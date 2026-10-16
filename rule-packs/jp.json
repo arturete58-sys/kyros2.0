@@ -34,6 +34,28 @@
       "note": "Back to 8% after the two-year cut, under the same plan"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile in Japan, or residence for one year or more"
+    ],
+    "days": 365,
+    "window": "continuous",
+    "regimes": [
+      {
+        "name": "Non-permanent resident",
+        "summary": "Foreign nationals resident less than 5 of the last 10 years are taxed on foreign income only when paid in or remitted to Japan"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Japan, residence",
+      "url": "https://taxsummaries.pwc.com/japan/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 90,
   "dueNote": "The final income tax return is due on 15 March and consumption tax for individuals on 31 March; the rest of a year's reserve is released then.",
@@ -114,7 +136,8 @@
           ]
         ],
         "label": "National income tax after the blue-return and basic deductions, with the 2.1% reconstruction surtax",
-        "surchargeBps": 210
+        "surchargeBps": 210,
+        "scope": "central"
       },
       {
         "name": "resident_tax",

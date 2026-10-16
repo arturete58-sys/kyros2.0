@@ -5,6 +5,11 @@
 // have changed: a maintainer reviews it, updates the pack, and the rate registry
 // is synced from the pack (sync-registry.mjs). Nothing changes without review.
 //
+// Pages that refuse plain requests (HTTP 403, bot walls, timeouts) are read with
+// a real browser (headless Chromium, when Playwright is installed), and failing
+// that from the Internet Archive's latest copy of the same page; the report says
+// which way each page was read.
+//
 //   node scripts/watch-sources.mjs [--out report.md] [--update]
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -37,6 +42,46 @@ const figures = (t) => {
   return [...new Set([...pct, ...money].map((x) => x.replace(/\s+/g, '')))].sort();
 };
 
+const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36';
+let browser;
+async function viaBrowser(url) {
+  if (browser === null) throw new Error('no browser');
+  if (!browser) {
+    try {
+      const { chromium } = await import('playwright');
+      browser = await chromium.launch();
+    } catch {
+      browser = null;
+      throw new Error('no browser');
+    }
+  }
+  const page = await browser.newPage({ userAgent: UA, locale: 'en-GB' });
+  try {
+    const r = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+    if (r && r.status() >= 400) throw new Error(`browser HTTP ${r.status()}`);
+    await page.waitForTimeout(2_000);
+    return figures(text(await page.content()));
+  } finally {
+    await page.close();
+  }
+}
+async function viaArchive(url) {
+  const a = await fetch(`https://archive.org/wayback/available?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(30_000) });
+  const snap = (await a.json())?.archived_snapshots?.closest;
+  if (!snap?.available) throw new Error('no archived copy');
+  const raw = snap.url.replace(/\/web\/(\d+)\//, '/web/$1id_/');
+  const r = await fetch(raw, { signal: AbortSignal.timeout(60_000) });
+  if (!r.ok) throw new Error(`archive HTTP ${r.status}`);
+  return { figs: figures(text(await r.text())), when: snap.timestamp.slice(0, 8) };
+}
+async function direct(url) {
+  const r = await fetch(url, { headers: { 'user-agent': UA, 'accept-language': 'en' }, signal: AbortSignal.timeout(30_000) });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const type = r.headers.get('content-type') ?? '';
+  if (!/html|text|xml|json/i.test(type)) return ['sha256:' + createHash('sha256').update(Buffer.from(await r.arrayBuffer())).digest('hex')];
+  return figures(text(await r.text()));
+}
+const via = {};
 const changed = [];
 const failed = [];
 const next = { ...snap };
@@ -45,18 +90,32 @@ for (const p of packs.sort((a, b) => a.id.localeCompare(b.id))) {
   for (const s of (p.sources ?? []).filter((s) => s.official)) {
     watched++;
     let figs;
+    const errors = [];
     try {
-      const r = await fetch(s.url, { headers: { 'user-agent': 'kyros-rule-pack-watch (+https://github.com/arturete58-sys/kyros2.0)' }, signal: AbortSignal.timeout(30_000) });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const type = r.headers.get('content-type') ?? '';
-      if (!/html|text|xml|json/i.test(type)) {
-        // PDFs and other binaries: compare the raw hash.
-        figs = ['sha256:' + createHash('sha256').update(Buffer.from(await r.arrayBuffer())).digest('hex')];
-      } else {
-        figs = figures(text(await r.text()));
-      }
+      figs = await direct(s.url);
+      via[s.url] = 'direct';
     } catch (e) {
-      failed.push(`\`${p.id}\` [${s.title}](${s.url}): ${e.message}`);
+      errors.push(e.message);
+    }
+    if (!figs && !/\.pdf($|\?)/i.test(s.url)) {
+      try {
+        figs = await viaBrowser(s.url);
+        via[s.url] = 'browser';
+      } catch (e) {
+        errors.push(e.message);
+      }
+    }
+    if (!figs) {
+      try {
+        const a = await viaArchive(s.url);
+        figs = a.figs;
+        via[s.url] = `archive ${a.when}`;
+      } catch (e) {
+        errors.push(e.message);
+      }
+    }
+    if (!figs) {
+      failed.push(`\`${p.id}\` [${s.title}](${s.url}): ${errors.join('; ')}`);
       continue;
     }
     const hash = createHash('sha256').update(figs.join('|')).digest('hex').slice(0, 16);
@@ -74,13 +133,14 @@ const first = Object.keys(snap).length === 0;
 const report = [
   `# Official sources watch, ${today}`,
   '',
-  `${watched} official pages cited by ${packs.length} rule packs. ${first ? 'First run: snapshot created.' : `${changed.length} changed, ${failed.length} could not be read.`}`,
+  `${watched} official pages cited by ${packs.length} rule packs. ${first ? 'First run: snapshot created.' : `${changed.length} changed, ${failed.length} could not be read.`} Read directly: ${Object.values(via).filter((v) => v === 'direct').length}; with a browser: ${Object.values(via).filter((v) => v === 'browser').length}; from the Internet Archive: ${Object.values(via).filter((v) => v.startsWith('archive')).length}.`,
   '',
   changed.length ? '## Changed: review the pack\n\n' + changed.map((x) => `- ${x}`).join('\n') + '\n' : '',
   failed.length ? '## Could not be read\n\n' + failed.map((x) => `- ${x}`).join('\n') + '\n' : '',
   'A change in a page is a prompt to review, not a rate change by itself. After review, update the pack (its `vatRates` with the new date), run `node scripts/watch-sources.mjs --update`, and sync the rate registry.',
   '',
 ].join('\n');
+if (browser) await browser.close();
 console.log(report);
 if (out) writeFileSync(out, report);
 if (first || update) {

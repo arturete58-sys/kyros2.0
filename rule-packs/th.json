@@ -23,6 +23,32 @@
       "note": "The statutory 10% applies unless the reduction is extended again (it has been extended every year since 1999)"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "remittance",
+    "tests": [
+      "180 days or more in the calendar year"
+    ],
+    "days": 180,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Foreign income",
+        "summary": "Since 2024 taxed when brought into Thailand, in any later year"
+      },
+      {
+        "name": "Long-Term Resident visa",
+        "summary": "Foreign income of LTR holders is exempt"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Thailand, residence",
+      "url": "https://taxsummaries.pwc.com/thailand/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 98,
   "dueNote": "VAT returns are monthly. The annual personal income tax return is due on 31 March (8 April online), with a half-year return in September.",
@@ -119,6 +145,11 @@
     {
       "title": "KPMG: Royal Decree No. 807 keeps VAT at 7% until 30 September 2027",
       "url": "https://kpmg.com/us/en/taxnewsflash/news/2026/09/thailand-reduced-7-percent-vat-rate-extended-through-september-2027.html",
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "Forvis Mazars: Thai personal income tax brackets (since 2017)",
+      "url": "https://forvismazars.com/th/en/insights/doing-business-in-thailand/tax/new-thai-personal-income-tax-structure",
       "checked": "2026-10-16"
     }
   ]

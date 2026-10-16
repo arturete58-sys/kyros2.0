@@ -15,6 +15,22 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile in Nigeria, or 183 days in any 12 months"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Nigeria, residence",
+      "url": "https://taxsummaries.pwc.com/nigeria/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 90,
   "dueNote": "VAT returns are monthly, by the 21st. Annual income tax returns are due on 31 March; the rest of a year's reserve is released then.",

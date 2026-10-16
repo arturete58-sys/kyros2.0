@@ -15,6 +15,22 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Permanent home in Kenya and present in the year, or 183 days in the year, or an average of more than 122 days over this year and the two before"
+    ],
+    "days": 183,
+    "window": "tax-year",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Kenya, residence",
+      "url": "https://taxsummaries.pwc.com/kenya/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 181,
   "dueNote": "Turnover tax and VAT are paid monthly, by the 20th. Annual income tax returns are due on 30 June.",

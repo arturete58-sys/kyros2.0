@@ -17,6 +17,32 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Ordinary residence, or more than 183 days in the year"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Non-domiciled (remittance basis)",
+        "summary": "Foreign income taxed only when remitted to Malta, with a EUR 5,000 minimum tax"
+      },
+      {
+        "name": "Nomad Residence Permit",
+        "summary": "Income from the remote work is taxed at 10% after the first 12 months"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Malta, residence",
+      "url": "https://taxsummaries.pwc.com/malta/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 181,
   "dueNote": "VAT returns are quarterly. Provisional tax is paid in April, August and December; the annual return and balance are due on 30 June.",
@@ -125,6 +151,12 @@
     {
       "title": "Commissioner for Revenue",
       "url": "https://cfr.gov.mt",
+      "official": true
+    },
+    {
+      "title": "MTCA: income tax rates (official)",
+      "url": "https://mtca.gov.mt/personal-tax/fss/tax-rates",
+      "checked": "2026-10-16",
       "official": true
     }
   ]

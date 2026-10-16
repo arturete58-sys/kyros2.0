@@ -27,6 +27,31 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "strict",
+    "facts": [
+      "Interest of 1% a month on shortfalls in advance tax (sections 234B and 234C)"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "182 days in the financial year, or 60 days plus 365 days in the four previous years (120 days for some high-income citizens)"
+    ],
+    "days": 182,
+    "window": "tax-year",
+    "regimes": [
+      {
+        "name": "Resident but not ordinarily resident",
+        "summary": "Foreign income not taxed for returning residents in their first years"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: India, residence",
+      "url": "https://taxsummaries.pwc.com/india/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 212,
   "dueNote": "GST returns and payment are monthly, by the 20th; advance tax falls due on 15 June, 15 September, 15 December and 15 March; pay them from the vault. The financial year runs April to March and returns are due on 31 July, so a calendar year's reserve is released on 31 July of the next year, after the return for April to December.",

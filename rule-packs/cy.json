@@ -17,6 +17,32 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days in the year, or the 60-day rule (60 days, a business or job in Cyprus, a home there, no other tax residence)"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Non-domiciled",
+        "summary": "Exempt from the special defence contribution on dividends and interest for 17 years; business income is still taxed"
+      },
+      {
+        "name": "Crypto gains",
+        "summary": "Gains on crypto-assets taxed at 8% from 2026"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Cyprus, residence",
+      "url": "https://taxsummaries.pwc.com/cyprus/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 396,
   "dueNote": "VAT returns are quarterly. From tax year 2026, individuals who prepare accounts file and pay by 31 January of the second following year; the rest of a year's reserve is released then.",
@@ -129,6 +155,11 @@
       "title": "Ministry of Finance, Tax Department",
       "url": "https://www.mof.gov.cy",
       "official": true
+    },
+    {
+      "title": "Harneys: Cyprus 2026 personal income tax bands (Official Gazette, 31 December 2025)",
+      "url": "https://www.harneys.com/our-blogs/regulatory/a-new-era-for-cyprus-taxation-the-key-insights-of-the-2026-cyprus-tax-reform/",
+      "checked": "2026-10-16"
     }
   ]
 }

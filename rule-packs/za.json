@@ -15,6 +15,22 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Ordinarily resident, or the physical presence test: 91 days in the year and in each of the 5 previous years, with 915 days in total"
+    ],
+    "days": 91,
+    "window": "tax-year",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: South Africa, residence",
+      "url": "https://taxsummaries.pwc.com/south-africa/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 273,
   "dueNote": "VAT returns are bimonthly. The tax year runs March to February; provisional tax is paid in August and February with a top-up by the end of September; a calendar year's reserve is released on 30 September of the next year.",
@@ -59,27 +75,27 @@
         "kind": "incomeTax",
         "brackets": [
           [
-            237100,
+            245100,
             1800
           ],
           [
-            370500,
+            383100,
             2600
           ],
           [
-            512800,
+            530200,
             3100
           ],
           [
-            673000,
+            695800,
             3600
           ],
           [
-            857900,
+            887000,
             3900
           ],
           [
-            1817000,
+            1878600,
             4100
           ],
           [
@@ -87,8 +103,8 @@
             4500
           ]
         ],
-        "label": "Income tax (2025/26 table) with the primary rebate",
-        "credit": 17235
+        "label": "Income tax, 2027 tax year (1 March 2026 to 28 February 2027), minus the primary rebate R17,820",
+        "credit": 17820
       }
     ],
     "notes": [
@@ -114,6 +130,12 @@
       "url": "https://www.sars.gov.za/tax-types/value-added-tax/",
       "checked": "2026-10-16",
       "official": true
+    },
+    {
+      "title": "SARS: rates of tax for individuals, 2027 tax year (official)",
+      "url": "https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/",
+      "official": true,
+      "checked": "2026-10-16"
     }
   ]
 }

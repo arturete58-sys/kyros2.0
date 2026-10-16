@@ -15,6 +15,32 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "territorial",
+    "tests": [
+      "More than 183 days in any 12 months"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "regimes": [
+      {
+        "name": "Foreign income exempt",
+        "summary": "Individuals are not taxed on foreign-source income"
+      },
+      {
+        "name": "Small business status",
+        "summary": "1% of turnover up to GEL 500,000"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Georgia, residence",
+      "url": "https://taxsummaries.pwc.com/georgia/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Month",
   "dueOffsetDays": 15,
   "dueNote": "Small business status holders declare and pay 1% of turnover monthly, by the 15th of the following month.",

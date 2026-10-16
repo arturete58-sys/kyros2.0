@@ -27,6 +27,19 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "none",
+    "tests": [
+      "No personal income tax"
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: The Bahamas, residence",
+      "url": "https://taxsummaries.pwc.com/bahamas/individual/residence"
+    }
+  },
   "period": "Quarter",
   "dueOffsetDays": 21,
   "dueNote": "VAT returns are due 21 days after each period: quarterly below BSD 5 million of turnover, monthly above.",

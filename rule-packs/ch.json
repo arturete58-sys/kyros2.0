@@ -35,6 +35,28 @@
       "note": "Approved by Parliament on 19 June 2026 to finance the 13th AHV pension; subject to a popular vote expected on 29 November 2026"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile with the intention to stay, or 30 days working (90 days not working) in Switzerland"
+    ],
+    "days": 90,
+    "window": "continuous",
+    "regimes": [
+      {
+        "name": "Lump-sum taxation",
+        "summary": "Foreign nationals without Swiss work can be taxed on living expenses in most cantons"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Switzerland, residence",
+      "url": "https://taxsummaries.pwc.com/switzerland/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 120,
   "dueNote": "VAT (MWST/TVA) returns are quarterly, due 60 days after the quarter. Income tax is assessed yearly by the canton; the rest of a year's reserve is released after 30 April.",

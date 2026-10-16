@@ -223,6 +223,13 @@
           },
           "note": {
             "type": "string"
+          },
+          "replaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of national estimate items this region's items replace"
           }
         }
       }
@@ -266,6 +273,88 @@
         }
       },
       "description": "How the law sets income-tax prepayments objectively (prior-year tax or a share of profit)"
+    },
+    "residence": {
+      "type": "object",
+      "required": [
+        "basis",
+        "tests"
+      ],
+      "description": "Who is tax resident and on what income",
+      "properties": {
+        "basis": {
+          "enum": [
+            "worldwide",
+            "territorial",
+            "remittance",
+            "none"
+          ]
+        },
+        "days": {
+          "type": "integer"
+        },
+        "window": {
+          "type": "string"
+        },
+        "inclusive": {
+          "type": "boolean"
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "regimes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "summary"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "citizenshipBased": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "object"
+        }
+      }
+    },
+    "enforcement": {
+      "type": "object",
+      "required": [
+        "level"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "strict",
+            "standard",
+            "lenient"
+          ]
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "type": "object"
+        }
+      },
+      "description": "How strictly late or short payment is penalised; sets the safety margin"
     }
   },
   "$defs": {
@@ -351,6 +440,14 @@
         "socialDeductibleBps": {
           "$ref": "#/$defs/bps",
           "description": "Only this share of social contributions is deductible (US: half of self-employment tax)"
+        },
+        "profitReliefBps": {
+          "$ref": "#/$defs/bps",
+          "description": "Flat deduction from taxable profit as a share of it"
+        },
+        "profitReliefMax": {
+          "type": "number",
+          "minimum": 0
         }
       }
     },
@@ -419,6 +516,12 @@
         "reliefBps": {
           "$ref": "#/$defs/bps",
           "description": "Share of the basis relieved before the brackets apply (e.g. a profit exemption)"
+        },
+        "scope": {
+          "enum": [
+            "central"
+          ],
+          "description": "The national (central government) scale, compared with the OECD Tax Database"
         }
       }
     }

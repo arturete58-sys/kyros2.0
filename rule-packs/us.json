@@ -6,6 +6,39 @@
   "version": "2026.3",
   "reviewed": "2026-10-16",
   "currency": "USD",
+  "enforcement": {
+    "level": "standard",
+    "facts": [
+      "Underpaid estimated tax costs interest at the federal short-term rate plus 3 points (7% a year in Q4 2026), compounded daily",
+      "No penalty if the instalments reach 100% of last year's tax (110% above USD 150,000 of AGI)"
+    ],
+    "source": {
+      "title": "IRS: interest rates for the quarter from 1 October 2026 (official)",
+      "url": "https://www.irs.gov/node/164096",
+      "official": true,
+      "checked": "2026-10-16"
+    }
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Citizens and green-card holders are taxed on worldwide income wherever they live; others by the substantial presence test (31 days this year and 183 weighted days over three years)"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Citizenship-based taxation",
+        "summary": "US citizens abroad still file; the foreign earned income exclusion (about USD 130,000 for 2025) and foreign tax credits reduce double tax"
+      }
+    ],
+    "citizenshipBased": true,
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: United States, residence",
+      "url": "https://taxsummaries.pwc.com/united-states/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 105,
   "dueNote": "Federal estimated tax is paid in four instalments (15 April, 15 June, 15 September, 15 January); pay them from the vault as they fall due. The rest of a year's reserve is released after 15 April, the deadline of the annual return.",
@@ -111,7 +144,8 @@
             3700
           ]
         ],
-        "label": "Federal income tax 2026, single: standard deduction (USD 16,100) and the 20% qualified business income deduction, phased out from USD 201,750 of taxable income for a sole proprietor without employees"
+        "label": "Federal income tax 2026, single: standard deduction (USD 16,100) and the 20% qualified business income deduction, phased out from USD 201,750 of taxable income for a sole proprietor without employees",
+        "scope": "central"
       }
     ],
     "notes": [

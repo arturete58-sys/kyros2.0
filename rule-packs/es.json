@@ -3,7 +3,7 @@
   "id": "es",
   "country": "ES",
   "name": "Spain: self-employed (autónomos) and small companies",
-  "version": "2026.2",
+  "version": "2026.3",
   "reviewed": "2026-10-16",
   "currency": "EUR",
   "vatName": "IVA",
@@ -13,10 +13,47 @@
       "rates": {
         "standard": 2100,
         "reduced": 1000,
-        "super_reduced": 400
+        "super_reduced": 400,
+        "regional_igic_general": 700,
+        "regional_igic_reduced": 300
       }
     }
   ],
+  "enforcement": {
+    "level": "strict",
+    "facts": [
+      "Late filing without a request: 1% surcharge plus 1% per full month of delay, 15% plus late-payment interest after 12 months (art. 27 LGT)",
+      "If the AEAT finds the shortfall first: penalties of 50% to 150% of the unpaid tax (art. 191 LGT), plus interest"
+    ],
+    "source": {
+      "title": "Ley General Tributaria, art. 27 (iberley, consolidated text)",
+      "url": "https://iberley.es/legislacion/articulo-27-ley-general-tributaria",
+      "checked": "2026-10-16"
+    }
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days in Spain in the calendar year (sporadic absences count unless residence elsewhere is proven), or the main centre of business or economic interests in Spain, or spouse and minor children living in Spain"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Beckham regime (impatriados)",
+        "summary": "24% on Spanish-source income up to EUR 600,000 for 6 years for new residents, including entrepreneurs and remote workers who qualify since the Startups Law"
+      },
+      {
+        "name": "Tax havens",
+        "summary": "Spanish nationals who move to a listed tax haven stay resident for that year and the next four"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Spain, residence",
+      "url": "https://taxsummaries.pwc.com/spain/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Quarter",
   "dueOffsetDays": 30,
   "dueNote": "Quarterly VAT (modelo 303) and income-tax prepayment (modelo 130) are filed in the first 20 days after each quarter, and until 30 January for the fourth quarter. The vault uses 30 days for every quarter; paying the tax earlier is always allowed.",
@@ -91,47 +128,44 @@
       "vatRate": "standard",
       "buckets": [],
       "covers": []
+    },
+    {
+      "id": "canarias-igic",
+      "label": "Canarias: IGIC 7% + income-tax prepayment 20%",
+      "vatBps": 700,
+      "vatRate": "regional_igic_general",
+      "buckets": [
+        {
+          "name": "irpf",
+          "bps": 2000,
+          "label": "Income-tax prepayment (modelo 130)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "canarias-igic-reduced",
+      "label": "Canarias: IGIC 3% (reduced) + income-tax prepayment 20%",
+      "vatBps": 300,
+      "vatRate": "regional_igic_reduced",
+      "buckets": [
+        {
+          "name": "irpf",
+          "bps": 2000,
+          "label": "Income-tax prepayment (modelo 130)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
     }
   ],
   "estimate": {
     "year": 2026,
     "socialDeductible": true,
     "items": [
-      {
-        "name": "irpf",
-        "kind": "incomeTax",
-        "brackets": [
-          [
-            5550,
-            0
-          ],
-          [
-            12450,
-            1900
-          ],
-          [
-            20200,
-            2400
-          ],
-          [
-            35200,
-            3000
-          ],
-          [
-            60000,
-            3700
-          ],
-          [
-            300000,
-            4500
-          ],
-          [
-            null,
-            4700
-          ]
-        ],
-        "label": "IRPF, state and regional scale combined (general scale; regions vary slightly), personal minimum 5,550"
-      },
       {
         "name": "reta",
         "kind": "social",
@@ -144,11 +178,76 @@
         "label": "Social security for the self-employed (RETA), about 31.4% of net income",
         "min": 2400,
         "max": 7100
+      },
+      {
+        "name": "irpf_estatal",
+        "kind": "incomeTax",
+        "scope": "central",
+        "brackets": [
+          [
+            12450,
+            950
+          ],
+          [
+            20200,
+            1200
+          ],
+          [
+            35200,
+            1500
+          ],
+          [
+            60000,
+            1850
+          ],
+          [
+            300000,
+            2250
+          ],
+          [
+            null,
+            2450
+          ]
+        ],
+        "credit": 527.25,
+        "label": "IRPF, state scale (art. 63 LIRPF), minus the same scale on the personal minimum (EUR 5,550)"
+      },
+      {
+        "name": "irpf_autonomico",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            12450,
+            950
+          ],
+          [
+            20200,
+            1200
+          ],
+          [
+            35200,
+            1500
+          ],
+          [
+            60000,
+            1850
+          ],
+          [
+            null,
+            2250
+          ]
+        ],
+        "credit": 527.25,
+        "label": "IRPF, regional scale: choose your community (default: the state's complementary scale)"
       }
     ],
     "notes": [
-      "IRPF is settled in the annual return (June); the quarterly modelo 130 prepays 20% of the quarter's net profit. RETA is paid monthly by direct debit, outside the vault, unless the reserve is meant to cover it."
-    ]
+      "Estimación directa simplificada: 5% of net profit is deducted as hard-to-justify expenses, up to EUR 2,000 (art. 30 RIRPF). In estimación directa normal there is no such deduction; the estimate is then slightly low. Estimación objetiva (módulos) does not apply to professional services.",
+      "IRPF is the state scale plus the scale of the community where you lived most of the year; Navarra and the Basque Country apply their own foral IRPF. The reduction for low business income (art. 32.2 LIRPF) and family minimums are not included.",
+      "RETA is paid monthly by direct debit, outside the vault, unless the reserve is meant to cover it; the estimate deducts it from profit before IRPF."
+    ],
+    "profitReliefBps": 500,
+    "profitReliefMax": 2000
   },
   "prepayment": {
     "method": "share-of-profit",
@@ -156,6 +255,7 @@
     "note": "Modelo 130: each quarter, 20% of the net profit since 1 January, minus the earlier quarters' payments (by the 20th of April, July and October, and 30 January). The annual return (June) settles the rest."
   },
   "notes": [
+    "Rates named regional_* are not VAT: IGIC applies in the Canary Islands (7% general, 3% reduced) instead of IVA; Ceuta and Melilla apply IPSI.",
     "The income-tax prepayment of modelo 130 is 20% of the quarter's net profit (income minus deductible expenses). Kyros reserves 20% of the taxable base of each payment, which is never less than what is due; the surplus is released after the due date.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
@@ -180,6 +280,1153 @@
       "url": "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/folleto-actividades-economicas/3-impuesto-sobre-renta-personas-fisicas/3_7-pagos-fraccionados.html",
       "official": true,
       "checked": "2026-10-16"
+    },
+    {
+      "title": "AEAT: Manual práctico de Renta 2025, escalas autonómicas (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Andalucía (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-andalucia.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Aragón (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-aragon.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Illes Balears (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-illes-balears.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Canarias (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-canarias.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Cantabria (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-cantabria.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Castilla y León (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-castilla-leon.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Cataluña (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-cataluna.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Extremadura (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-extremadura.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Galicia (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-galicia.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Comunidad de Madrid (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-madrid.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Región de Murcia (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-region-murcia.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, La Rioja (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunidad-autonoma-rioja.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "AEAT: escala autonómica 2025, Comunitat Valenciana (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/en_gb/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-general/gravamen-autonomico/comunitat-valenciana.html",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "TaxDown: escala de Asturias 2025 (Ley 3/2025)",
+      "url": "https://taxdown.es/irpf/tramos-tablas-asturias",
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "TaxDown: escala de Castilla-La Mancha (art. 13 bis Ley 8/2013)",
+      "url": "https://taxdown.es/irpf/tramos-tablas-castilla-la-mancha",
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "TaxDown: escala del IRPF de Navarra 2026",
+      "url": "https://taxdown.es/navarra-declaracion-renta/tramos-irpf-navarra-2026",
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "Guía Fiscal: escala general del IRPF de Bizkaia 2026 (art. 75 NF 13/2013)",
+      "url": "https://guiafiscal.es/irpf/tablas-irpf-bizkaia/",
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "Gobierno de Canarias: IGIC tipos impositivos (official)",
+      "url": "https://www3.gobiernodecanarias.org/tributos/atc/w/igic-tipos-impositivos",
+      "official": true
+    }
+  ],
+  "regions": [
+    {
+      "id": "AN",
+      "name": "Andalucía",
+      "items": [
+        {
+          "name": "irpf_autonomico_an",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              13000,
+              950
+            ],
+            [
+              21100,
+              1200
+            ],
+            [
+              35200,
+              1500
+            ],
+            [
+              60000,
+              1850
+            ],
+            [
+              null,
+              2250
+            ]
+          ],
+          "credit": 527.25,
+          "label": "IRPF, Andalucía scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "AR",
+      "name": "Aragón",
+      "items": [
+        {
+          "name": "irpf_autonomico_ar",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              13072.5,
+              950
+            ],
+            [
+              21210,
+              1200
+            ],
+            [
+              36960,
+              1500
+            ],
+            [
+              52500,
+              1850
+            ],
+            [
+              60000,
+              2050
+            ],
+            [
+              80000,
+              2300
+            ],
+            [
+              90000,
+              2400
+            ],
+            [
+              130000,
+              2500
+            ],
+            [
+              null,
+              2550
+            ]
+          ],
+          "credit": 527.25,
+          "label": "IRPF, Aragón scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "AS",
+      "name": "Asturias",
+      "items": [
+        {
+          "name": "irpf_autonomico_as",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              900
+            ],
+            [
+              17707.2,
+              1200
+            ],
+            [
+              33007.2,
+              1400
+            ],
+            [
+              53407.2,
+              1920
+            ],
+            [
+              70000,
+              2150
+            ],
+            [
+              90000,
+              2250
+            ],
+            [
+              175000,
+              2500
+            ],
+            [
+              null,
+              2600
+            ]
+          ],
+          "credit": 499.5,
+          "label": "IRPF, Asturias scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ],
+      "note": "Asturias: scale as amended by Ley del Principado 3/2025 (in force 3 December 2025)."
+    },
+    {
+      "id": "IB",
+      "name": "Illes Balears",
+      "items": [
+        {
+          "name": "irpf_autonomico_ib",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              10000,
+              900
+            ],
+            [
+              18000,
+              1125
+            ],
+            [
+              30000,
+              1425
+            ],
+            [
+              48000,
+              1750
+            ],
+            [
+              70000,
+              1900
+            ],
+            [
+              90000,
+              2175
+            ],
+            [
+              120000,
+              2275
+            ],
+            [
+              175000,
+              2375
+            ],
+            [
+              null,
+              2475
+            ]
+          ],
+          "credit": 499.5,
+          "label": "IRPF, Illes Balears scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "CN",
+      "name": "Canarias",
+      "items": [
+        {
+          "name": "irpf_autonomico_cn",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              13748,
+              900
+            ],
+            [
+              19422,
+              1150
+            ],
+            [
+              35924,
+              1400
+            ],
+            [
+              57566,
+              1850
+            ],
+            [
+              93268,
+              2350
+            ],
+            [
+              123745,
+              2500
+            ],
+            [
+              null,
+              2600
+            ]
+          ],
+          "credit": 499.5,
+          "label": "IRPF, Canarias scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ],
+      "note": "Canarias: VAT does not apply; choose an IGIC preset (7% general)."
+    },
+    {
+      "id": "CB",
+      "name": "Cantabria",
+      "items": [
+        {
+          "name": "irpf_autonomico_cb",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              13000,
+              850
+            ],
+            [
+              21000,
+              1100
+            ],
+            [
+              35200,
+              1450
+            ],
+            [
+              60000,
+              1800
+            ],
+            [
+              90000,
+              2250
+            ],
+            [
+              null,
+              2450
+            ]
+          ],
+          "credit": 471.75,
+          "label": "IRPF, Cantabria scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "CM",
+      "name": "Castilla-La Mancha",
+      "items": [
+        {
+          "name": "irpf_autonomico_cm",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              950
+            ],
+            [
+              20200,
+              1200
+            ],
+            [
+              35200,
+              1500
+            ],
+            [
+              60000,
+              1850
+            ],
+            [
+              null,
+              2250
+            ]
+          ],
+          "credit": 527.25,
+          "label": "IRPF, Castilla-La Mancha scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "CL",
+      "name": "Castilla y León",
+      "items": [
+        {
+          "name": "irpf_autonomico_cl",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              900
+            ],
+            [
+              20200,
+              1200
+            ],
+            [
+              35200,
+              1400
+            ],
+            [
+              53407.2,
+              1850
+            ],
+            [
+              null,
+              2150
+            ]
+          ],
+          "credit": 499.5,
+          "label": "IRPF, Castilla y León scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "CT",
+      "name": "Cataluña",
+      "items": [
+        {
+          "name": "irpf_autonomico_ct",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12500,
+              950
+            ],
+            [
+              22000,
+              1250
+            ],
+            [
+              33000,
+              1600
+            ],
+            [
+              53000,
+              1900
+            ],
+            [
+              90000,
+              2150
+            ],
+            [
+              120000,
+              2350
+            ],
+            [
+              175000,
+              2450
+            ],
+            [
+              null,
+              2550
+            ]
+          ],
+          "credit": 527.25,
+          "label": "IRPF, Cataluña scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "EX",
+      "name": "Extremadura",
+      "items": [
+        {
+          "name": "irpf_autonomico_ex",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              800
+            ],
+            [
+              20200,
+              1000
+            ],
+            [
+              24200,
+              1600
+            ],
+            [
+              35200,
+              1750
+            ],
+            [
+              60000,
+              2100
+            ],
+            [
+              80200,
+              2350
+            ],
+            [
+              99200,
+              2400
+            ],
+            [
+              120200,
+              2450
+            ],
+            [
+              null,
+              2500
+            ]
+          ],
+          "credit": 444.0,
+          "label": "IRPF, Extremadura scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "GA",
+      "name": "Galicia",
+      "items": [
+        {
+          "name": "irpf_autonomico_ga",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12985.35,
+              900
+            ],
+            [
+              21068.6,
+              1165
+            ],
+            [
+              35200,
+              1490
+            ],
+            [
+              60000,
+              1840
+            ],
+            [
+              null,
+              2250
+            ]
+          ],
+          "credit": 499.5,
+          "label": "IRPF, Galicia scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "MD",
+      "name": "Comunidad de Madrid",
+      "items": [
+        {
+          "name": "irpf_autonomico_md",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              13362.22,
+              850
+            ],
+            [
+              19004.63,
+              1070
+            ],
+            [
+              35425.68,
+              1280
+            ],
+            [
+              57320.4,
+              1740
+            ],
+            [
+              null,
+              2050
+            ]
+          ],
+          "credit": 471.75,
+          "label": "IRPF, Comunidad de Madrid scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "MC",
+      "name": "Región de Murcia",
+      "items": [
+        {
+          "name": "irpf_autonomico_mc",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              950
+            ],
+            [
+              20200,
+              1120
+            ],
+            [
+              34000,
+              1330
+            ],
+            [
+              60000,
+              1790
+            ],
+            [
+              null,
+              2250
+            ]
+          ],
+          "credit": 527.25,
+          "label": "IRPF, Región de Murcia scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "RI",
+      "name": "La Rioja",
+      "items": [
+        {
+          "name": "irpf_autonomico_ri",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              800
+            ],
+            [
+              20200,
+              1060
+            ],
+            [
+              35200,
+              1360
+            ],
+            [
+              40000,
+              1780
+            ],
+            [
+              50000,
+              1830
+            ],
+            [
+              60000,
+              1900
+            ],
+            [
+              120000,
+              2450
+            ],
+            [
+              null,
+              2700
+            ]
+          ],
+          "credit": 444.0,
+          "label": "IRPF, La Rioja scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "VC",
+      "name": "Comunitat Valenciana",
+      "items": [
+        {
+          "name": "irpf_autonomico_vc",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12000,
+              900
+            ],
+            [
+              22000,
+              1200
+            ],
+            [
+              32000,
+              1500
+            ],
+            [
+              42000,
+              1750
+            ],
+            [
+              52000,
+              2000
+            ],
+            [
+              62000,
+              2250
+            ],
+            [
+              72000,
+              2500
+            ],
+            [
+              100000,
+              2650
+            ],
+            [
+              150000,
+              2750
+            ],
+            [
+              200000,
+              2850
+            ],
+            [
+              null,
+              2950
+            ]
+          ],
+          "credit": 499.5,
+          "label": "IRPF, Comunitat Valenciana scale 2025, minus the same scale on the personal minimum"
+        }
+      ],
+      "replaces": [
+        "irpf_autonomico"
+      ]
+    },
+    {
+      "id": "NC",
+      "name": "Navarra (régimen foral)",
+      "replaces": [
+        "irpf_estatal",
+        "irpf_autonomico"
+      ],
+      "items": [
+        {
+          "name": "irpf_navarra",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              4458,
+              1300
+            ],
+            [
+              10030,
+              2200
+            ],
+            [
+              21175,
+              2500
+            ],
+            [
+              35663,
+              2800
+            ],
+            [
+              51266,
+              3650
+            ],
+            [
+              66869,
+              4150
+            ],
+            [
+              89159,
+              4400
+            ],
+            [
+              139310,
+              4700
+            ],
+            [
+              195034,
+              4900
+            ],
+            [
+              334344,
+              5050
+            ],
+            [
+              null,
+              5200
+            ]
+          ],
+          "label": "IRPF foral de Navarra 2026, general base scale (13% to 52%)"
+        }
+      ],
+      "note": "Navarra applies its own IRPF; personal deductions in the quota are not included, so the estimate is on the high side."
+    },
+    {
+      "id": "BI",
+      "name": "Bizkaia (régimen foral)",
+      "replaces": [
+        "irpf_estatal",
+        "irpf_autonomico"
+      ],
+      "items": [
+        {
+          "name": "irpf_bi",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              18080,
+              2300
+            ],
+            [
+              36160,
+              2800
+            ],
+            [
+              54240,
+              3500
+            ],
+            [
+              77450,
+              4000
+            ],
+            [
+              107260,
+              4500
+            ],
+            [
+              142960,
+              4600
+            ],
+            [
+              208390,
+              4700
+            ],
+            [
+              null,
+              4900
+            ]
+          ],
+          "credit": 1615,
+          "label": "IRPF foral de Bizkaia 2026, general scale (23% to 49%) minus the general quota reduction (EUR 1,615)"
+        }
+      ],
+      "note": "The three Basque territories share the general scale (art. 75 NF 13/2013 in Bizkaia)."
+    },
+    {
+      "id": "SS",
+      "name": "Gipuzkoa (régimen foral)",
+      "replaces": [
+        "irpf_estatal",
+        "irpf_autonomico"
+      ],
+      "items": [
+        {
+          "name": "irpf_ss",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              18080,
+              2300
+            ],
+            [
+              36160,
+              2800
+            ],
+            [
+              54240,
+              3500
+            ],
+            [
+              77450,
+              4000
+            ],
+            [
+              107260,
+              4500
+            ],
+            [
+              142960,
+              4600
+            ],
+            [
+              208390,
+              4700
+            ],
+            [
+              null,
+              4900
+            ]
+          ],
+          "credit": 1615,
+          "label": "IRPF foral de Gipuzkoa 2026, general scale (23% to 49%) minus the general quota reduction (EUR 1,615)"
+        }
+      ],
+      "note": "The three Basque territories share the general scale (art. 75 NF 13/2013 in Bizkaia)."
+    },
+    {
+      "id": "VI",
+      "name": "Araba/Álava (régimen foral)",
+      "replaces": [
+        "irpf_estatal",
+        "irpf_autonomico"
+      ],
+      "items": [
+        {
+          "name": "irpf_vi",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              18080,
+              2300
+            ],
+            [
+              36160,
+              2800
+            ],
+            [
+              54240,
+              3500
+            ],
+            [
+              77450,
+              4000
+            ],
+            [
+              107260,
+              4500
+            ],
+            [
+              142960,
+              4600
+            ],
+            [
+              208390,
+              4700
+            ],
+            [
+              null,
+              4900
+            ]
+          ],
+          "credit": 1615,
+          "label": "IRPF foral de Araba/Álava 2026, general scale (23% to 49%) minus the general quota reduction (EUR 1,615)"
+        }
+      ],
+      "note": "The three Basque territories share the general scale (art. 75 NF 13/2013 in Bizkaia)."
+    },
+    {
+      "id": "CE",
+      "name": "Ceuta",
+      "replaces": [
+        "irpf_estatal",
+        "irpf_autonomico"
+      ],
+      "items": [
+        {
+          "name": "irpf_estatal_ceuta_melilla",
+          "kind": "incomeTax",
+          "scope": "central",
+          "brackets": [
+            [
+              12450,
+              380
+            ],
+            [
+              20200,
+              480
+            ],
+            [
+              35200,
+              600
+            ],
+            [
+              60000,
+              740
+            ],
+            [
+              300000,
+              900
+            ],
+            [
+              null,
+              980
+            ]
+          ],
+          "credit": 210.9,
+          "label": "IRPF state scale after the 60% deduction for income obtained in Ceuta or Melilla (art. 68.4 LIRPF)"
+        },
+        {
+          "name": "irpf_autonomico_ceuta_melilla",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              380
+            ],
+            [
+              20200,
+              480
+            ],
+            [
+              35200,
+              600
+            ],
+            [
+              60000,
+              740
+            ],
+            [
+              null,
+              900
+            ]
+          ],
+          "credit": 210.9,
+          "label": "IRPF complementary scale after the 60% deduction"
+        }
+      ],
+      "note": "Ceuta: the 60% deduction applies to income obtained there by residents; IVA does not apply (IPSI instead)."
+    },
+    {
+      "id": "ML",
+      "name": "Melilla",
+      "replaces": [
+        "irpf_estatal",
+        "irpf_autonomico"
+      ],
+      "items": [
+        {
+          "name": "irpf_estatal_ceuta_melilla",
+          "kind": "incomeTax",
+          "scope": "central",
+          "brackets": [
+            [
+              12450,
+              380
+            ],
+            [
+              20200,
+              480
+            ],
+            [
+              35200,
+              600
+            ],
+            [
+              60000,
+              740
+            ],
+            [
+              300000,
+              900
+            ],
+            [
+              null,
+              980
+            ]
+          ],
+          "credit": 210.9,
+          "label": "IRPF state scale after the 60% deduction for income obtained in Ceuta or Melilla (art. 68.4 LIRPF)"
+        },
+        {
+          "name": "irpf_autonomico_ceuta_melilla",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12450,
+              380
+            ],
+            [
+              20200,
+              480
+            ],
+            [
+              35200,
+              600
+            ],
+            [
+              60000,
+              740
+            ],
+            [
+              null,
+              900
+            ]
+          ],
+          "credit": 210.9,
+          "label": "IRPF complementary scale after the 60% deduction"
+        }
+      ],
+      "note": "Melilla: the 60% deduction applies to income obtained there by residents; IVA does not apply (IPSI instead)."
     }
   ]
 }

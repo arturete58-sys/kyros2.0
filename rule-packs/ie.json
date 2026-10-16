@@ -17,6 +17,31 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard",
+    "facts": [
+      "Interest on late tax of about 8% a year (0.0219% a day); preliminary tax below the safe harbour triggers interest"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "183 days in the year, or 280 days over this year and last (30 or more in each)"
+    ],
+    "days": 183,
+    "window": "tax-year",
+    "regimes": [
+      {
+        "name": "Non-domiciled",
+        "summary": "Foreign income taxed only when remitted to Ireland"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Ireland, residence",
+      "url": "https://taxsummaries.pwc.com/ireland/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 304,
   "dueNote": "VAT returns are usually bi-monthly, due on the 23rd of the following month. Preliminary tax and the balance for a year are due on 31 October of the following year; the rest of a year's reserve is released then.",
@@ -106,7 +131,8 @@
           ]
         ],
         "label": "Income tax, single person; personal and earned-income credits EUR 4,000",
-        "credit": 4000
+        "credit": 4000,
+        "scope": "central"
       },
       {
         "name": "usc",
@@ -174,6 +200,11 @@
       "title": "European Commission TEDB, VAT Retrieval Service (official), compared weekly by the law watch",
       "url": "https://ec.europa.eu/taxation_customs/tedb/",
       "official": true,
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "KPMG Ireland: rates, bands and credits 2026 and Budget 2027",
+      "url": "https://kpmg.com/ie/en/insights/tax/budget-2027/tax-rates-and-credits.html",
       "checked": "2026-10-16"
     }
   ]

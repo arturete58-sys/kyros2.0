@@ -18,6 +18,22 @@
       "note": "Rates in force on 1 January 2026"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Permanent home in Ukraine; then centre of vital interests, then more than 183 days, then citizenship"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Ukraine, residence",
+      "url": "https://taxsummaries.pwc.com/ukraine/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Quarter",
   "dueOffsetDays": 50,
   "dueNote": "Group 3 declarations are filed within 40 days after each quarter and the tax is paid within the next 10 days.",

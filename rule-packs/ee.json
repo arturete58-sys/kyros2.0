@@ -33,6 +33,28 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Place of residence in Estonia, or 183 days in 12 months"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "regimes": [
+      {
+        "name": "e-Residency",
+        "summary": "Not tax residence: it gives access to an Estonian company, which is taxed where it is managed"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Estonia, residence",
+      "url": "https://taxsummaries.pwc.com/estonia/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 274,
   "dueNote": "VAT returns are monthly, due on the 20th of the following month. FIE income and social tax are paid in quarterly advances and settled after the annual return; the rest of a year's reserve is released after 1 October of the following year.",
@@ -105,7 +127,8 @@
             2200
           ]
         ],
-        "label": "Income tax 22%, basic exemption EUR 700 a month"
+        "label": "Income tax 22%, basic exemption EUR 700 a month",
+        "scope": "central"
       },
       {
         "name": "sotsiaalmaks",

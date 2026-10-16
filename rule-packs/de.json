@@ -24,6 +24,31 @@
       "note": "Temporary Covid-19 reduction"
     }
   ],
+  "enforcement": {
+    "level": "strict",
+    "facts": [
+      "Säumniszuschlag: 1% of the unpaid tax for each started month (§ 240 AO)",
+      "The Finanzamt raises prepayments when it expects more tax"
+    ],
+    "source": {
+      "title": "§ 240 AO, Säumniszuschläge (official text)",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__240.html",
+      "official": true
+    }
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile (a home kept for use) or habitual abode (more than 6 months) in Germany"
+    ],
+    "days": 183,
+    "window": "continuous",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Germany, residence",
+      "url": "https://taxsummaries.pwc.com/germany/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 300,
   "dueNote": "VAT returns (Umsatzsteuer-Voranmeldung) are due on the 10th day after each month or quarter, and income-tax prepayments on 10 March, June, September and December; pay them from the vault as they fall due. The rest of a year's reserve is released about ten months after the year ends, after the annual return and assessment.",
@@ -124,7 +149,8 @@
             4500
           ]
         ],
-        "label": "Income tax, 2026 basic table (linear zones approximated in steps)"
+        "label": "Income tax, 2026 basic table (linear zones approximated in steps)",
+        "scope": "central"
       },
       {
         "name": "kranken_pflege",
@@ -138,6 +164,29 @@
         "label": "Statutory health and long-term care insurance, about 19% of profit (if not privately insured)",
         "min": 3000,
         "max": 13250
+      },
+      {
+        "name": "solidaritaetszuschlag",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            74945.57,
+            0
+          ],
+          [
+            116584.33,
+            500
+          ],
+          [
+            277825,
+            231
+          ],
+          [
+            null,
+            247
+          ]
+        ],
+        "label": "Solidarity surcharge: 5.5% of income tax above the 2026 exemption (income tax over EUR 20,350), phased in at 11.9%"
       }
     ],
     "notes": [
@@ -168,6 +217,116 @@
       "url": "https://www.gesetze-im-internet.de/estg/__37.html",
       "official": true,
       "checked": "2026-10-16"
+    },
+    {
+      "title": "§ 32a EStG and § 3 SolZG 1995 (official texts)",
+      "url": "https://www.gesetze-im-internet.de/estg/__32a.html",
+      "official": true
+    }
+  ],
+  "regions": [
+    {
+      "id": "none",
+      "name": "No church tax",
+      "items": []
+    },
+    {
+      "id": "church-by-bw",
+      "name": "Church member in Bavaria or Baden-Württemberg (8%)",
+      "items": [
+        {
+          "name": "kirchensteuer",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12348,
+              0
+            ],
+            [
+              15074,
+              132
+            ],
+            [
+              17799,
+              172
+            ],
+            [
+              30820,
+              210
+            ],
+            [
+              43839,
+              246
+            ],
+            [
+              56859,
+              282
+            ],
+            [
+              69878,
+              318
+            ],
+            [
+              277825,
+              336
+            ],
+            [
+              null,
+              360
+            ]
+          ],
+          "label": "Church tax: 8% of income tax (members of a church that levies it)"
+        }
+      ]
+    },
+    {
+      "id": "church-other",
+      "name": "Church member in another Land (9%)",
+      "items": [
+        {
+          "name": "kirchensteuer",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12348,
+              0
+            ],
+            [
+              15074,
+              148
+            ],
+            [
+              17799,
+              194
+            ],
+            [
+              30820,
+              236
+            ],
+            [
+              43839,
+              277
+            ],
+            [
+              56859,
+              317
+            ],
+            [
+              69878,
+              358
+            ],
+            [
+              277825,
+              378
+            ],
+            [
+              null,
+              405
+            ]
+          ],
+          "label": "Church tax: 9% of income tax (members of a church that levies it)"
+        }
+      ]
     }
   ]
 }

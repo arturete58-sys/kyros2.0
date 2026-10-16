@@ -129,25 +129,25 @@ Each tax can be paid from the vault to the tax-payment destination whenever it i
 | [AD](../rule-packs/ad.json) | Andorra | EUR | IGI 4.5% / 1% | Year + 212 days | `standard` (estimate), `not-igi-registered` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [AE](../rule-packs/ae.json) | United Arab Emirates | AED | VAT 5% | Quarter + 28 days | `vat-only` (exact), `vat-and-corporate-tax` (exact on profit) | 1 official, 0 checked 2026-10-16 |
 | [AR](../rule-packs/ar.json) | Argentina | ARS | IVA 27% / 21% / 10.5% | Year + 181 days | `responsable-inscripto` (none), `exportacion-servicios` (none), `monotributo` (none) | 1 official, 0 checked 2026-10-16 |
-| [AU](../rule-packs/au.json) | Australia | AUD | GST 10% | Year + 304 days | `gst` (estimate), `not-gst-registered` (estimate) | 2 official, 1 checked 2026-10-16 |
+| [AU](../rule-packs/au.json) | Australia | AUD | GST 10% | Year + 304 days | `gst` (estimate), `not-gst-registered` (estimate) | 2 official, 2 checked 2026-10-16 |
 | [BH](../rule-packs/bh.json) | Bahrain | BHD | VAT 10% | Quarter + 31 days | `vat-only` (exact), `not-vat-registered` (exact) | 1 official, 1 checked 2026-10-16 |
-| [BR](../rule-packs/br.json) | Brazil | BRL | ISS / CBS / IBS: see notes | Month + 20 days | `simples-anexo-iii` (exact), `simples-anexo-v` (exact), `pessoa-fisica` (estimate) | 1 official, 0 checked 2026-10-16 |
+| [BR](../rule-packs/br.json) | Brazil | BRL | ISS / CBS / IBS: see notes | Month + 20 days | `simples-anexo-iii` (exact), `simples-anexo-v` (exact), `pessoa-fisica` (estimate) | 1 official, 1 checked 2026-10-16 |
 | [BS](../rule-packs/bs.json) | The Bahamas | BSD | VAT 10% | Quarter + 21 days | `vat-only` (exact) | 0 official, 0 checked 2026-10-16 |
-| [CA](../rule-packs/ca.json) | Canada | CAD | GST/HST 15% / 14.98% / 14% / 13% / 5% | Year + 120 days | `gst` (estimate), `hst-13` (estimate), `hst-14` (estimate), `hst-15` (estimate), `gst-qst` (estimate), `small-supplier` (estimate) | 2 official, 1 checked 2026-10-16 |
+| [CA](../rule-packs/ca.json) | Canada | CAD | GST/HST 15% / 14.98% / 14% / 13% / 5% | Year + 120 days | `gst` (estimate), `hst-13` (estimate), `hst-14` (estimate), `hst-15` (estimate), `gst-qst` (estimate), `small-supplier` (estimate) | 3 official, 3 checked 2026-10-16 |
 | [CH](../rule-packs/ch.json) | Switzerland | CHF | MWST / TVA / IVA 8.1% / 3.8% / 2.6%; changes 2028-01-01 (proposed) | Year + 120 days | `standard` (none), `reduced-vat` (none), `accommodation-vat` (none), `not-vat-registered` (none) | 2 official, 1 checked 2026-10-16 |
-| [CO](../rule-packs/co.json) | Colombia | COP | IVA 19% / 5% | Year + 293 days | `responsable-iva` (estimate), `no-responsable-iva` (estimate) | 1 official, 0 checked 2026-10-16 |
-| [CY](../rule-packs/cy.json) | Cyprus | EUR | VAT 19% / 9% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 1 official, 0 checked 2026-10-16 |
-| [DE](../rule-packs/de.json) | Germany | EUR | USt 19% / 7% | Year + 300 days | `standard` (estimate), `reduced-vat` (estimate), `small-business` (estimate) | 2 official, 1 checked 2026-10-16 |
+| [CO](../rule-packs/co.json) | Colombia | COP | IVA 19% / 5% | Year + 293 days | `responsable-iva` (estimate), `no-responsable-iva` (estimate) | 2 official, 1 checked 2026-10-16 |
+| [CY](../rule-packs/cy.json) | Cyprus | EUR | VAT 19% / 9% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 1 official, 1 checked 2026-10-16 |
+| [DE](../rule-packs/de.json) | Germany | EUR | USt 19% / 7% | Year + 300 days | `standard` (estimate), `reduced-vat` (estimate), `small-business` (estimate) | 3 official, 1 checked 2026-10-16 |
 | [EE](../rule-packs/ee.json) | Estonia | EUR | Käibemaks 24% / 13% / 9% | Year + 274 days | `standard` (exact on profit), `accommodation-vat` (exact on profit), `not-vat-registered` (exact on profit) | 1 official, 0 checked 2026-10-16 |
-| [ES](../rule-packs/es.json) | Spain | EUR | IVA 21% / 10% / 4% | Quarter + 30 days | `general` (estimate), `reduced-vat` (estimate), `super-reduced-vat` (estimate), `no-vat` (estimate), `vat-only` (exact) | 4 official, 1 checked 2026-10-16 |
+| [ES](../rule-packs/es.json) | Spain | EUR | IVA 21% / 10% / 7% / 4% / 3% | Quarter + 30 days | `general` (estimate), `reduced-vat` (estimate), `super-reduced-vat` (estimate), `no-vat` (estimate), `vat-only` (exact), `canarias-igic` (estimate), `canarias-igic-reduced` (estimate) | 19 official, 19 checked 2026-10-16 |
 | [FR](../rule-packs/fr.json) | France | EUR | TVA 20% / 10% / 5.5% / 2.1% | Quarter + 31 days | `micro-bnc` (exact), `micro-bnc-vl` (exact), `micro-bic-services` (exact), `micro-bnc-vat` (exact) | 2 official, 0 checked 2026-10-16 |
-| [GB](../rule-packs/gb.json) | United Kingdom | GBP | VAT 20% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 2 official, 1 checked 2026-10-16 |
+| [GB](../rule-packs/gb.json) | United Kingdom | GBP | VAT 20% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 2 checked 2026-10-16 |
 | [GE](../rule-packs/ge.json) | Georgia | GEL | VAT 18% | Month + 15 days | `small-business` (exact), `small-business-vat` (exact) | 1 official, 0 checked 2026-10-16 |
 | [HK](../rule-packs/hk.json) | Hong Kong | HKD | none | Year + 365 days | `profits-tax` (exact on profit) | 1 official, 0 checked 2026-10-16 |
 | [ID](../rule-packs/id.json) | Indonesia | IDR | PPN 12% / 11% | Year + 90 days | `umkm-final` (exact), `pkp-umkm` (exact), `regular` (estimate) | 3 official, 2 checked 2026-10-16 |
-| [IE](../rule-packs/ie.json) | Ireland | EUR | VAT 23% / 13.5% / 9% | Year + 304 days | `standard` (estimate), `reduced-vat` (estimate), `second-reduced-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 2 checked 2026-10-16 |
+| [IE](../rule-packs/ie.json) | Ireland | EUR | VAT 23% / 13.5% / 9% | Year + 304 days | `standard` (estimate), `reduced-vat` (estimate), `second-reduced-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 3 checked 2026-10-16 |
 | [IN](../rule-packs/in.json) | India | INR | GST 40% / 18% / 5% | Year + 212 days | `presumptive-gst` (presumptive), `presumptive-export` (presumptive), `regular-gst` (estimate) | 1 official, 0 checked 2026-10-16 |
-| [IT](../rule-packs/it.json) | Italy | EUR | IVA 22% / 10% / 5% / 4% | Year + 181 days | `forfettario` (exact), `forfettario-startup` (exact), `ordinario` (estimate) | 2 official, 0 checked 2026-10-16 |
+| [IT](../rule-packs/it.json) | Italy | EUR | IVA 22% / 10% / 5% / 4% | Year + 181 days | `forfettario` (exact), `forfettario-startup` (exact), `ordinario` (estimate) | 2 official, 1 checked 2026-10-16 |
 | [JP](../rule-packs/jp.json) | Japan | JPY | Consumption tax 10% / 8%; changes 2027-04-01 (proposed), 2029-04-01 (proposed) | Year + 90 days | `taxable` (estimate), `exempt` (estimate) | 2 official, 2 checked 2026-10-16 |
 | [KE](../rule-packs/ke.json) | Kenya | KES | VAT 16% | Year + 181 days | `turnover-tax` (exact), `vat` (estimate), `no-vat` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [KR](../rule-packs/kr.json) | South Korea | KRW | VAT 10% | Year + 151 days | `general` (estimate), `vat-exempt-freelancer` (estimate) | 1 official, 0 checked 2026-10-16 |
@@ -155,23 +155,23 @@ Each tax can be paid from the vault to the tax-payment destination whenever it i
 | [LI](../rule-packs/li.json) | Liechtenstein | CHF | MWST 8.1% / 3.8% / 2.6%; changes 2028-01-01 (proposed) | Year + 120 days | `standard` (none), `reduced-vat` (none), `accommodation-vat` (none), `not-vat-registered` (none) | 1 official, 1 checked 2026-10-16 |
 | [LU](../rule-packs/lu.json) | Luxembourg | EUR | TVA 17% / 14% / 8% / 3% | Year + 365 days | `standard` (none), `intermediate-vat` (none), `reduced-vat` (none), `franchise` (none) | 1 official, 0 checked 2026-10-16 |
 | [MC](../rule-packs/mc.json) | Monaco | EUR | TVA 20% / 10% / 5.5% / 2.1% | Quarter + 31 days | `standard` (exact), `reduced-vat` (exact), `isb` (exact on profit) | 1 official, 1 checked 2026-10-16 |
-| [MT](../rule-packs/mt.json) | Malta | EUR | VAT 18% / 7% / 5% | Year + 181 days | `standard` (estimate), `reduced-vat` (estimate), `article-11` (estimate) | 1 official, 0 checked 2026-10-16 |
-| [MX](../rule-packs/mx.json) | México | MXN | IVA 16% / 8% | Year + 120 days | `resico` (exact), `resico-frontera` (exact), `resico-exportacion` (exact), `actividad-empresarial` (estimate) | 1 official, 0 checked 2026-10-16 |
+| [MT](../rule-packs/mt.json) | Malta | EUR | VAT 18% / 7% / 5% | Year + 181 days | `standard` (estimate), `reduced-vat` (estimate), `article-11` (estimate) | 2 official, 1 checked 2026-10-16 |
+| [MX](../rule-packs/mx.json) | México | MXN | IVA 16% / 8% | Year + 120 days | `resico` (exact), `resico-frontera` (exact), `resico-exportacion` (exact), `actividad-empresarial` (estimate) | 1 official, 1 checked 2026-10-16 |
 | [NG](../rule-packs/ng.json) | Nigeria | NGN | VAT 7.5% | Year + 90 days | `freelancer` (estimate), `vat-registered` (estimate) | 0 official, 1 checked 2026-10-16 |
 | [NL](../rule-packs/nl.json) | Netherlands | EUR | BTW 21% / 9% | Year + 120 days | `standard` (estimate), `reduced-vat` (estimate), `kor` (estimate) | 2 official, 0 checked 2026-10-16 |
 | [PA](../rule-packs/pa.json) | Panama | USD | ITBMS 7% | Year + 75 days | `itbms` (estimate), `itbms-foreign-source` (exact), `no-itbms` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [PH](../rule-packs/ph.json) | Philippines | PHP | VAT 12% | Year + 105 days | `eight-percent` (exact), `graduated-non-vat` (estimate), `vat-registered` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [PK](../rule-packs/pk.json) | Pakistan | PKR | Sales tax 18% | Year + 273 days | `it-export-pseb` (exact), `it-export` (exact), `local-services` (estimate) | 1 official, 0 checked 2026-10-16 |
-| [PR](../rule-packs/pr.json) | Puerto Rico | USD | IVU 11.5% / 4% | Year + 105 days | `act-60-export-services` (exact on profit), `ivu` (estimate), `b2b-services` (estimate) | 1 official, 0 checked 2026-10-16 |
+| [PR](../rule-packs/pr.json) | Puerto Rico | USD | IVU 11.5% / 4% | Year + 105 days | `act-60-export-services` (exact on profit), `ivu` (estimate), `b2b-services` (estimate) | 2 official, 1 checked 2026-10-16 |
 | [PT](../rule-packs/pt.json) | Portugal | EUR | IVA 23% / 13% / 6% | Year + 181 days | `standard` (presumptive), `intermediate-vat` (presumptive), `reduced-vat` (presumptive), `vat-exempt` (presumptive) | 2 official, 0 checked 2026-10-16 |
 | [SG](../rule-packs/sg.json) | Singapore | SGD | GST 9% | Year + 365 days | `gst` (estimate), `not-gst-registered` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [SV](../rule-packs/sv.json) | El Salvador | USD | IVA 13% | Year + 120 days | `iva` (estimate), `exportacion` (estimate) | 1 official, 0 checked 2026-10-16 |
-| [TH](../rule-packs/th.json) | Thailand | THB | VAT 7%; changes 2027-10-01 | Year + 98 days | `vat-registered` (estimate), `not-vat-registered` (estimate) | 1 official, 1 checked 2026-10-16 |
+| [TH](../rule-packs/th.json) | Thailand | THB | VAT 7%; changes 2027-10-01 | Year + 98 days | `vat-registered` (estimate), `not-vat-registered` (estimate) | 1 official, 2 checked 2026-10-16 |
 | [TR](../rule-packs/tr.json) | Türkiye | TRY | KDV 20% / 10% / 1% | Year + 212 days | `kdv-standard` (estimate), `kdv-reduced` (estimate), `export-services` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [UA](../rule-packs/ua.json) | Ukraine | UAH | VAT (ПДВ) 20% / 14% / 7% | Quarter + 50 days | `fop-group-3` (exact), `fop-group-3-vat` (exact) | 1 official, 0 checked 2026-10-16 |
 | [US](../rule-packs/us.json) | United States | USD | none | Year + 105 days | `self-employed` (estimate), `with-sales-tax-example` (estimate) | 5 official, 1 checked 2026-10-16 |
 | [VN](../rule-packs/vn.json) | Vietnam | VND | VAT (GTGT) 10% / 8% / 5%; changes 2027-01-01 | Quarter + 30 days | `household-services` (exact), `company-vat` (exact on profit), `company-vat-8` (exact on profit) | 1 official, 1 checked 2026-10-16 |
-| [ZA](../rule-packs/za.json) | South Africa | ZAR | VAT 15% | Year + 273 days | `vat` (estimate), `not-vat-registered` (estimate) | 2 official, 1 checked 2026-10-16 |
+| [ZA](../rule-packs/za.json) | South Africa | ZAR | VAT 15% | Year + 273 days | `vat` (estimate), `not-vat-registered` (estimate) | 3 official, 2 checked 2026-10-16 |
 <!-- packs:end -->
 
 ## Coverage

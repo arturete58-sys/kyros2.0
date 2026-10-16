@@ -3,7 +3,9 @@ name: Law watch
 # Every Monday, and on demand: are the rule packs still the law?
 #  1. EU packs against the European Commission's official VAT database (TEDB);
 #  2. EU and UK packs against an independent maintained dataset;
-#  3. every official page the packs cite, for changed percentages or amounts.
+#  3. national income-tax scales against the OECD Tax Database (reported by governments);
+#  4. every official page the packs cite, for changed percentages or amounts; pages that
+#     refuse plain requests are read with a real browser, or from the Internet Archive.
 # Anything that needs a look opens (or updates) one issue. A maintainer reviews,
 # updates the pack, and syncs the on-chain rate registry from it; vaults that
 # follow the registry then change on the legal date with no action from users.
@@ -39,6 +41,14 @@ jobs:
         id: dataset
         continue-on-error: true
         run: node sdk/scripts/check-vat-rates.mjs --out dataset.md
+      - name: National scales against the OECD Tax Database
+        id: oecd
+        continue-on-error: true
+        run: node sdk/scripts/check-brackets-oecd.mjs --out oecd.md
+      - name: Browser for pages that block plain requests
+        run: |
+          npm i --no-save --prefix sdk playwright@1.48.2
+          npx --prefix sdk playwright install --with-deps chromium
       - name: Official pages cited by the packs
         id: pages
         continue-on-error: true
@@ -47,20 +57,20 @@ jobs:
         if: always()
         run: |
           : > report.md
-          for f in tedb.md dataset.md pages.md; do if [ -f "$f" ]; then cat "$f" >> report.md; echo >> report.md; fi; done
+          for f in tedb.md dataset.md oecd.md pages.md; do if [ -f "$f" ]; then cat "$f" >> report.md; echo >> report.md; fi; done
           cat report.md >> "$GITHUB_STEP_SUMMARY"
-      - name: Save the first snapshot of the official pages
+      - name: Save the official snapshots (pages, OECD figures)
         if: always()
         run: |
           if [ -n "$(git status --porcelain rule-packs/watch)" ]; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add rule-packs/watch
-            git commit -m 'Law watch: snapshot of the official pages'
+            git commit -m 'Law watch: official snapshots'
             git pull --rebase origin main && git push
           fi
       - name: Open or update an issue
-        if: steps.tedb.outcome == 'failure' || steps.dataset.outcome == 'failure' || steps.pages.outcome == 'failure'
+        if: steps.tedb.outcome == 'failure' || steps.dataset.outcome == 'failure' || steps.oecd.outcome == 'failure' || steps.pages.outcome == 'failure'
         uses: actions/github-script@v7
         with:
           script: |

@@ -16,6 +16,28 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days in Andorra, or the main centre of economic interests there"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Passive residence",
+        "summary": "Residence permit without work in Andorra; IRPF still applies to income, at up to 10%"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Andorra, residence",
+      "url": "https://taxsummaries.pwc.com/andorra/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 212,
   "dueNote": "IGI returns are quarterly or half-yearly. Personal income tax (IRPF) is settled yearly; the rest of a year's reserve is released after 31 July.",

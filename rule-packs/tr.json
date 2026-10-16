@@ -17,6 +17,22 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile in Türkiye, or more than 6 months in a calendar year"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Türkiye, residence",
+      "url": "https://taxsummaries.pwc.com/turkey/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 212,
   "dueNote": "KDV returns are monthly, by the 28th. The annual income tax return is filed in March and the tax is paid in two instalments, in March and July; the rest of a year's reserve is released after 31 July.",
@@ -97,7 +113,8 @@
             4000
           ]
         ],
-        "label": "Income tax 2026, non-wage income"
+        "label": "Income tax 2026, non-wage income",
+        "scope": "central"
       },
       {
         "name": "bag_kur",

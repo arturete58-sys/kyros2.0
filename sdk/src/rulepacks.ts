@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PeriodKind } from './periods.js';
 import { type Rule, validateRule } from './split.js';
-import type { Estimate, Precision, Prepayment, Region } from './estimate.js';
+import type { Enforcement, Estimate, Precision, Prepayment, Region } from './estimate.js';
 
 export type CalendarPeriod = 'Month' | 'Quarter' | 'Year';
 /** What a preset's reserve buckets are meant to cover, for the reserve check. */
@@ -57,6 +57,10 @@ export interface RulePack {
   presets: RulePackPreset[];
   /** Simplified annual tax estimate used by `checkReserve`. */
   estimate?: Estimate;
+  /** How strictly late or short payment is penalised; sets the safety margin of the reserve check. */
+  enforcement?: Enforcement;
+  /** Who is tax resident there, and on what income. */
+  residence?: Residence;
   /** How the law sets income-tax prepayments, when it does so objectively. */
   prepayment?: Prepayment;
   /** Regions with their own income tax (US states), chosen with `ReserveInput.region`. */
@@ -287,4 +291,81 @@ export function customRule(
   const rule = { vatBps, buckets: choice.reserves.map(({ name, bps }) => ({ name, bps })) };
   validateRule(rule);
   return rule;
+}
+
+/** How a jurisdiction decides who is tax resident, and what it taxes them on. */
+export interface Residence {
+  /** `worldwide`, `territorial` (local-source income only), `remittance` (foreign income when brought in) or `none` (no personal income tax). */
+  basis: 'worldwide' | 'territorial' | 'remittance' | 'none';
+  /** Day threshold of the main presence test, if any. */
+  days?: number;
+  /** Over what the days are counted. */
+  window?: string;
+  /** The day test is met at exactly `days` ("183 days or more"); otherwise it needs more ("more than 183 days"). */
+  inclusive?: boolean;
+  /** The tests, in plain words. */
+  tests: string[];
+  /** Regimes for newcomers, nomads or non-domiciled residents. */
+  regimes?: { name: string; summary: string }[];
+  /** Citizens are taxed wherever they live (the United States). */
+  citizenshipBased?: boolean;
+  source?: { title: string; url: string; official?: boolean; checked?: string };
+}
+
+export interface ResidenceSituation {
+  /** Days spent in each country (ISO code) in the period that country counts. */
+  days: Record<string, number>;
+  /** Countries where the person keeps a home available to them. */
+  homes?: string[];
+  /** Citizenships (ISO codes). */
+  citizenships?: string[];
+}
+
+export interface ResidenceFinding {
+  country: string;
+  /** `likely`: a test is clearly met; `possible`: depends on facts the days alone do not show; `no`: no test met on these facts. */
+  resident: 'likely' | 'possible' | 'no';
+  why: string;
+  basis: Residence['basis'];
+  regimes: { name: string; summary: string }[];
+}
+
+/**
+ * A first answer to "where do I pay income tax?" from days spent, homes and
+ * citizenship, using each pack's residence tests. When more than one country
+ * claims the person, the tax treaty between them decides (permanent home,
+ * centre of vital interests, habitual abode, nationality); the result says so.
+ * It is a guide for choosing the rule pack, not a ruling.
+ */
+export function residenceGuide(packs: RulePack[], s: ResidenceSituation): { findings: ResidenceFinding[]; summary: string } {
+  const findings: ResidenceFinding[] = [];
+  for (const p of packs) {
+    const r = p.residence;
+    if (!r) continue;
+    const days = s.days[p.country] ?? 0;
+    const home = (s.homes ?? []).includes(p.country);
+    const citizen = (s.citizenships ?? []).includes(p.country);
+    let resident: ResidenceFinding['resident'] = 'no';
+    let why = `${days} days`;
+    if (r.citizenshipBased && citizen) {
+      resident = 'likely';
+      why = 'citizens are taxed on worldwide income wherever they live';
+    } else if (r.days !== undefined && (r.inclusive ? days >= r.days : days > r.days)) {
+      resident = 'likely';
+      why = `${days} days, over the ${r.days}-day test`;
+    } else if (home || days > 0) {
+      resident = home ? 'possible' : 'no';
+      why = home ? `a home there can make you resident under its other tests (${r.tests[0]})` : `${days} days, under the day test`;
+    }
+    if (resident !== 'no' || days > 0 || home) findings.push({ country: p.country, resident, why, basis: r.basis, regimes: r.regimes ?? [] });
+  }
+  const likely = findings.filter((f) => f.resident === 'likely');
+  const taxing = likely.filter((f) => f.basis !== 'none');
+  const summary =
+    likely.length === 0
+      ? 'No country is clearly claiming you on these facts: check the other tests (home, family, centre of interests), because being resident nowhere is rarely accepted.'
+      : likely.length === 1
+        ? `${likely[0].country} is likely your tax residence (${likely[0].why}); use its rule pack.`
+        : `${likely.map((f) => f.country).join(' and ')} may both treat you as resident: the tax treaty between them decides (permanent home, then centre of vital interests, then habitual abode, then nationality).${taxing.length < likely.length ? ' Some of them have no personal income tax.' : ''}`;
+  return { findings, summary };
 }

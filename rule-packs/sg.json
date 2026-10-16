@@ -27,6 +27,28 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "territorial",
+    "tests": [
+      "183 days in the calendar year (or over two years), or ordinarily residing in Singapore"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Foreign-sourced income",
+        "summary": "Received by individuals is exempt, except through a partnership"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Singapore, residence",
+      "url": "https://taxsummaries.pwc.com/singapore/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 365,
   "dueNote": "GST returns are quarterly, due one month after the quarter. Income tax is assessed yearly after the return (due in April); the rest of a year's reserve is released one year after it ends.",

@@ -17,6 +17,31 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "strict",
+    "facts": [
+      "Compensatory interest and fines for late payment; prepayments (pagamentos por conta) are compulsory"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days in any 12 months, or a home in Portugal that suggests habitual residence"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "regimes": [
+      {
+        "name": "IFICI (successor of NHR)",
+        "summary": "20% on qualifying Portuguese professional income and exemption of most foreign income for 10 years, for qualifying activities"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Portugal, residence",
+      "url": "https://taxsummaries.pwc.com/portugal/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 181,
   "dueNote": "VAT returns are quarterly or monthly; the annual IRS return is filed from April to June. The rest of a year's reserve is released after 30 June.",
@@ -134,7 +159,8 @@
             4800
           ]
         ],
-        "label": "IRS (mainland), simplified regime: 75% of service revenue is taxable"
+        "label": "IRS (mainland), simplified regime: 75% of service revenue is taxable",
+        "scope": "central"
       },
       {
         "name": "seguranca_social",

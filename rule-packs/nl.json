@@ -16,6 +16,28 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard",
+    "facts": [
+      "Tax interest on late assessments; penalties for not filing"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Facts and circumstances: home, family, work and social ties in the Netherlands"
+    ],
+    "regimes": [
+      {
+        "name": "30% ruling",
+        "summary": "For incoming employees with scarce skills; not for the self-employed"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Netherlands, residence",
+      "url": "https://taxsummaries.pwc.com/netherlands/individual/residence"
+    }
+  },
   "period": "Year",
   "dueOffsetDays": 120,
   "dueNote": "VAT returns are usually quarterly, due by the end of the month after the quarter; provisional income-tax assessments are paid in monthly instalments. The rest of a year's reserve is released after 1 May, the deadline of the annual return.",
@@ -93,7 +115,8 @@
         ],
         "label": "Box 1 income tax 2026, after the 12.7% SME profit exemption, minus typical tax credits",
         "reliefBps": 1270,
-        "credit": 4000
+        "credit": 4000,
+        "scope": "central"
       },
       {
         "name": "zvw",

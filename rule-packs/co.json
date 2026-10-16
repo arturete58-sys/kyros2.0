@@ -16,6 +16,22 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days, continuous or not, in any 365 days"
+    ],
+    "days": 183,
+    "window": "365-days",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Colombia, residence",
+      "url": "https://taxsummaries.pwc.com/colombia/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 293,
   "dueNote": "IVA returns are bimonthly or four-monthly. The income tax return is filed between August and October depending on the taxpayer's ID; the rest of a year's reserve is released after 20 October.",
@@ -90,7 +106,8 @@
             3900
           ]
         ],
-        "label": "Income tax, article 241 table (UVT 2026: COP 52,374)"
+        "label": "Income tax, article 241 table (UVT 2026: COP 52,374)",
+        "scope": "central"
       },
       {
         "name": "seguridad_social",
@@ -120,6 +137,12 @@
     {
       "title": "DIAN",
       "url": "https://www.dian.gov.co",
+      "official": true
+    },
+    {
+      "title": "DIAN: Resolución 000238 de 2025, UVT 2026 = COP 52,374 (official)",
+      "url": "https://normograma.dian.gov.co/dian/compilacion/docs/resolucion_dian_0238_2025.htm",
+      "checked": "2026-10-16",
       "official": true
     }
   ]

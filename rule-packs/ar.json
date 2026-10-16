@@ -17,6 +17,25 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "strict",
+    "facts": [
+      "Compensatory interest on late tax, high in nominal terms; formal fines on top"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Becomes resident after 12 months of continuous presence (or with permanent residence status)"
+    ],
+    "days": 365,
+    "window": "12-months",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Argentina, residence",
+      "url": "https://taxsummaries.pwc.com/argentina/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 181,
   "dueNote": "IVA returns are monthly. The annual Ganancias return is due in June; the rest of a year's reserve is released after 30 June.",

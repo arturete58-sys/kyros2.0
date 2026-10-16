@@ -22,6 +22,19 @@
       "note": "Raised to 10% by Decree-Law No. 33 of 2021"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "none",
+    "tests": [
+      "No personal income tax, so residence matters only for other countries' rules"
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Bahrain, residence",
+      "url": "https://taxsummaries.pwc.com/bahrain/individual/residence"
+    }
+  },
   "period": "Quarter",
   "dueOffsetDays": 31,
   "dueNote": "Businesses below BHD 3 million file VAT quarterly, by the last day of the month after the quarter.",

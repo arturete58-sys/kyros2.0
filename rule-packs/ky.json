@@ -7,6 +7,19 @@
   "reviewed": "2026-10-16",
   "currency": "KYD",
   "vatName": "VAT",
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "none",
+    "tests": [
+      "No direct taxes"
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Cayman Islands, residence",
+      "url": "https://taxsummaries.pwc.com/cayman-islands/individual/residence"
+    }
+  },
   "period": "Year",
   "dueOffsetDays": 0,
   "dueNote": "There is no income tax or VAT to reserve for; a vault is only useful for taxes owed elsewhere (e.g. US citizens, who are taxed on worldwide income).",

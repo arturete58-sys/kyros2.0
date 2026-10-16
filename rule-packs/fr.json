@@ -18,6 +18,31 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard",
+    "facts": [
+      "Late payment: 10% surcharge and interest of 0.2% a month"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Home or main stay in France (more than 183 days), main professional activity there, or centre of economic interests there"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Impatriates",
+        "summary": "Partial exemption of some income for 8 years for people recruited from abroad"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: France, residence",
+      "url": "https://taxsummaries.pwc.com/france/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Quarter",
   "dueOffsetDays": 31,
   "dueNote": "Micro-entrepreneurs declaring quarterly pay URSSAF contributions (and the optional versement libératoire) by the end of the month after each quarter.",
@@ -77,7 +102,8 @@
                 4500
               ]
             ],
-            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance"
+            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance",
+            "scope": "central"
           }
         ]
       }
@@ -187,7 +213,8 @@
                 4500
               ]
             ],
-            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance"
+            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance",
+            "scope": "central"
           }
         ]
       }
@@ -248,7 +275,8 @@
                 4500
               ]
             ],
-            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance"
+            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance",
+            "scope": "central"
           }
         ]
       }

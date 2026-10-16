@@ -26,6 +26,22 @@
       "note": "The temporary 8% rate ends after 31 December 2026 unless extended again"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "183 days in the calendar year or 12 months from arrival, or a registered permanent home or a lease of 183 days or more"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Vietnam, residence",
+      "url": "https://taxsummaries.pwc.com/vietnam/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Quarter",
   "dueOffsetDays": 30,
   "dueNote": "Business households above the exemption threshold declare and pay quarterly, by the last day of the month after the quarter, with an annual settlement.",

@@ -18,6 +18,35 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "strict",
+    "facts": [
+      "Late payment penalties and interest; voluntary correction (ravvedimento operoso) reduces them only if paid before the agency acts"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days (from 2024: physical presence counts), registration in the population register, or domicile or habitual residence in Italy"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Impatriati",
+        "summary": "50% of work and self-employment income exempt for 5 years for new residents who qualify"
+      },
+      {
+        "name": "Flat tax for new residents",
+        "summary": "A fixed annual tax on foreign income instead of the normal rules, for high earners who move to Italy"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Italy, residence",
+      "url": "https://taxsummaries.pwc.com/italy/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 181,
   "dueNote": "Income tax balances and first advances are due by 30 June, second advances by 30 November. The rest of a year's reserve is released after 30 June of the following year.",
@@ -152,7 +181,8 @@
             4300
           ]
         ],
-        "label": "IRPEF 2026"
+        "label": "IRPEF 2026",
+        "scope": "central"
       },
       {
         "name": "addizionali",
@@ -193,6 +223,11 @@
       "title": "Agenzia delle Entrate",
       "url": "https://www.agenziaentrate.gov.it",
       "official": true
+    },
+    {
+      "title": "Legge di bilancio 2026 (L. 199/2025): IRPEF second bracket 33%",
+      "url": "https://www.ecnews.it/lavoro/news-del-giorno/legge-bilancio-2026-revisione-aliquote-irpef/",
+      "checked": "2026-10-16"
     }
   ]
 }

@@ -6,6 +6,19 @@
   "version": "2026.2",
   "reviewed": "2026-10-16",
   "currency": "HKD",
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "territorial",
+    "tests": [
+      "Profits tax applies to profits arising in or derived from Hong Kong, whatever the residence"
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Hong Kong, residence",
+      "url": "https://taxsummaries.pwc.com/hong-kong-sar/individual/residence"
+    }
+  },
   "period": "Year",
   "dueOffsetDays": 365,
   "dueNote": "There is no VAT or GST. Profits tax is assessed yearly with provisional tax; the rest of a year's reserve is released one year after it ends.",

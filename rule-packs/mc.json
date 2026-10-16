@@ -19,6 +19,25 @@
       "note": "Monaco applies VAT on the same basis and at the same rates as France"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "none",
+    "tests": [
+      "No personal income tax for residents, except French nationals"
+    ],
+    "regimes": [
+      {
+        "name": "French nationals",
+        "summary": "Taxed by France under the 1963 convention"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Monaco, residence",
+      "url": "https://taxsummaries.pwc.com/monaco/individual/residence"
+    }
+  },
   "period": "Quarter",
   "dueOffsetDays": 31,
   "dueNote": "VAT is declared monthly or quarterly as in France. ISB, where it applies, is paid in quarterly instalments (February, May, August, November) and a return by 31 March.",

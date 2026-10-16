@@ -46,6 +46,10 @@ export interface Estimate {
   socialDeductible?: boolean;
   /** Only this share of social contributions is deductible, in bps (US: half of self-employment tax). */
   socialDeductibleBps?: number;
+  /** A flat deduction from taxable profit, as a share of it (Spain: 5% hard-to-justify expenses in simplified direct estimation). */
+  profitReliefBps?: number;
+  /** Cap on that deduction, in the pack's currency (Spain: EUR 2,000). */
+  profitReliefMax?: number;
   items: EstimateItem[];
   notes?: string[];
 }
@@ -93,7 +97,28 @@ export interface EstimateResult {
   social: number;
 }
 
-export type ReserveStatus = 'short' | 'ok' | 'generous' | 'unknown';
+export type ReserveStatus = 'short' | 'tight' | 'ok' | 'generous' | 'unknown';
+
+/** How hard a country comes down on late or short payment of income tax. */
+export interface Enforcement {
+  level: 'strict' | 'standard' | 'lenient';
+  /** What a late or short payment costs, in plain words. */
+  facts?: string[];
+  source?: { title: string; url: string; official?: boolean; checked?: string };
+}
+
+/**
+ * Safety margin over the estimated need, in points of the base (bps), by how
+ * exact the check is and how strict the country is. An exact figure needs no
+ * margin; a progressive estimate in a strict country needs the most.
+ */
+export const SAFETY_MARGIN_BPS: Record<Precision, Record<Enforcement['level'], number>> = {
+  exact: { strict: 0, standard: 0, lenient: 0 },
+  presumptive: { strict: 150, standard: 100, lenient: 50 },
+  'exact-on-profit': { strict: 200, standard: 150, lenient: 100 },
+  estimate: { strict: 400, standard: 300, lenient: 200 },
+  none: { strict: 0, standard: 0, lenient: 0 },
+};
 
 /**
  * How a country sets income-tax prepayments, when the law fixes them objectively:
@@ -116,6 +141,8 @@ export interface Region {
   id: string;
   name: string;
   items: EstimateItem[];
+  /** Names of the national estimate's items this region's items replace (a default regional scale, or a whole foral system). */
+  replaces?: string[];
   note?: string;
 }
 
@@ -138,6 +165,12 @@ export interface ReserveCheck extends Partial<EstimateResult> {
   reserveBps: number;
   /** Estimated reserve needed for what `covers` lists, bps of the base. */
   requiredBps?: number;
+  /** Safety margin added for this precision and country, bps. */
+  marginBps?: number;
+  /** requiredBps + marginBps: the reserve the app recommends. */
+  recommendedBps?: number;
+  /** The country's enforcement level used for the margin. */
+  enforcement?: Enforcement['level'];
   /** Amount the chosen reserve would set aside in a year. */
   reserved: number;
   /** Estimated amount owed for what `covers` lists. */
@@ -180,7 +213,9 @@ export function estimateTaxes(est: Estimate, input: ReserveInput): EstimateResul
   const revenue = Math.max(0, input.revenue);
   const profile = ACTIVITY_PROFILES[input.activity ?? 'other'] ?? ACTIVITY_PROFILES.other;
   const expenses = Math.max(0, input.expenses ?? (revenue * profile.expenseBps) / 10_000);
-  const taxable = est.taxableShareBps !== undefined ? (revenue * est.taxableShareBps) / 10_000 : Math.max(0, revenue - expenses);
+  const gross = est.taxableShareBps !== undefined ? (revenue * est.taxableShareBps) / 10_000 : Math.max(0, revenue - expenses);
+  const relief = est.profitReliefBps ? Math.min((gross * est.profitReliefBps) / 10_000, est.profitReliefMax ?? Infinity) : 0;
+  const taxable = Math.max(0, gross - relief);
   const lines: EstimateResult['lines'] = [];
   const amountOf = (it: EstimateItem, taxableBasis: number): number => {
     const basis = (it.basis === 'revenue' ? revenue : taxableBasis) * (1 - (it.reliefBps ?? 0) / 10_000);
@@ -225,7 +260,8 @@ export function estimateFor(pack: RulePack, presetId: string, region?: string): 
   if (!base || !region) return base;
   const r = (pack.regions ?? []).find((x) => x.id === region);
   if (!r) throw new Error(`no region ${region} in ${pack.id}`);
-  return { ...base, items: [...base.items, ...r.items], notes: [...(base.notes ?? []), ...(r.note ? [r.note] : [])] };
+  const kept = base.items.filter((it) => !(r.replaces ?? []).includes(it.name));
+  return { ...base, items: [...kept, ...r.items], notes: [...(base.notes ?? []), ...(r.note ? [r.note] : [])] };
 }
 
 /** How far the reserve check can be trusted for this preset (see `Precision`). */
@@ -279,11 +315,19 @@ export function checkReserve(pack: RulePack, presetId: string, input: ReserveInp
   const owed = (covers.includes('incomeTax') ? r.incomeTax : 0) + (covers.includes('social') ? r.social : 0);
   // The small epsilon keeps exact rates (6% of revenue) from rounding up to 601 bps.
   const requiredBps = r.revenue > 0 ? Math.max(0, Math.ceil((owed / r.revenue) * 10_000 - 1e-6)) : 0;
-  const status: ReserveStatus = reserveBps < requiredBps ? 'short' : reserveBps > requiredBps + GENEROUS_MARGIN_BPS ? 'generous' : 'ok';
+  const precision = precisionOf(pack, presetId);
+  const level = pack.enforcement?.level ?? 'standard';
+  const marginBps = SAFETY_MARGIN_BPS[precision][level];
+  const recommendedBps = requiredBps + marginBps;
+  const status: ReserveStatus =
+    reserveBps < requiredBps ? 'short' : reserveBps < recommendedBps ? 'tight' : reserveBps > recommendedBps + GENEROUS_MARGIN_BPS ? 'generous' : 'ok';
   return {
     ...r,
     status,
-    precision: precisionOf(pack, presetId),
+    precision,
+    marginBps,
+    recommendedBps,
+    enforcement: level,
     covers,
     reserveBps,
     requiredBps,

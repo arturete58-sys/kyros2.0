@@ -36,6 +36,22 @@
       "note": "Liechtenstein adopts Swiss VAT rates under the 1994 VAT treaty; follows the Swiss vote expected on 29 November 2026"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile or habitual residence (more than 6 months) in Liechtenstein"
+    ],
+    "days": 183,
+    "window": "continuous",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Liechtenstein, residence",
+      "url": "https://taxsummaries.pwc.com/liechtenstein/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 120,
   "dueNote": "VAT returns are quarterly, due 60 days after the quarter. Income tax (Erwerbssteuer) is assessed yearly.",

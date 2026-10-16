@@ -23,6 +23,22 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard",
+    "facts": [
+      "Surcharges (recargos) monthly on unpaid tax, plus inflation adjustment"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "A home available in Mexico; if there is also one abroad, the centre of vital interests (more than 50% of income from Mexico, or the main centre of professional activity) decides"
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: México, residence",
+      "url": "https://taxsummaries.pwc.com/mexico/individual/residence"
+    }
+  },
   "period": "Year",
   "dueOffsetDays": 120,
   "dueNote": "IVA and ISR are paid monthly, by the 17th of the following month; the annual return is due on 30 April.",
@@ -201,43 +217,43 @@
         "kind": "incomeTax",
         "brackets": [
           [
-            8952.49,
+            10135.08,
             192
           ],
           [
-            75984.55,
+            86022.12,
             640
           ],
           [
-            133536.07,
+            151176.24,
             1088
           ],
           [
-            155229.8,
+            175735.68,
             1600
           ],
           [
-            185852.57,
+            210403.68,
             1792
           ],
           [
-            374837.88,
+            424353.96,
             2136
           ],
           [
-            590795.99,
+            668840.16,
             2352
           ],
           [
-            1127926.84,
+            1276926.0,
             3000
           ],
           [
-            1503902.46,
+            1702567.92,
             3200
           ],
           [
-            4511707.37,
+            5107703.88,
             3400
           ],
           [
@@ -245,7 +261,8 @@
             3500
           ]
         ],
-        "label": "ISR, annual table (article 152)"
+        "label": "ISR annual tariff 2026 (art. 152 LISR, updated by Anexo 8 RMF 2026: twelve times the monthly tariff)",
+        "scope": "central"
       }
     ]
   },
@@ -262,6 +279,11 @@
     {
       "title": "Alegra: RESICO for individuals",
       "url": "https://blog.alegra.com/mexico/resico-personas-fisicas/"
+    },
+    {
+      "title": "IDC: ISR tariffs 2026, Anexo 8 of the RMF 2026 (DOF, 28 December 2025), factor 1.13213",
+      "url": "https://idconline.mx/fiscal-contable/2025/12/30/tablas-y-tarifas-isr-2026-nueva-actualizacion",
+      "checked": "2026-10-16"
     }
   ]
 }

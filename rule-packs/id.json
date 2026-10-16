@@ -23,6 +23,38 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days in any 12 months, or presence in the year with intention to reside (a KITAS or KITAP valid for more than 183 days counts), or a home available in Indonesia"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "regimes": [
+      {
+        "name": "E33G remote worker visa",
+        "summary": "An immigration status, not a tax exemption: holders with an ITAS over 183 days can be resident from arrival"
+      },
+      {
+        "name": "Foreign experts",
+        "summary": "Qualifying foreign experts are taxed only on Indonesian income for 4 years (PMK 18/2021); not available through the nomad visa alone"
+      },
+      {
+        "name": "UMKM 0.5%",
+        "summary": "Turnover tax for resident individuals with business turnover up to IDR 4.8 billion; independent professional services are excluded"
+      }
+    ],
+    "source": {
+      "title": "DJP: when foreign nationals are taxed only on Indonesian income, and the residence tests (official)",
+      "url": "https://www.pajak.go.id/id/artikel/wna-hanya-dipajaki-atas-penghasilan-dari-indonesia-kok-bisa",
+      "official": true,
+      "checked": "2026-10-16"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 90,
   "dueNote": "The UMKM final tax is paid monthly, by the 15th of the following month; annual returns are due on 31 March.",
@@ -154,6 +186,7 @@
     ]
   },
   "notes": [
+    "The 0.5% final tax (PP 55/2022, made permanent for individuals by PP 20/2026) does not cover independent professional services (pekerjaan bebas: consultants, lawyers, accountants, doctors and similar); those pay the progressive rates on net income.",
     "The 0.5% final tax for individuals was made permanent in 2026 (PP 20/2026).",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],

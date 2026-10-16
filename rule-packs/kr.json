@@ -16,6 +16,28 @@
       "note": "Rate in force on 1 January 2026"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile in Korea, or residence for 183 days or more"
+    ],
+    "days": 183,
+    "window": "continuous",
+    "regimes": [
+      {
+        "name": "Short-term foreign residents",
+        "summary": "Foreign nationals resident 5 years or less in the last 10 are taxed on foreign income only when paid in or remitted to Korea"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: South Korea, residence",
+      "url": "https://taxsummaries.pwc.com/republic-of-korea/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 151,
   "dueNote": "VAT for individuals is filed twice a year (25 January and 25 July); the comprehensive income tax return is due on 31 May.",
@@ -98,7 +120,8 @@
           ]
         ],
         "label": "Comprehensive income tax after the basic deduction, with local income tax (10% of the tax)",
-        "surchargeBps": 1000
+        "surchargeBps": 1000,
+        "scope": "central"
       },
       {
         "name": "nhi_pension",

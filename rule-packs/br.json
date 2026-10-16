@@ -7,6 +7,25 @@
   "reviewed": "2026-10-16",
   "currency": "BRL",
   "vatName": "ISS / CBS / IBS",
+  "enforcement": {
+    "level": "strict",
+    "facts": [
+      "Late payment fine of 0.33% a day up to 20%, plus interest at the Selic rate"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "More than 183 days in any 12 months, or arrival with a permanent visa"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Brazil, residence",
+      "url": "https://taxsummaries.pwc.com/brazil/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Month",
   "dueOffsetDays": 20,
   "dueNote": "The Simples Nacional DAS is due on the 20th of the following month. Self-employed individuals pay the carnê-leão monthly and settle the annual return by the end of May.",
@@ -188,6 +207,11 @@
       "title": "Receita Federal",
       "url": "https://www.gov.br/receitafederal",
       "official": true
+    },
+    {
+      "title": "Receita Federal guidance on the 2026 income-tax reduction (via COAD)",
+      "url": "https://coad.com.br/home/noticias-detalhe/135095/receita-federal-orienta-fontes-pagadoras-e-contribuintes-a-calcular-a-reducao-do-imposto-de-renda-a-partir-de-1-de-janeiro-de-2026",
+      "checked": "2026-10-16"
     }
   ]
 }

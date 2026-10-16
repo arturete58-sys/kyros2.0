@@ -16,6 +16,32 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard",
+    "facts": [
+      "Late payment interest at the Bank of England base rate plus 4 points",
+      "Late payment penalties of 5% of the unpaid tax at 30 days, 6 months and 12 months"
+    ]
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Statutory residence test: 183 days in the tax year, or the only home in the UK, or full-time work there, or the ties tests"
+    ],
+    "days": 183,
+    "window": "tax-year",
+    "regimes": [
+      {
+        "name": "Foreign income and gains (FIG) regime",
+        "summary": "From April 2025, new residents after 10 years abroad are not taxed on foreign income and gains for their first 4 years"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: United Kingdom, residence",
+      "url": "https://taxsummaries.pwc.com/united-kingdom/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 396,
   "dueNote": "VAT returns are quarterly, due one month and seven days after the period. Self Assessment payments on account fall on 31 January and 31 July, and the balancing payment on 31 January after the tax year (6 April to 5 April). The rest of a calendar year's reserve is released on 31 January two years later, after the last balancing payment it can include.",
@@ -99,7 +125,8 @@
             4500
           ]
         ],
-        "label": "Income tax, England, Wales and Northern Ireland (the personal allowance tapers away from GBP 100,000)"
+        "label": "Income tax, England, Wales and Northern Ireland (the personal allowance tapers away from GBP 100,000)",
+        "scope": "central"
       },
       {
         "name": "class4_nic",
@@ -145,6 +172,68 @@
       "title": "GOV.UK: Self Assessment payments on account",
       "url": "https://www.gov.uk/understand-self-assessment-bill/payments-on-account",
       "official": true
+    },
+    {
+      "title": "Scottish Government: Scottish income tax rates and bands 2026 to 2027 (official)",
+      "url": "https://www.gov.scot/publications/scottish-income-tax-rates-and-bands/pages/2026-to-2027/",
+      "official": true,
+      "checked": "2026-10-16"
+    }
+  ],
+  "regions": [
+    {
+      "id": "ENG-WLS-NI",
+      "name": "England, Wales or Northern Ireland",
+      "items": []
+    },
+    {
+      "id": "SCT",
+      "name": "Scotland",
+      "replaces": [
+        "income_tax"
+      ],
+      "items": [
+        {
+          "name": "income_tax_scotland",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12570,
+              0
+            ],
+            [
+              16537,
+              1900
+            ],
+            [
+              29526,
+              2000
+            ],
+            [
+              43662,
+              2100
+            ],
+            [
+              75000,
+              4200
+            ],
+            [
+              100000,
+              4500
+            ],
+            [
+              125140,
+              6750
+            ],
+            [
+              null,
+              4800
+            ]
+          ],
+          "label": "Scottish income tax 2026-27 (starter 19% to top 48%), with the personal allowance withdrawn between GBP 100,000 and 125,140"
+        }
+      ],
+      "note": "Scottish taxpayers pay Scottish rates on earned income; National Insurance stays UK-wide."
     }
   ]
 }

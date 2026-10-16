@@ -15,6 +15,28 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "none",
+    "tests": [
+      "183 days in 12 months; or 90 days with a UAE residence permit and a permanent home or job there; or the UAE as the main home and centre of interests"
+    ],
+    "days": 183,
+    "window": "12-months",
+    "regimes": [
+      {
+        "name": "No personal income tax",
+        "summary": "Business income of individuals above AED 1 million a year falls under corporate tax (9% above AED 375,000)"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: United Arab Emirates, residence",
+      "url": "https://taxsummaries.pwc.com/united-arab-emirates/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Quarter",
   "dueOffsetDays": 28,
   "dueNote": "VAT returns are quarterly, due on the 28th day after the period. Corporate tax returns and payment are due nine months after the financial year.",

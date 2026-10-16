@@ -44,7 +44,7 @@ for (const pack of packs.sort((a, b) => a.id.localeCompare(b.id))) {
   const theirValues = new Set(Object.values(theirs).map(bps));
   const issues = [];
   if (mine.standard !== bps(theirs.standard)) issues.push(`standard rate ${mine.standard} bps, dataset ${bps(theirs.standard)} bps`);
-  for (const [k, v] of Object.entries(mine)) {
+  for (const [k, v] of Object.entries(mine).filter(([k]) => !k.startsWith('regional_'))) {
     if (v !== 0 && !theirValues.has(v)) issues.push(`rate \`${k}\` ${v} bps is not in the dataset (${[...theirValues].join(', ')})`);
   }
   for (const t of ref.filter((t) => t.effective_from > today)) {

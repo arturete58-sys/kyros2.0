@@ -29,6 +29,22 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Significant residential ties (home, spouse, dependants), or 183 days in the year (deemed resident)"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Canada, residence",
+      "url": "https://taxsummaries.pwc.com/canada/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 120,
   "dueNote": "GST/HST returns are annual, quarterly or monthly. Self-employed individuals pay quarterly instalments and the balance by 30 April (return by 15 June); the rest of a year's reserve is released after 30 April.",
@@ -164,7 +180,8 @@
           ]
         ],
         "label": "Federal income tax 2026, basic personal amount credit",
-        "credit": 2303
+        "credit": 2303,
+        "scope": "central"
       },
       {
         "name": "cpp",
@@ -191,7 +208,8 @@
       }
     ],
     "notes": [
-      "Provincial income tax is not included: add your province's rate as an extra rate (for example about 5% to 11% in Ontario)."
+      "Provincial income tax is not included: add your province's rate as an extra rate (for example about 5% to 11% in Ontario).",
+      "Choose your province: its 2026 brackets are added, with the basic personal amount credit at its 2025 amount (2026 indexation not applied, so slightly high). The province is the one you live in on 31 December."
     ]
   },
   "notes": [
@@ -212,6 +230,500 @@
       "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/charge-collect-which-rate/calculator.html",
       "checked": "2026-10-16",
       "official": true
+    },
+    {
+      "title": "CRA: tax rates and income brackets for individuals, 2026 (federal, provinces, territories) (official)",
+      "url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/tax-rates-brackets/current-year.html",
+      "official": true,
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "KPMG: federal and provincial/territorial rates 2026 (Quebec brackets, Ontario surtax)",
+      "url": "https://assets.kpmg.com/content/dam/kpmg/ca/pdf/2026/01/ca-federal-and-provincial-territorial-income-tax-rates-and-brackets-for-2026.pdf",
+      "checked": "2026-10-16"
+    }
+  ],
+  "regions": [
+    {
+      "id": "AB",
+      "name": "Alberta",
+      "items": [
+        {
+          "name": "prov_ab",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              61200,
+              800
+            ],
+            [
+              154259,
+              1000
+            ],
+            [
+              185111,
+              1200
+            ],
+            [
+              246813,
+              1300
+            ],
+            [
+              370220,
+              1400
+            ],
+            [
+              null,
+              1500
+            ]
+          ],
+          "label": "Alberta income tax 2026, minus the basic personal amount credit",
+          "credit": 1785.84
+        }
+      ]
+    },
+    {
+      "id": "BC",
+      "name": "British Columbia",
+      "items": [
+        {
+          "name": "prov_bc",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              50363,
+              560
+            ],
+            [
+              100728,
+              770
+            ],
+            [
+              115648,
+              1050
+            ],
+            [
+              140430,
+              1229
+            ],
+            [
+              190405,
+              1470
+            ],
+            [
+              265545,
+              1680
+            ],
+            [
+              null,
+              2050
+            ]
+          ],
+          "label": "British Columbia income tax 2026, minus the basic personal amount credit",
+          "credit": 724.19
+        }
+      ]
+    },
+    {
+      "id": "MB",
+      "name": "Manitoba",
+      "items": [
+        {
+          "name": "prov_mb",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              47564,
+              1080
+            ],
+            [
+              101200,
+              1275
+            ],
+            [
+              null,
+              1740
+            ]
+          ],
+          "label": "Manitoba income tax 2026, minus the basic personal amount credit",
+          "credit": 1704.24
+        }
+      ]
+    },
+    {
+      "id": "NB",
+      "name": "New Brunswick",
+      "items": [
+        {
+          "name": "prov_nb",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              52333,
+              940
+            ],
+            [
+              104666,
+              1400
+            ],
+            [
+              193861,
+              1600
+            ],
+            [
+              null,
+              1950
+            ]
+          ],
+          "label": "New Brunswick income tax 2026, minus the basic personal amount credit",
+          "credit": 1259.22
+        }
+      ]
+    },
+    {
+      "id": "NL",
+      "name": "Newfoundland and Labrador",
+      "items": [
+        {
+          "name": "prov_nl",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              44678,
+              870
+            ],
+            [
+              89354,
+              1450
+            ],
+            [
+              159528,
+              1580
+            ],
+            [
+              223340,
+              1780
+            ],
+            [
+              285319,
+              1980
+            ],
+            [
+              570638,
+              2080
+            ],
+            [
+              1141275,
+              2130
+            ],
+            [
+              null,
+              2180
+            ]
+          ],
+          "label": "Newfoundland and Labrador income tax 2026, minus the basic personal amount credit",
+          "credit": 962.83
+        }
+      ]
+    },
+    {
+      "id": "NT",
+      "name": "Northwest Territories",
+      "items": [
+        {
+          "name": "prov_nt",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              53003,
+              590
+            ],
+            [
+              106009,
+              860
+            ],
+            [
+              172346,
+              1220
+            ],
+            [
+              null,
+              1405
+            ]
+          ],
+          "label": "Northwest Territories income tax 2026, minus the basic personal amount credit",
+          "credit": 1052.68
+        }
+      ]
+    },
+    {
+      "id": "NS",
+      "name": "Nova Scotia",
+      "items": [
+        {
+          "name": "prov_ns",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              30995,
+              879
+            ],
+            [
+              61991,
+              1495
+            ],
+            [
+              97417,
+              1667
+            ],
+            [
+              157124,
+              1750
+            ],
+            [
+              null,
+              2100
+            ]
+          ],
+          "label": "Nova Scotia income tax 2026, minus the basic personal amount credit",
+          "credit": 1032.3
+        }
+      ]
+    },
+    {
+      "id": "NU",
+      "name": "Nunavut",
+      "items": [
+        {
+          "name": "prov_nu",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              55801,
+              400
+            ],
+            [
+              111602,
+              700
+            ],
+            [
+              181439,
+              900
+            ],
+            [
+              null,
+              1150
+            ]
+          ],
+          "label": "Nunavut income tax 2026, minus the basic personal amount credit",
+          "credit": 770.96
+        }
+      ]
+    },
+    {
+      "id": "ON",
+      "name": "Ontario",
+      "items": [
+        {
+          "name": "prov_on",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12747,
+              0
+            ],
+            [
+              53891,
+              505
+            ],
+            [
+              94767.77,
+              915
+            ],
+            [
+              107785,
+              1098
+            ],
+            [
+              111700.09,
+              1339
+            ],
+            [
+              150000,
+              1741
+            ],
+            [
+              220000,
+              1897
+            ],
+            [
+              null,
+              2053
+            ]
+          ],
+          "label": "Ontario income tax 2026 with the provincial surtax (20% of tax over $5,818, 36% over $7,446), after the basic personal amount"
+        }
+      ]
+    },
+    {
+      "id": "PE",
+      "name": "Prince Edward Island",
+      "items": [
+        {
+          "name": "prov_pe",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              33928,
+              950
+            ],
+            [
+              65820,
+              1347
+            ],
+            [
+              106890,
+              1660
+            ],
+            [
+              142520,
+              1762
+            ],
+            [
+              200000,
+              1900
+            ],
+            [
+              null,
+              2000
+            ]
+          ],
+          "label": "Prince Edward Island income tax 2026, minus the basic personal amount credit",
+          "credit": 1353.75
+        }
+      ]
+    },
+    {
+      "id": "QC",
+      "name": "Quebec",
+      "items": [
+        {
+          "name": "federal_tax_quebec",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              58523,
+              1169
+            ],
+            [
+              117045,
+              1712
+            ],
+            [
+              181440,
+              2171
+            ],
+            [
+              258482,
+              2422
+            ],
+            [
+              null,
+              2756
+            ]
+          ],
+          "label": "Federal tax 2026 after the 16.5% Quebec abatement",
+          "credit": 1923.0
+        },
+        {
+          "name": "prov_qc",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              54345,
+              1400
+            ],
+            [
+              108680,
+              1900
+            ],
+            [
+              132245,
+              2400
+            ],
+            [
+              null,
+              2575
+            ]
+          ],
+          "label": "Quebec income tax 2026, minus the basic personal amount credit",
+          "credit": 2599.94
+        }
+      ],
+      "replaces": [
+        "federal_tax"
+      ],
+      "note": "Quebec residents file a separate provincial return with Revenu Québec, pay QPP (12.8% self-employed) instead of CPP, and QPIP; the federal tax is reduced by the 16.5% abatement."
+    },
+    {
+      "id": "SK",
+      "name": "Saskatchewan",
+      "items": [
+        {
+          "name": "prov_sk",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              54532,
+              1050
+            ],
+            [
+              155805,
+              1250
+            ],
+            [
+              null,
+              1450
+            ]
+          ],
+          "label": "Saskatchewan income tax 2026, minus the basic personal amount credit",
+          "credit": 2046.56
+        }
+      ]
+    },
+    {
+      "id": "YT",
+      "name": "Yukon",
+      "items": [
+        {
+          "name": "prov_yt",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              58523,
+              640
+            ],
+            [
+              117045,
+              900
+            ],
+            [
+              181440,
+              1090
+            ],
+            [
+              500000,
+              1280
+            ],
+            [
+              null,
+              1500
+            ]
+          ],
+          "label": "Yukon income tax 2026, minus the basic personal amount credit",
+          "credit": 1032.26
+        }
+      ]
     }
   ]
 }

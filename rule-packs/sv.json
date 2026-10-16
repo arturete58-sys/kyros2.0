@@ -16,6 +16,28 @@
       "note": "Rate in force on 1 January 2026"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "territorial",
+    "tests": [
+      "More than 200 days in the year in El Salvador"
+    ],
+    "days": 200,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Territorial",
+        "summary": "Income obtained in El Salvador is taxed; foreign income generally is not"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: El Salvador, residence",
+      "url": "https://taxsummaries.pwc.com/el-salvador/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 120,
   "dueNote": "IVA and the 1.75% monthly payment on account are due monthly. The annual income tax return is due on 30 April.",

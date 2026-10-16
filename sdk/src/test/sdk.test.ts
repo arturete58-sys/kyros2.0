@@ -203,13 +203,18 @@ test('VAT tables follow their dates; a vault learns when its rate changes', () =
 });
 
 test('reserve check: short, ok, generous, and exact regimes', () => {
-  // Spain, EUR 80,000 a year with EUR 8,000 of expenses: RETA (capped at EUR 7,100) is deducted first,
-  // then annual IRPF on EUR 64,900 is EUR 19,052, about 23.8% of revenue: more than the 20% prepayment.
+  // Spain, EUR 80,000 a year with EUR 8,000 of expenses: 5% hard-to-justify expenses (capped at EUR 2,000)
+  // leave EUR 70,000; RETA (capped at EUR 7,100) is deducted, and IRPF on EUR 62,900 is the state scale
+  // (EUR 9,076) plus the default regional scale (EUR 9,076): EUR 18,152, about 22.7% of revenue.
   const es = loadRulePack('es');
   const a = checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000 });
-  assert.equal(Math.round(a.incomeTax!), 19_052);
+  assert.equal(Math.round(a.incomeTax!), 18_152);
   assert.equal(a.status, 'short');
-  assert.equal(a.requiredBps, 2382);
+  assert.equal(a.requiredBps, 2269);
+  // Madrid's own scale: EUR 8,323 instead of 9,076; the Basque foral system replaces both scales.
+  assert.equal(Math.round(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'MD' }).incomeTax!), 17_399);
+  assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'BI' }).lines!.filter((l) => l.kind === 'incomeTax').length, 1);
+  assert.equal(es.regions!.length, 21);
   assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, reserveBps: 3000 }).status, 'ok');
   assert.equal(checkReserve(es, 'general', { revenue: 12_000, expenses: 1_200 }).status, 'generous');
 
@@ -330,7 +335,36 @@ test('objective prepayments: last year\'s tax or a share of profit', () => {
   assert.equal(checkReserve(loadRulePack('gb'), 'standard', { revenue: 50_000, lastYearTax: 9_000, reserveBps: 1500 }).prepayment!.covered, false);
   // Spain: modelo 130 = 20% of profit, objective whatever the final IRPF.
   const es = checkReserve(loadRulePack('es'), 'general', { revenue: 80_000, expenses: 8_000 });
-  assert.equal(es.prepayment!.amount, 14_400);
+  assert.equal(es.prepayment!.amount, 14_000);
   // No rule: no prepayment figure.
   assert.equal(checkReserve(loadRulePack('nl'), 'standard', { revenue: 50_000, lastYearTax: 5_000 }).prepayment, undefined);
+});
+
+test('where do I pay? residence from days, homes and citizenship', async () => {
+  const { residenceGuide } = await import('../rulepacks.js');
+  const packs = listRulePacks().map((id) => loadRulePack(id));
+  // A Spanish freelancer living in Bali: 250 days in Indonesia, 60 in Spain, no home kept in Spain.
+  const bali = residenceGuide(packs, { days: { ID: 250, ES: 60 }, citizenships: ['ES'] });
+  assert.deepEqual(bali.findings.filter((f) => f.resident === 'likely').map((f) => f.country), ['ID']);
+  assert.match(bali.summary, /ID is likely/);
+  // Keeping a home in Spain makes Spain possible too.
+  assert.equal(residenceGuide(packs, { days: { ID: 250, ES: 60 }, homes: ['ES'] }).findings.find((f) => f.country === 'ES')!.resident, 'possible');
+  // A US citizen in Dubai: the US taxes them anyway; the UAE has no income tax.
+  const us = residenceGuide(packs, { days: { AE: 300 }, citizenships: ['US'] });
+  assert.deepEqual(us.findings.filter((f) => f.resident === 'likely').map((f) => f.country).sort(), ['AE', 'US']);
+  // Every pack says how it decides residence.
+  for (const p of packs) assert.ok(p.residence && p.residence.tests.length > 0, p.id);
+});
+
+test('safety margin: strict countries and rough estimates need more than the estimate', () => {
+  const es = loadRulePack('es');
+  // Spain is strict and IRPF is an estimate: 4 points over the need.
+  const t = checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'MD', reserveBps: 2300 });
+  assert.equal(t.enforcement, 'strict');
+  assert.equal(t.marginBps, 400);
+  assert.equal(t.recommendedBps, t.requiredBps! + 400);
+  assert.equal(t.status, 'tight');
+  assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'MD', reserveBps: 2600 }).status, 'ok');
+  // An exact regime needs no margin.
+  assert.equal(checkReserve(loadRulePack('it'), 'forfettario', { revenue: 50_000 }).marginBps, 0);
 });

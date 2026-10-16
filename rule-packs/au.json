@@ -15,6 +15,28 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Resides in Australia (ordinary concepts), or domicile there, or 183 days in the income year"
+    ],
+    "days": 183,
+    "window": "tax-year",
+    "regimes": [
+      {
+        "name": "Temporary resident",
+        "summary": "Foreign income of temporary visa holders is generally not taxed"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Australia, residence",
+      "url": "https://taxsummaries.pwc.com/australia/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 304,
   "dueNote": "BAS (GST and PAYG instalments) is lodged quarterly. The financial year runs July to June and self-lodged returns are due on 31 October; a calendar year's reserve is released on 31 October of the next year.",
@@ -79,7 +101,8 @@
             4500
           ]
         ],
-        "label": "Resident income tax 2026-27"
+        "label": "Resident income tax 2026-27",
+        "scope": "central"
       },
       {
         "name": "medicare",
@@ -113,6 +136,11 @@
       "url": "https://www.ato.gov.au/businesses-and-organisations/international-tax-for-business/gst-for-non-resident-businesses/how-australian-gst-works",
       "checked": "2026-10-16",
       "official": true
+    },
+    {
+      "title": "SuperGuide: resident rates 2026-27 (15% from 1 July 2026)",
+      "url": "https://www.superguide.com.au/how-super-works/income-tax-rates-brackets",
+      "checked": "2026-10-16"
     }
   ]
 }

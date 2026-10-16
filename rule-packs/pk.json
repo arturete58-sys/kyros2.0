@@ -16,6 +16,22 @@
       "note": "Federal sales tax on goods; services are taxed by the provinces (Punjab and Islamabad 16%, Sindh 15%)"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "183 days in the tax year, or 120 days plus 365 days in the four previous years"
+    ],
+    "days": 183,
+    "window": "tax-year",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Pakistan, residence",
+      "url": "https://taxsummaries.pwc.com/pakistan/individual/residence"
+    },
+    "inclusive": true
+  },
   "period": "Year",
   "dueOffsetDays": 273,
   "dueNote": "The tax year runs July to June and returns are due on 30 September; a calendar year's reserve is released on 30 September of the next year. Final tax on export proceeds is withheld or paid as the proceeds arrive.",

@@ -71,7 +71,7 @@ for (const p of packs.sort((a, b) => a.id.localeCompare(b.id))) {
   }
   const issues = [];
   if (o.standard.size && !o.standard.has(mine.standard)) issues.push(`standard ${mine.standard / 100}%, TEDB ${[...o.standard].map((x) => x / 100 + '%').join('/')}`);
-  for (const [k, v] of Object.entries(mine)) if (v !== 0 && !o.all.has(v)) issues.push(`\`${k}\` ${v / 100}% is not a TEDB rate`);
+  for (const [k, v] of Object.entries(mine).filter(([k]) => !k.startsWith('regional_'))) if (v !== 0 && !o.all.has(v)) issues.push(`\`${k}\` ${v / 100}% is not a TEDB rate`);
   lines.push(`| ${p.country} | ${Object.entries(mine).map(([k, v]) => `${k} ${v / 100}%`).join(', ')} | ${[...o.all].sort((a, b) => b - a).map((x) => x / 100 + '%').join(', ')} | ${issues.length ? '⚠️ ' + issues.join('; ') : 'matches'} |`);
   for (const i of issues) problems.push(`\`${p.id}\`: ${i}`);
 }

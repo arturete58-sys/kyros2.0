@@ -17,6 +17,28 @@
       "note": "11.5% (10.5% state + 1% municipal); 4% on business-to-business and designated professional services"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "183 days in Puerto Rico, a tax home there and no closer connection elsewhere (bona fide resident)"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Act 60 resident individual investor",
+        "summary": "100% exemption on certain passive income for new residents; 4% on eligible export services income through a decree"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Puerto Rico, residence",
+      "url": "https://taxsummaries.pwc.com/puerto-rico/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 105,
   "dueNote": "IVU returns are monthly, by the 20th. The annual income tax return is due on 15 April.",
@@ -146,6 +168,12 @@
     {
       "title": "Departamento de Hacienda",
       "url": "https://hacienda.pr.gov",
+      "official": true
+    },
+    {
+      "title": "Hacienda: guide to the 2025 tax relief (one-off for tax year 2025) (official)",
+      "url": "https://hacienda.pr.gov/sites/default/files/guia_sobre_el_alivio_contributivo_2025_rev._5.20.2026_final.pdf",
+      "checked": "2026-10-16",
       "official": true
     }
   ]

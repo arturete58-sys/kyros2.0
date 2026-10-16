@@ -28,6 +28,22 @@
       "note": "Temporary 2023 reduction"
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "worldwide",
+    "tests": [
+      "Domicile, or habitual residence of more than 6 months"
+    ],
+    "days": 183,
+    "window": "continuous",
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Luxembourg, residence",
+      "url": "https://taxsummaries.pwc.com/luxembourg/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 365,
   "dueNote": "VAT returns are monthly, quarterly or annual depending on turnover; income-tax advances are quarterly. The annual return can be filed until the end of the following year, so the rest of a year's reserve is released one year after it ends.",

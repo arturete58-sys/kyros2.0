@@ -15,6 +15,28 @@
       }
     }
   ],
+  "enforcement": {
+    "level": "standard"
+  },
+  "residence": {
+    "basis": "territorial",
+    "tests": [
+      "More than 183 days in the year, or a home in Panama"
+    ],
+    "days": 183,
+    "window": "calendar-year",
+    "regimes": [
+      {
+        "name": "Territorial taxation",
+        "summary": "Income from foreign sources is not taxed, including services provided to foreign clients from abroad"
+      }
+    ],
+    "source": {
+      "title": "PwC Worldwide Tax Summaries: Panama, residence",
+      "url": "https://taxsummaries.pwc.com/panama/individual/residence"
+    },
+    "inclusive": false
+  },
   "period": "Year",
   "dueOffsetDays": 75,
   "dueNote": "ITBMS returns are monthly. The annual income tax return of individuals is due on 15 March.",
