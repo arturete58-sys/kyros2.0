@@ -8,3 +8,4 @@ export * from './events.js';
 export * from './keeper.js';
 export * from './estimate.js';
 export * from './registry.js';
+export * from './activities.js';

@@ -45,7 +45,7 @@ const rule = customRule(es, { vatRate: 'standard', reserves: [{ name: 'irpf', bp
 - **short**: the reserve is below the estimated tax; the app suggests the required percentage.
 - **ok**: the reserve covers the estimate with less than 10 points to spare.
 - **generous**: more than 10 points above; the surplus goes back to the user after the release date anyway.
-- **unknown**: no estimate for that jurisdiction yet (Switzerland, Liechtenstein, Luxembourg and Argentina, where income tax depends on canton, commune, tax class or twice-yearly indexation); the user compares with their adviser's figure.
+- **unknown**: no estimate for that jurisdiction yet (Liechtenstein, Luxembourg and Argentina, where income tax depends on commune, tax class or twice-yearly indexation); the user compares with their adviser's figure.
 
 ### Regions with their own income tax
 
@@ -57,7 +57,33 @@ const rule = customRule(es, { vatRate: 'standard', reserves: [{ name: 'irpf', bp
 | United Kingdom | Scotland | Scottish rates 2026-27 |
 | Germany | Church tax by Land | 8% or 9% of income tax; the solidarity surcharge applies everywhere |
 
-Switzerland and Liechtenstein (cantonal and communal multipliers), Italy's regional and municipal surcharges (a default 2.5% is used) and local business taxes (French CFE, Colombian ICA, Brazilian ISS, Puerto Rico's municipal licence) are not modelled per region yet.
+| Switzerland | 26 cantons (their capitals) | Federal, cantonal and communal income tax from the Federal Tax Administration's own calculator, regenerated every January and July by [a workflow](../.github/workflows/swiss-scales.yml) |
+
+Liechtenstein (communal multipliers), Italy's regional and municipal surcharges (a default 2.5% is used) and local business taxes (French CFE, Colombian ICA, Brazilian ISS, Puerto Rico's municipal licence) are not modelled per region yet.
+
+## Set up from the activity
+
+The user does not need to know their VAT category. `suggestSetup` takes what they do and who pays them and returns the VAT, the regime and the recommended reserve, with the reasons:
+
+```ts
+suggestSetup(loadRulePack('es'), { activity: 'software', client: 'consumer-local', revenue: 80_000, region: 'MD' });
+// VAT 21% (standard), preset `general`, reserve 25.75% (estimate + 4-point margin for a strict country)
+suggestSetup(loadRulePack('es'), { activity: 'software', client: 'business-eu' });   // reverse charge: no VAT in the vault
+suggestSetup(loadRulePack('es'), { activity: 'health', client: 'consumer-local' });  // exempt
+```
+
+| Activity | VAT treatment |
+| --- | --- |
+| Software, consulting, design and content, web3 services, online sales of goods | Standard rate |
+| Medical and health care, recognised education | Exempt in the EU (Directive 2006/112/EC, art. 132), the UK, Switzerland, Liechtenstein, Australia, Canada and Monaco; standard elsewhere, flagged to check |
+| Books | The country's reduced rate (4% in Spain, 7% in Germany, 5.5% in France), zero in the UK and Ireland |
+| Restaurant food | The country's reduced rate (10% in Spain, France and Italy, 7% in Germany, 9% in the Netherlands and Ireland) |
+
+| Client | VAT |
+| --- | --- |
+| Consumers or businesses in the same country | As the activity |
+| A business in another EU state | Reverse charge: the client accounts for VAT |
+| A client in another country | Outside the scope or zero-rated for services |
 
 ### The safety margin
 
@@ -82,7 +108,7 @@ How much margin a reserve needs depends on how exact the figure is and how hard 
 | `presumptive` | Progressive rates on a profit the law presumes from revenue; only personal allowances and other income change it | Portugal's simplified regime, India's section 44ADA |
 | `exact-on-profit` | One rate on profit: exact once expenses are known | Estonia, Hong Kong, Puerto Rico Act 60, UAE corporate tax, Vietnamese companies |
 | `estimate` | Progressive income tax with deductions and personal circumstances | Spain, Germany, the Netherlands, Ireland, the UK, the US, Canada, Australia, Japan, Korea and others |
-| `none` | The tax depends on things the pack cannot know | Switzerland, Liechtenstein, Luxembourg, Argentina |
+| `none` | The tax depends on things the pack cannot know | Liechtenstein, Luxembourg, Argentina |
 
 ### Objective targets from last year's tax
 
@@ -171,7 +197,7 @@ Each tax can be paid from the vault to the tax-payment destination whenever it i
 | [BR](../rule-packs/br.json) | Brazil | BRL | ISS / CBS / IBS: see notes | Month + 20 days | `simples-anexo-iii` (exact), `simples-anexo-v` (exact), `pessoa-fisica` (estimate) | 1 official, 1 checked 2026-10-16 |
 | [BS](../rule-packs/bs.json) | The Bahamas | BSD | VAT 10% | Quarter + 21 days | `vat-only` (exact) | 0 official, 0 checked 2026-10-16 |
 | [CA](../rule-packs/ca.json) | Canada | CAD | GST/HST 15% / 14.98% / 14% / 13% / 5% | Year + 120 days | `gst` (estimate), `hst-13` (estimate), `hst-14` (estimate), `hst-15` (estimate), `gst-qst` (estimate), `small-supplier` (estimate) | 3 official, 3 checked 2026-10-16 |
-| [CH](../rule-packs/ch.json) | Switzerland | CHF | MWST / TVA / IVA 8.1% / 3.8% / 2.6%; changes 2028-01-01 (proposed) | Year + 120 days | `standard` (none), `reduced-vat` (none), `accommodation-vat` (none), `not-vat-registered` (none) | 2 official, 1 checked 2026-10-16 |
+| [CH](../rule-packs/ch.json) | Switzerland | CHF | MWST / TVA / IVA 8.1% / 3.8% / 2.6%; changes 2028-01-01 (proposed) | Year + 120 days | `standard` (estimate), `reduced-vat` (estimate), `accommodation-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 2 checked 2026-10-16 |
 | [CO](../rule-packs/co.json) | Colombia | COP | IVA 19% / 5% | Year + 293 days | `responsable-iva` (estimate), `no-responsable-iva` (estimate) | 2 official, 1 checked 2026-10-16 |
 | [CY](../rule-packs/cy.json) | Cyprus | EUR | VAT 19% / 9% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 1 official, 1 checked 2026-10-16 |
 | [DE](../rule-packs/de.json) | Germany | EUR | USt 19% / 7% | Year + 300 days | `standard` (estimate), `reduced-vat` (estimate), `small-business` (estimate) | 3 official, 1 checked 2026-10-16 |

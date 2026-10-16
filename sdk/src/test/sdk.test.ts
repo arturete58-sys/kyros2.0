@@ -368,3 +368,33 @@ test('safety margin: strict countries and rough estimates need more than the est
   // An exact regime needs no margin.
   assert.equal(checkReserve(loadRulePack('it'), 'forfettario', { revenue: 50_000 }).marginBps, 0);
 });
+
+test('activity and client set the VAT, the regime and the reserve automatically', async () => {
+  const { suggestSetup } = await import('../activities.js');
+  const es = loadRulePack('es');
+  const dev = suggestSetup(es, { activity: 'software', client: 'consumer-local', revenue: 80_000, expenses: 8_000, region: 'MD', date: '2026-10-16' });
+  assert.equal(dev.vat.bps, 2100);
+  assert.equal(dev.presetId, 'general');
+  assert.ok(dev.reserveBps > 2000);
+  // Same freelancer billing a German company: reverse charge, no VAT in the vault.
+  assert.equal(suggestSetup(es, { activity: 'software', client: 'business-eu', date: '2026-10-16' }).vat.treatment, 'reverse-charge');
+  // A physiotherapist in Spain: exempt. A restaurant: 10%. A bookshop: 4%.
+  assert.equal(suggestSetup(es, { activity: 'health', client: 'consumer-local', date: '2026-10-16' }).vat.treatment, 'exempt');
+  assert.equal(suggestSetup(es, { activity: 'hospitality', client: 'consumer-local', date: '2026-10-16' }).vat.bps, 1000);
+  assert.equal(suggestSetup(es, { activity: 'books', client: 'consumer-local', date: '2026-10-16' }).vat.bps, 400);
+  // A client outside the country: no VAT; the UAE: 5% at home.
+  assert.equal(suggestSetup(loadRulePack('ae'), { activity: 'consulting', client: 'abroad', date: '2026-10-16' }).vat.bps, 0);
+  assert.equal(suggestSetup(loadRulePack('ae'), { activity: 'consulting', client: 'consumer-local', date: '2026-10-16' }).vat.bps, 500);
+  // An exact regime keeps its own reserve (Italy forfettario has no margin).
+  const it = suggestSetup(loadRulePack('it'), { activity: 'software', client: 'consumer-local', revenue: 50_000, date: '2026-10-16' });
+  assert.ok(it.rule.buckets.length === 1);
+  // Every pack answers for every activity and client.
+  const { ACTIVITIES } = await import('../activities.js');
+  for (const id of listRulePacks()) {
+    const p = loadRulePack(id);
+    for (const a of Object.keys(ACTIVITIES)) for (const c of ['consumer-local', 'business-local', 'business-eu', 'abroad'] as const) {
+      const r = suggestSetup(p, { activity: a as never, client: c, revenue: 60_000, date: '2026-10-16' });
+      assert.ok(r.rule.vatBps >= 0 && r.reserveBps >= 0, `${id} ${a} ${c}`);
+    }
+  }
+});
