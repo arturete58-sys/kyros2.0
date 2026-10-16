@@ -1,0 +1,32 @@
+name: Swiss cantonal scales
+
+# Rebuilds the Swiss rule pack's income-tax estimate from the Federal Tax
+# Administration's calculator: federal tax and the cantonal + communal tax of
+# each canton capital. Runs on demand and every January and July.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 20 1,7 *'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ask ESTV for each canton capital
+        run: node sdk/scripts/swiss-cantons.mjs
+      - name: Commit the updated pack
+        run: |
+          if [ -n "$(git status --porcelain rule-packs/ch.json)" ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add rule-packs/ch.json
+            git commit -m 'Swiss pack: cantonal and federal scales from the ESTV calculator'
+            git pull --rebase origin main && git push
+          fi

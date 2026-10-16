@@ -237,7 +237,7 @@ test('reserve check: short, ok, generous, and exact regimes', () => {
 
   // The Bahamas: no income tax. Switzerland: no estimate, so the check says it cannot tell.
   assert.equal(checkReserve(loadRulePack('bs'), 'vat-only', { revenue: 100_000 }).requiredBps, 0);
-  assert.equal(checkReserve(loadRulePack('ch'), 'standard', { revenue: 100_000 }).status, 'unknown');
+  assert.equal(checkReserve(loadRulePack('lu'), 'standard', { revenue: 100_000 }).status, 'unknown');
 
   // Extra regional tax and fixed contributions entered by the user.
   const us = checkReserve(loadRulePack('us'), 'self-employed', { revenue: 100_000, activity: 'software' });
