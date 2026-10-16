@@ -1,0 +1,20 @@
+[package]
+name = "kyros-router"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+kyros-types = { workspace = true }
+
+[dev-dependencies]
+kyros-types = { workspace = true, features = ["testutils"] }
+soroban-sdk = { workspace = true, features = ["testutils"] }
+kyros-reserve-vault = { path = "../reserve-vault" }
+kyros-inbox = { path = "../inbox" }

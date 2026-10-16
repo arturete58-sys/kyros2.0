@@ -1,0 +1,36 @@
+{
+  "name": "kyros-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Kyros Tax Vaults on Stellar: split stablecoin payments and lock tax reserves in user-owned Soroban contracts.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "kyros-keeper": "dist/keeper-cli.js"
+  },
+  "files": [
+    "dist",
+    "rule-packs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-packs.mjs",
+    "test": "npm run build && node --test dist/test/sdk.test.js",
+    "demo:testnet": "node dist/demo/testnet.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arturete58-sys/kyros2.0.git",
+    "directory": "sdk"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
+  }
+}

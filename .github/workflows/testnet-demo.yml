@@ -1,0 +1,63 @@
+name: Testnet demo
+
+# Runs the whole Kyros flow on Stellar testnet with real transactions:
+# deploy, pay through the Router, pay into the Inbox and sweep, pay tax,
+# refuse an early release and an early change, release after the due date,
+# export the history as CSV. Results are committed to docs/testnet.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['contracts/**/src/**', 'contracts/**/Cargo.toml', 'sdk/src/**', 'rule-packs/**', '.github/workflows/testnet-demo.yml']
+  schedule:
+    - cron: '41 6 * * *'
+
+concurrency:
+  group: testnet-demo
+  cancel-in-progress: false
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - name: Install the Stellar CLI
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://github.com/stellar/stellar-cli/releases/download/v28.1.0/stellar-cli-28.1.0-x86_64-unknown-linux-gnu.tar.gz | tar xz -C "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - name: Build the contracts
+        working-directory: contracts
+        run: stellar contract build --meta source_repo=github:${{ github.repository }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: Run the testnet demo
+        working-directory: sdk
+        run: node dist/demo/testnet.js --wasm-dir ../contracts/target/wasm32v1-none/release --out ../docs/testnet
+      - name: Summary
+        if: always()
+        run: if [ -f docs/testnet/README.md ]; then cat docs/testnet/README.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Publish the results in the repository
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/testnet
+          git commit -q -m "Testnet demo results" || exit 0
+          git pull --rebase origin main && git push origin HEAD:main

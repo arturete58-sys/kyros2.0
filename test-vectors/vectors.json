@@ -1,0 +1,1499 @@
+{
+ "splits": [
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "0",
+   "base": "0",
+   "vat": "0",
+   "parts": [
+    "0"
+   ],
+   "reserve": "0",
+   "net": "0"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "1",
+   "base": "0",
+   "vat": "1",
+   "parts": [
+    "0"
+   ],
+   "reserve": "1",
+   "net": "0"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "7",
+   "base": "5",
+   "vat": "2",
+   "parts": [
+    "1"
+   ],
+   "reserve": "3",
+   "net": "4"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "99",
+   "base": "81",
+   "vat": "18",
+   "parts": [
+    "16"
+   ],
+   "reserve": "34",
+   "net": "65"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "12100000000",
+   "base": "10000000000",
+   "vat": "2100000000",
+   "parts": [
+    "2000000000"
+   ],
+   "reserve": "4100000000",
+   "net": "8000000000"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "1210000000",
+   "base": "1000000000",
+   "vat": "210000000",
+   "parts": [
+    "200000000"
+   ],
+   "reserve": "410000000",
+   "net": "800000000"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "1343844878695",
+   "base": "1110615602227",
+   "vat": "233229276468",
+   "parts": [
+    "222123120445"
+   ],
+   "reserve": "455352396913",
+   "net": "888492481782"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "701797632122",
+   "base": "579998043076",
+   "vat": "121799589046",
+   "parts": [
+    "115999608615"
+   ],
+   "reserve": "237799197661",
+   "net": "463998434461"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "2673684646983",
+   "base": "2209656733043",
+   "vat": "464027913940",
+   "parts": [
+    "441931346608"
+   ],
+   "reserve": "905959260548",
+   "net": "1767725386435"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "9464320056434",
+   "base": "7821752112755",
+   "vat": "1642567943679",
+   "parts": [
+    "1564350422551"
+   ],
+   "reserve": "3206918366230",
+   "net": "6257401690204"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "532714162736",
+   "base": "440259638624",
+   "vat": "92454524112",
+   "parts": [
+    "88051927724"
+   ],
+   "reserve": "180506451836",
+   "net": "352207710900"
+  },
+  {
+   "rule": "spain-general",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "961321450256",
+   "base": "794480537401",
+   "vat": "166840912855",
+   "parts": [
+    "158896107480"
+   ],
+   "reserve": "325737020335",
+   "net": "635584429921"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "0",
+   "base": "0",
+   "vat": "0",
+   "parts": [
+    "0"
+   ],
+   "reserve": "0",
+   "net": "0"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "1",
+   "base": "0",
+   "vat": "1",
+   "parts": [
+    "0"
+   ],
+   "reserve": "1",
+   "net": "0"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "7",
+   "base": "5",
+   "vat": "2",
+   "parts": [
+    "0"
+   ],
+   "reserve": "2",
+   "net": "5"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "99",
+   "base": "81",
+   "vat": "18",
+   "parts": [
+    "5"
+   ],
+   "reserve": "23",
+   "net": "76"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "12100000000",
+   "base": "10000000000",
+   "vat": "2100000000",
+   "parts": [
+    "700000000"
+   ],
+   "reserve": "2800000000",
+   "net": "9300000000"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "1210000000",
+   "base": "1000000000",
+   "vat": "210000000",
+   "parts": [
+    "70000000"
+   ],
+   "reserve": "280000000",
+   "net": "930000000"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "544787179204",
+   "base": "450237338185",
+   "vat": "94549841019",
+   "parts": [
+    "31516613672"
+   ],
+   "reserve": "126066454691",
+   "net": "418720724513"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "9651373014813",
+   "base": "7976341334556",
+   "vat": "1675031680257",
+   "parts": [
+    "558343893418"
+   ],
+   "reserve": "2233375573675",
+   "net": "7417997441138"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "5196564855177",
+   "base": "4294681698493",
+   "vat": "901883156684",
+   "parts": [
+    "300627718894"
+   ],
+   "reserve": "1202510875578",
+   "net": "3994053979599"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "5800472601668",
+   "base": "4793779009642",
+   "vat": "1006693592026",
+   "parts": [
+    "335564530674"
+   ],
+   "reserve": "1342258122700",
+   "net": "4458214478968"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "7001195787047",
+   "base": "5786112220700",
+   "vat": "1215083566347",
+   "parts": [
+    "405027855449"
+   ],
+   "reserve": "1620111421796",
+   "net": "5381084365251"
+  },
+  {
+   "rule": "spain-new-autonomo",
+   "vat_bps": 2100,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 700
+    }
+   ],
+   "gross": "6341427920364",
+   "base": "5240849520961",
+   "vat": "1100578399403",
+   "parts": [
+    "366859466467"
+   ],
+   "reserve": "1467437865870",
+   "net": "4873990054494"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "0",
+   "base": "0",
+   "vat": "0",
+   "parts": [
+    "0"
+   ],
+   "reserve": "0",
+   "net": "0"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "1",
+   "base": "0",
+   "vat": "1",
+   "parts": [
+    "0"
+   ],
+   "reserve": "1",
+   "net": "0"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "7",
+   "base": "6",
+   "vat": "1",
+   "parts": [
+    "0"
+   ],
+   "reserve": "1",
+   "net": "6"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "99",
+   "base": "90",
+   "vat": "9",
+   "parts": [
+    "13"
+   ],
+   "reserve": "22",
+   "net": "77"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "12100000000",
+   "base": "11000000000",
+   "vat": "1100000000",
+   "parts": [
+    "1650000000"
+   ],
+   "reserve": "2750000000",
+   "net": "9350000000"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "1210000000",
+   "base": "1100000000",
+   "vat": "110000000",
+   "parts": [
+    "165000000"
+   ],
+   "reserve": "275000000",
+   "net": "935000000"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "8281367438922",
+   "base": "7528515853565",
+   "vat": "752851585357",
+   "parts": [
+    "1129277378034"
+   ],
+   "reserve": "1882128963391",
+   "net": "6399238475531"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "8083447651924",
+   "base": "7348588774476",
+   "vat": "734858877448",
+   "parts": [
+    "1102288316171"
+   ],
+   "reserve": "1837147193619",
+   "net": "6246300458305"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "7611151839974",
+   "base": "6919228945430",
+   "vat": "691922894544",
+   "parts": [
+    "1037884341814"
+   ],
+   "reserve": "1729807236358",
+   "net": "5881344603616"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "5919437138088",
+   "base": "5381306489170",
+   "vat": "538130648918",
+   "parts": [
+    "807195973375"
+   ],
+   "reserve": "1345326622293",
+   "net": "4574110515795"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "7810426255377",
+   "base": "7100387504888",
+   "vat": "710038750489",
+   "parts": [
+    "1065058125733"
+   ],
+   "reserve": "1775096876222",
+   "net": "6035329379155"
+  },
+  {
+   "rule": "spain-reduced-vat",
+   "vat_bps": 1000,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 1500
+    }
+   ],
+   "gross": "2694125909888",
+   "base": "2449205372625",
+   "vat": "244920537263",
+   "parts": [
+    "367380805893"
+   ],
+   "reserve": "612301343156",
+   "net": "2081824566732"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "0",
+   "base": "0",
+   "vat": "0",
+   "parts": [
+    "0"
+   ],
+   "reserve": "0",
+   "net": "0"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "1",
+   "base": "1",
+   "vat": "0",
+   "parts": [
+    "0"
+   ],
+   "reserve": "0",
+   "net": "1"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "7",
+   "base": "7",
+   "vat": "0",
+   "parts": [
+    "1"
+   ],
+   "reserve": "1",
+   "net": "6"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "99",
+   "base": "99",
+   "vat": "0",
+   "parts": [
+    "19"
+   ],
+   "reserve": "19",
+   "net": "80"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "12100000000",
+   "base": "12100000000",
+   "vat": "0",
+   "parts": [
+    "2420000000"
+   ],
+   "reserve": "2420000000",
+   "net": "9680000000"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "1210000000",
+   "base": "1210000000",
+   "vat": "0",
+   "parts": [
+    "242000000"
+   ],
+   "reserve": "242000000",
+   "net": "968000000"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "8097454677057",
+   "base": "8097454677057",
+   "vat": "0",
+   "parts": [
+    "1619490935411"
+   ],
+   "reserve": "1619490935411",
+   "net": "6477963741646"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "7146275154440",
+   "base": "7146275154440",
+   "vat": "0",
+   "parts": [
+    "1429255030888"
+   ],
+   "reserve": "1429255030888",
+   "net": "5717020123552"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "6752477766297",
+   "base": "6752477766297",
+   "vat": "0",
+   "parts": [
+    "1350495553259"
+   ],
+   "reserve": "1350495553259",
+   "net": "5401982213038"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "6271948189636",
+   "base": "6271948189636",
+   "vat": "0",
+   "parts": [
+    "1254389637927"
+   ],
+   "reserve": "1254389637927",
+   "net": "5017558551709"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "5526234489827",
+   "base": "5526234489827",
+   "vat": "0",
+   "parts": [
+    "1105246897965"
+   ],
+   "reserve": "1105246897965",
+   "net": "4420987591862"
+  },
+  {
+   "rule": "export-no-vat",
+   "vat_bps": 0,
+   "buckets": [
+    {
+     "name": "irpf",
+     "bps": 2000
+    }
+   ],
+   "gross": "6485897928195",
+   "base": "6485897928195",
+   "vat": "0",
+   "parts": [
+    "1297179585639"
+   ],
+   "reserve": "1297179585639",
+   "net": "5188718342556"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "0",
+   "base": "0",
+   "vat": "0",
+   "parts": [],
+   "reserve": "0",
+   "net": "0"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "1",
+   "base": "0",
+   "vat": "1",
+   "parts": [],
+   "reserve": "1",
+   "net": "0"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "7",
+   "base": "5",
+   "vat": "2",
+   "parts": [],
+   "reserve": "2",
+   "net": "5"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "99",
+   "base": "81",
+   "vat": "18",
+   "parts": [],
+   "reserve": "18",
+   "net": "81"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "12100000000",
+   "base": "10000000000",
+   "vat": "2100000000",
+   "parts": [],
+   "reserve": "2100000000",
+   "net": "10000000000"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "1210000000",
+   "base": "1000000000",
+   "vat": "210000000",
+   "parts": [],
+   "reserve": "210000000",
+   "net": "1000000000"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "3219336121225",
+   "base": "2660608364648",
+   "vat": "558727756577",
+   "parts": [],
+   "reserve": "558727756577",
+   "net": "2660608364648"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "9321650350921",
+   "base": "7703843265223",
+   "vat": "1617807085698",
+   "parts": [],
+   "reserve": "1617807085698",
+   "net": "7703843265223"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "3335225110272",
+   "base": "2756384388654",
+   "vat": "578840721618",
+   "parts": [],
+   "reserve": "578840721618",
+   "net": "2756384388654"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "6936654868953",
+   "base": "5732772618969",
+   "vat": "1203882249984",
+   "parts": [],
+   "reserve": "1203882249984",
+   "net": "5732772618969"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "5935036026352",
+   "base": "4904988451530",
+   "vat": "1030047574822",
+   "parts": [],
+   "reserve": "1030047574822",
+   "net": "4904988451530"
+  },
+  {
+   "rule": "vat-only",
+   "vat_bps": 2100,
+   "buckets": [],
+   "gross": "7109462984803",
+   "base": "5875589243638",
+   "vat": "1233873741165",
+   "parts": [],
+   "reserve": "1233873741165",
+   "net": "5875589243638"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "0",
+   "base": "0",
+   "vat": "0",
+   "parts": [
+    "0",
+    "0",
+    "0"
+   ],
+   "reserve": "0",
+   "net": "0"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "1",
+   "base": "0",
+   "vat": "1",
+   "parts": [
+    "0",
+    "0",
+    "0"
+   ],
+   "reserve": "1",
+   "net": "0"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "7",
+   "base": "5",
+   "vat": "2",
+   "parts": [
+    "1",
+    "0",
+    "0"
+   ],
+   "reserve": "3",
+   "net": "4"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "99",
+   "base": "80",
+   "vat": "19",
+   "parts": [
+    "20",
+    "8",
+    "2"
+   ],
+   "reserve": "49",
+   "net": "50"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "12100000000",
+   "base": "9837398373",
+   "vat": "2262601627",
+   "parts": [
+    "2459349593",
+    "983739837",
+    "327585365"
+   ],
+   "reserve": "6033276422",
+   "net": "6066723578"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "1210000000",
+   "base": "983739837",
+   "vat": "226260163",
+   "parts": [
+    "245934959",
+    "98373983",
+    "32758536"
+   ],
+   "reserve": "603327641",
+   "net": "606672359"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "9092545277519",
+   "base": "7392313233755",
+   "vat": "1700232043764",
+   "parts": [
+    "1848078308438",
+    "739231323375",
+    "246164030684"
+   ],
+   "reserve": "4533705706261",
+   "net": "4558839571258"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "3474779020260",
+   "base": "2825023593707",
+   "vat": "649755426553",
+   "parts": [
+    "706255898426",
+    "282502359370",
+    "94073285670"
+   ],
+   "reserve": "1732586970019",
+   "net": "1742192050241"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "4130791724743",
+   "base": "3358367255888",
+   "vat": "772424468855",
+   "parts": [
+    "839591813972",
+    "335836725588",
+    "111833629621"
+   ],
+   "reserve": "2059686638036",
+   "net": "2071105086707"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "1331808335944",
+   "base": "1082771004832",
+   "vat": "249037331112",
+   "parts": [
+    "270692751208",
+    "108277100483",
+    "36056274460"
+   ],
+   "reserve": "664063457263",
+   "net": "667744878681"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "7754099457318",
+   "base": "6304145900258",
+   "vat": "1449953557060",
+   "parts": [
+    "1576036475064",
+    "630414590025",
+    "209928058478"
+   ],
+   "reserve": "3866332680627",
+   "net": "3887766776691"
+  },
+  {
+   "rule": "three-buckets",
+   "vat_bps": 2300,
+   "buckets": [
+    {
+     "name": "income",
+     "bps": 2500
+    },
+    {
+     "name": "social",
+     "bps": 1000
+    },
+    {
+     "name": "buffer",
+     "bps": 333
+    }
+   ],
+   "gross": "3129530389670",
+   "base": "2544333650138",
+   "vat": "585196739532",
+   "parts": [
+    "636083412534",
+    "254433365013",
+    "84726310549"
+   ],
+   "reserve": "1560439827628",
+   "net": "1569090562042"
+  }
+ ],
+ "periods": [
+  {
+   "ts": "1802260800",
+   "month": {
+    "id": 24325,
+    "start": "1801440000",
+    "end": "1803859200"
+   },
+   "quarter": {
+    "id": 8108,
+    "start": "1798761600",
+    "end": "1806537600"
+   },
+   "year": {
+    "id": 2027,
+    "start": "1798761600",
+    "end": "1830297600"
+   },
+   "seconds60": {
+    "id": 30037680,
+    "start": "1802260800",
+    "end": "1802260860"
+   }
+  },
+  {
+   "ts": "1798758000",
+   "month": {
+    "id": 24323,
+    "start": "1796083200",
+    "end": "1798761600"
+   },
+   "quarter": {
+    "id": 8107,
+    "start": "1790812800",
+    "end": "1798761600"
+   },
+   "year": {
+    "id": 2026,
+    "start": "1767225600",
+    "end": "1798761600"
+   },
+   "seconds60": {
+    "id": 29979300,
+    "start": "1798758000",
+    "end": "1798758060"
+   }
+  },
+  {
+   "ts": "1798761600",
+   "month": {
+    "id": 24324,
+    "start": "1798761600",
+    "end": "1801440000"
+   },
+   "quarter": {
+    "id": 8108,
+    "start": "1798761600",
+    "end": "1806537600"
+   },
+   "year": {
+    "id": 2027,
+    "start": "1798761600",
+    "end": "1830297600"
+   },
+   "seconds60": {
+    "id": 29979360,
+    "start": "1798761600",
+    "end": "1798761660"
+   }
+  },
+  {
+   "ts": "1709182800",
+   "month": {
+    "id": 24289,
+    "start": "1706745600",
+    "end": "1709251200"
+   },
+   "quarter": {
+    "id": 8096,
+    "start": "1704067200",
+    "end": "1711929600"
+   },
+   "year": {
+    "id": 2024,
+    "start": "1704067200",
+    "end": "1735689600"
+   },
+   "seconds60": {
+    "id": 28486380,
+    "start": "1709182800",
+    "end": "1709182860"
+   }
+  },
+  {
+   "ts": "1792144800",
+   "month": {
+    "id": 24321,
+    "start": "1790812800",
+    "end": "1793491200"
+   },
+   "quarter": {
+    "id": 8107,
+    "start": "1790812800",
+    "end": "1798761600"
+   },
+   "year": {
+    "id": 2026,
+    "start": "1767225600",
+    "end": "1798761600"
+   },
+   "seconds60": {
+    "id": 29869080,
+    "start": "1792144800",
+    "end": "1792144860"
+   }
+  },
+  {
+   "ts": "922921200",
+   "month": {
+    "id": 23990,
+    "start": "920246400",
+    "end": "922924800"
+   },
+   "quarter": {
+    "id": 7996,
+    "start": "915148800",
+    "end": "922924800"
+   },
+   "year": {
+    "id": 1999,
+    "start": "915148800",
+    "end": "946684800"
+   },
+   "seconds60": {
+    "id": 15382020,
+    "start": "922921200",
+    "end": "922921260"
+   }
+  },
+  {
+   "ts": "4107542400",
+   "month": {
+    "id": 25202,
+    "start": "4107542400",
+    "end": "4110220800"
+   },
+   "quarter": {
+    "id": 8400,
+    "start": "4102444800",
+    "end": "4110220800"
+   },
+   "year": {
+    "id": 2100,
+    "start": "4102444800",
+    "end": "4133980800"
+   },
+   "seconds60": {
+    "id": 68459040,
+    "start": "4107542400",
+    "end": "4107542460"
+   }
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "./schema.json",
+  "id": "es",
+  "country": "ES",
+  "name": "Spain: self-employed (autónomos) and small companies",
+  "version": "2026.1",
+  "currencyNote": "Reserves are held in the token received (USDC or EURC); the user converts and pays in euros.",
+  "period": "Quarter",
+  "dueOffsetDays": 30,
+  "dueNote": "Quarterly VAT (modelo 303) and income-tax prepayment (modelo 130) are filed in the first 20 days after each quarter, and until 30 January for the fourth quarter. The vault uses 30 days for every quarter; paying the tax earlier is always allowed.",
+  "presets": [
+    {
+      "id": "general",
+      "label": "General VAT 21% + income-tax prepayment 20%",
+      "vatBps": 2100,
+      "buckets": [{ "name": "irpf", "bps": 2000, "label": "Income-tax prepayment (modelo 130)" }]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "Reduced VAT 10% + income-tax prepayment 20%",
+      "vatBps": 1000,
+      "buckets": [{ "name": "irpf", "bps": 2000, "label": "Income-tax prepayment (modelo 130)" }]
+    },
+    {
+      "id": "super-reduced-vat",
+      "label": "Super-reduced VAT 4% + income-tax prepayment 20%",
+      "vatBps": 400,
+      "buckets": [{ "name": "irpf", "bps": 2000, "label": "Income-tax prepayment (modelo 130)" }]
+    },
+    {
+      "id": "no-vat",
+      "label": "No VAT charged (exports, EU B2B reverse charge) + income-tax prepayment 20%",
+      "vatBps": 0,
+      "buckets": [{ "name": "irpf", "bps": 2000, "label": "Income-tax prepayment (modelo 130)" }]
+    },
+    {
+      "id": "vat-only",
+      "label": "VAT 21% only (income tax handled elsewhere)",
+      "vatBps": 2100,
+      "buckets": []
+    }
+  ],
+  "notes": [
+    "The income-tax prepayment of modelo 130 is 20% of the quarter's net profit (income minus deductible expenses). Kyros reserves 20% of the taxable base of each payment, which is never less than what is due; the surplus is released after the due date.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    { "title": "Ley 37/1992 del IVA (tipos impositivos, arts. 90 y 91)", "url": "https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740" },
+    { "title": "AEAT: modelo 303, IVA autoliquidación", "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientoini/G414.shtml" },
+    { "title": "AEAT: modelo 130, IRPF pago fraccionado", "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientoini/G601.shtml" }
+  ]
+}
