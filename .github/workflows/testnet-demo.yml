@@ -49,7 +49,7 @@ jobs:
         run: npm ci && npm run build
       - name: Run the testnet demo
         working-directory: sdk
-        run: node dist/demo/testnet.js --wasm-dir ../contracts/target/wasm32v1-none/release --out ../docs/testnet
+        run: bash ../scripts/run-and-annotate.sh "testnet demo" node dist/demo/testnet.js --wasm-dir ../contracts/target/wasm32v1-none/release --out ../docs/testnet
       - name: Summary
         if: always()
         run: if [ -f docs/testnet/README.md ]; then cat docs/testnet/README.md >> "$GITHUB_STEP_SUMMARY"; fi

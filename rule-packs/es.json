@@ -46,7 +46,7 @@
   ],
   "sources": [
     { "title": "Ley 37/1992 del IVA (tipos impositivos, arts. 90 y 91)", "url": "https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740" },
-    { "title": "AEAT: modelo 303, IVA autoliquidación", "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientoini/G414.shtml" },
-    { "title": "AEAT: modelo 130, IRPF pago fraccionado", "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientoini/G601.shtml" }
+    { "title": "AEAT: modelo 303, IVA autoliquidación", "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G414.shtml" },
+    { "title": "AEAT: modelo 130, IRPF pago fraccionado", "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G601.shtml" }
   ]
 }
