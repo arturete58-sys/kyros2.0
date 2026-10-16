@@ -72,7 +72,8 @@ async function expectRefusal(f: () => Promise<unknown>, contains: string): Promi
     await f();
   } catch (e) {
     const m = (e as Error).message;
-    if (e instanceof KyrosError && (m.includes(contains) || m.includes('Error(Contract'))) return m.split('\n')[0].slice(0, 200);
+    const code = /Error\(Contract, #(\d+)\)/.exec(m);
+    if (e instanceof KyrosError && code) return `${contains} (contract error #${code[1]})`;
     throw e;
   }
   throw new Error(`expected a refusal (${contains}) but the call succeeded`);
