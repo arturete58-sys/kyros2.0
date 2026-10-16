@@ -83,6 +83,12 @@
       "title": "Inland Revenue Department",
       "url": "https://www.ird.gov.hk",
       "official": true
+    },
+    {
+      "title": "IRD: two-tiered profits tax rates for unincorporated businesses (official)",
+      "url": "https://www.ird.gov.hk/eng/faq/2tr.htm",
+      "checked": "2026-10-16",
+      "official": true
     }
   ]
 }

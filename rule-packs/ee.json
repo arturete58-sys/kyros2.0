@@ -165,6 +165,12 @@
     {
       "title": "1Office: Estonia tax changes 2026",
       "url": "https://1office.co/blog/estonia-tax-changes-2026/"
+    },
+    {
+      "title": "EMTA: income and social tax rates 2026 (official)",
+      "url": "https://emta.ee/en/business-client/taxes-and-payment/income-and-social-taxes/tax-rates",
+      "checked": "2026-10-16",
+      "official": true
     }
   ]
 }

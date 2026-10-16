@@ -201,17 +201,17 @@ Each tax can be paid from the vault to the tax-payment destination whenever it i
 | [CO](../rule-packs/co.json) | Colombia | COP | IVA 19% / 5% | Year + 293 days | `responsable-iva` (estimate), `no-responsable-iva` (estimate) | 2 official, 1 checked 2026-10-16 |
 | [CY](../rule-packs/cy.json) | Cyprus | EUR | VAT 19% / 9% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 1 official, 1 checked 2026-10-16 |
 | [DE](../rule-packs/de.json) | Germany | EUR | USt 19% / 7% | Year + 300 days | `standard` (estimate), `reduced-vat` (estimate), `small-business` (estimate) | 3 official, 1 checked 2026-10-16 |
-| [EE](../rule-packs/ee.json) | Estonia | EUR | Käibemaks 24% / 13% / 9% | Year + 274 days | `standard` (exact on profit), `accommodation-vat` (exact on profit), `not-vat-registered` (exact on profit) | 1 official, 0 checked 2026-10-16 |
+| [EE](../rule-packs/ee.json) | Estonia | EUR | Käibemaks 24% / 13% / 9% | Year + 274 days | `standard` (exact on profit), `accommodation-vat` (exact on profit), `not-vat-registered` (exact on profit) | 2 official, 1 checked 2026-10-16 |
 | [ES](../rule-packs/es.json) | Spain | EUR | IVA 21% / 10% / 7% / 4% / 3% | Quarter + 30 days | `general` (estimate), `reduced-vat` (estimate), `super-reduced-vat` (estimate), `no-vat` (estimate), `vat-only` (exact), `canarias-igic` (estimate), `canarias-igic-reduced` (estimate) | 18 official, 20 checked 2026-10-16 |
 | [FR](../rule-packs/fr.json) | France | EUR | TVA 20% / 10% / 5.5% / 2.1% | Quarter + 31 days | `micro-bnc` (exact), `micro-bnc-vl` (exact), `micro-bic-services` (exact), `micro-bnc-vat` (exact) | 2 official, 0 checked 2026-10-16 |
 | [GB](../rule-packs/gb.json) | United Kingdom | GBP | VAT 20% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 2 checked 2026-10-16 |
 | [GE](../rule-packs/ge.json) | Georgia | GEL | VAT 18% | Month + 15 days | `small-business` (exact), `small-business-vat` (exact) | 1 official, 0 checked 2026-10-16 |
-| [HK](../rule-packs/hk.json) | Hong Kong | HKD | none | Year + 365 days | `profits-tax` (exact on profit) | 1 official, 0 checked 2026-10-16 |
+| [HK](../rule-packs/hk.json) | Hong Kong | HKD | none | Year + 365 days | `profits-tax` (exact on profit) | 2 official, 1 checked 2026-10-16 |
 | [ID](../rule-packs/id.json) | Indonesia | IDR | PPN 12% / 11% | Year + 90 days | `umkm-final` (exact), `pkp-umkm` (exact), `regular` (estimate) | 3 official, 2 checked 2026-10-16 |
 | [IE](../rule-packs/ie.json) | Ireland | EUR | VAT 23% / 13.5% / 9% | Year + 304 days | `standard` (estimate), `reduced-vat` (estimate), `second-reduced-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 3 checked 2026-10-16 |
 | [IN](../rule-packs/in.json) | India | INR | GST 40% / 18% / 5% | Year + 212 days | `presumptive-gst` (presumptive), `presumptive-export` (presumptive), `regular-gst` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [IT](../rule-packs/it.json) | Italy | EUR | IVA 22% / 10% / 5% / 4% | Year + 181 days | `forfettario` (exact), `forfettario-startup` (exact), `ordinario` (estimate) | 2 official, 1 checked 2026-10-16 |
-| [JP](../rule-packs/jp.json) | Japan | JPY | Consumption tax 10% / 8%; changes 2027-04-01 (proposed), 2029-04-01 (proposed) | Year + 90 days | `taxable` (estimate), `exempt` (estimate) | 2 official, 2 checked 2026-10-16 |
+| [JP](../rule-packs/jp.json) | Japan | JPY | Consumption tax 10% / 8%; changes 2027-04-01 (proposed), 2029-04-01 (proposed) | Year + 90 days | `taxable` (estimate), `exempt` (estimate) | 2 official, 3 checked 2026-10-16 |
 | [KE](../rule-packs/ke.json) | Kenya | KES | VAT 16% | Year + 181 days | `turnover-tax` (exact), `vat` (estimate), `no-vat` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [KR](../rule-packs/kr.json) | South Korea | KRW | VAT 10% | Year + 151 days | `general` (estimate), `vat-exempt-freelancer` (estimate) | 1 official, 0 checked 2026-10-16 |
 | [KY](../rule-packs/ky.json) | Cayman Islands | KYD | VAT: see notes | Year + 0 days | `no-tax` (exact), `us-person` (none) | 1 official, 1 checked 2026-10-16 |
