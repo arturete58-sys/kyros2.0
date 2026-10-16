@@ -79,7 +79,8 @@
   "sources": [
     {
       "title": "Revenue Service of Georgia",
-      "url": "https://www.rs.ge"
+      "url": "https://www.rs.ge",
+      "official": true
     }
   ]
 }

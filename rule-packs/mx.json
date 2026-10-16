@@ -256,7 +256,8 @@
   "sources": [
     {
       "title": "SAT",
-      "url": "https://www.sat.gob.mx"
+      "url": "https://www.sat.gob.mx",
+      "official": true
     },
     {
       "title": "Alegra: RESICO for individuals",

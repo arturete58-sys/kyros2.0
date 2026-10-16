@@ -3,7 +3,7 @@
   "id": "us",
   "country": "US",
   "name": "United States: self-employed (federal)",
-  "version": "2026.2",
+  "version": "2026.3",
   "reviewed": "2026-10-16",
   "currency": "USD",
   "period": "Year",
@@ -11,14 +11,14 @@
   "dueNote": "Federal estimated tax is paid in four instalments (15 April, 15 June, 15 September, 15 January); pay them from the vault as they fall due. The rest of a year's reserve is released after 15 April, the deadline of the annual return.",
   "presets": [
     {
-      "id": "no-state-income-tax",
-      "label": "Federal income tax + self-employment tax, state without income tax: reserve 30%",
+      "id": "self-employed",
+      "label": "Federal income tax + self-employment tax (add your state): reserve 30%",
       "vatBps": 0,
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
-          "label": "Federal income tax and self-employment tax 15.3% (suggested reserve)"
+          "label": "Federal and state income tax, self-employment tax (suggested reserve)"
         }
       ],
       "covers": [
@@ -27,100 +27,14 @@
       ]
     },
     {
-      "id": "with-state-income-tax",
-      "label": "Federal + state income tax + self-employment tax: reserve 35%",
-      "vatBps": 0,
-      "buckets": [
-        {
-          "name": "income_tax",
-          "bps": 3500,
-          "label": "Federal and state income tax, self-employment tax (suggested reserve)"
-        }
-      ],
-      "covers": [
-        "incomeTax",
-        "social"
-      ],
-      "estimate": {
-        "year": 2026,
-        "items": [
-          {
-            "name": "federal_income_tax",
-            "kind": "incomeTax",
-            "brackets": [
-              [
-                16100,
-                0
-              ],
-              [
-                28500,
-                1000
-              ],
-              [
-                66500,
-                1200
-              ],
-              [
-                121800,
-                2200
-              ],
-              [
-                217875,
-                2400
-              ],
-              [
-                272325,
-                3200
-              ],
-              [
-                656700,
-                3500
-              ],
-              [
-                null,
-                3700
-              ]
-            ],
-            "label": "Federal income tax 2026, single, after the standard deduction (USD 16,100)"
-          },
-          {
-            "name": "self_employment_tax",
-            "kind": "social",
-            "brackets": [
-              [
-                199783,
-                1413
-              ],
-              [
-                null,
-                268
-              ]
-            ],
-            "label": "Self-employment tax: 15.3% on 92.35% of profit up to the Social Security wage base, then 2.9%"
-          },
-          {
-            "name": "state_income_tax",
-            "kind": "incomeTax",
-            "brackets": [
-              [
-                null,
-                500
-              ]
-            ],
-            "label": "State income tax (typical 5%; enter your state's rate)"
-          }
-        ]
-      }
-    },
-    {
       "id": "with-sales-tax-example",
-      "label": "Example: 8% sales tax collected + federal reserve 30%",
+      "label": "Example: 8% sales tax collected + income tax reserve 30%",
       "vatBps": 800,
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
-          "label": "Federal income tax and self-employment tax 15.3% (suggested reserve)"
+          "label": "Federal and state income tax, self-employment tax (suggested reserve)"
         }
       ],
       "covers": [
@@ -131,7 +45,27 @@
   ],
   "estimate": {
     "year": 2026,
+    "socialDeductibleBps": 5000,
     "items": [
+      {
+        "name": "self_employment_tax",
+        "kind": "social",
+        "brackets": [
+          [
+            199783,
+            1413
+          ],
+          [
+            216568,
+            268
+          ],
+          [
+            null,
+            351
+          ]
+        ],
+        "label": "Self-employment tax: 15.3% on 92.35% of profit up to the 2026 Social Security wage base (USD 184,500), then 2.9% Medicare, plus 0.9% Additional Medicare above USD 200,000"
+      },
       {
         "name": "federal_income_tax",
         "kind": "incomeTax",
@@ -141,24 +75,32 @@
             0
           ],
           [
-            28500,
-            1000
+            31600,
+            800
           ],
           [
-            66500,
-            1200
+            79100,
+            960
           ],
           [
-            121800,
-            2200
+            148225,
+            1760
           ],
           [
-            217875,
-            2400
+            217850,
+            1920
           ],
           [
-            272325,
-            3200
+            244102,
+            3691
+          ],
+          [
+            279505,
+            4922
+          ],
+          [
+            292850,
+            5383
           ],
           [
             656700,
@@ -169,27 +111,22 @@
             3700
           ]
         ],
-        "label": "Federal income tax 2026, single, after the standard deduction (USD 16,100)"
-      },
-      {
-        "name": "self_employment_tax",
-        "kind": "social",
-        "brackets": [
-          [
-            199783,
-            1413
-          ],
-          [
-            null,
-            268
-          ]
-        ],
-        "label": "Self-employment tax: 15.3% on 92.35% of profit up to the Social Security wage base, then 2.9%"
+        "label": "Federal income tax 2026, single: standard deduction (USD 16,100) and the 20% qualified business income deduction, phased out from USD 201,750 of taxable income for a sole proprietor without employees"
       }
     ],
     "notes": [
-      "The qualified business income deduction and the deduction for half of the self-employment tax are not applied, so the estimate is on the high side. State income tax: add it as an extra rate."
+      "Half of the self-employment tax is deducted before income tax, as on Form 1040. Itemised deductions, credits, retirement contributions and other income are not included.",
+      "Choose your state to add its income tax; local taxes (New York City, Maryland counties, many Ohio and Pennsylvania cities) can be added as extra income tax."
     ]
+  },
+  "prepayment": {
+    "method": "prior-year",
+    "bps": 10000,
+    "above": {
+      "income": 150000,
+      "bps": 11000
+    },
+    "note": "Paying 100% of last year's tax in the four estimated-tax instalments (110% if last year's AGI was over USD 150,000) avoids the underpayment penalty, whatever this year's tax turns out to be."
   },
   "notes": [
     "There is no federal VAT. Sales tax is set by states and localities and does not apply to most services; set the rate your state requires, if any.",
@@ -198,16 +135,1385 @@
   ],
   "sources": [
     {
-      "title": "IRS: estimated taxes",
-      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes"
+      "title": "IRS: Rev. Proc. 2025-32, inflation adjustments for 2026 (official)",
+      "url": "https://www.irs.gov/pub/irs-drop/rp-25-32.pdf",
+      "official": true
     },
     {
-      "title": "IRS: self-employment tax",
-      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax-social-security-and-medicare-taxes"
+      "title": "IRS: estimated taxes (official)",
+      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes",
+      "official": true
     },
     {
-      "title": "2026 federal tax brackets (IRS Rev. Proc. 2025-32)",
-      "url": "https://www.breakeven.tax/brackets/2026"
+      "title": "IRS: self-employment tax (official)",
+      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax-social-security-and-medicare-taxes",
+      "official": true
+    },
+    {
+      "title": "SSA: 2026 Social Security changes, maximum taxable earnings USD 184,500 (official)",
+      "url": "https://www.ssa.gov/cola/factsheets/2026.html",
+      "official": true
+    },
+    {
+      "title": "KPMG: Rev. Proc. 2025-32 brackets for 2026",
+      "url": "https://kpmg.com/us/en/taxnewsflash/news/2025/10/tnf-rev-proc-2025-32-inflation-adjustments-for-2026-individual-taxpayers.html"
+    },
+    {
+      "title": "Tax Foundation: state individual income tax rates and brackets, 2026 (compiled from state statutes)",
+      "url": "https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/"
+    },
+    {
+      "title": "Section 199A for 2026: threshold USD 201,750, USD 75,000 phase-in",
+      "url": "https://beancount.io/blog/2026/06/01/section-199a-qbi-deduction-pass-through-owners-obbba-permanent-2026-thresholds-sstb-phase-out-w2-wages-ubia-form-8995-aggregation-guide"
+    },
+    {
+      "title": "IRS Publication 505, figure 4-A: do you have to pay estimated tax? (official)",
+      "url": "https://irs.gov/media/167296",
+      "official": true,
+      "checked": "2026-10-16"
+    }
+  ],
+  "regions": [
+    {
+      "id": "AK",
+      "name": "Alaska",
+      "items": [],
+      "note": "Alaska has no state income tax on self-employment income."
+    },
+    {
+      "id": "AL",
+      "name": "Alabama",
+      "items": [
+        {
+          "name": "state_al",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              4500,
+              0
+            ],
+            [
+              5000,
+              200
+            ],
+            [
+              7500,
+              400
+            ],
+            [
+              null,
+              500
+            ]
+          ],
+          "label": "Alabama income tax 2026, single"
+        }
+      ],
+      "note": "Alabama: some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "AR",
+      "name": "Arkansas",
+      "items": [
+        {
+          "name": "state_ar",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              2470,
+              0
+            ],
+            [
+              7070,
+              200
+            ],
+            [
+              null,
+              390
+            ]
+          ],
+          "label": "Arkansas income tax 2026, single",
+          "credit": 29
+        }
+      ]
+    },
+    {
+      "id": "AZ",
+      "name": "Arizona",
+      "items": [
+        {
+          "name": "state_az",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              250
+            ]
+          ],
+          "label": "Arizona income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Arizona: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly."
+    },
+    {
+      "id": "CA",
+      "name": "California",
+      "items": [
+        {
+          "name": "state_ca",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              5540,
+              0
+            ],
+            [
+              16619,
+              100
+            ],
+            [
+              31804,
+              200
+            ],
+            [
+              46992,
+              400
+            ],
+            [
+              63082,
+              600
+            ],
+            [
+              78264,
+              800
+            ],
+            [
+              377019,
+              930
+            ],
+            [
+              451311,
+              1030
+            ],
+            [
+              748493,
+              1130
+            ],
+            [
+              1005540,
+              1230
+            ],
+            [
+              null,
+              1330
+            ]
+          ],
+          "label": "California income tax 2026, single",
+          "credit": 153
+        }
+      ]
+    },
+    {
+      "id": "CO",
+      "name": "Colorado",
+      "items": [
+        {
+          "name": "state_co",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              440
+            ]
+          ],
+          "label": "Colorado income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Colorado: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly."
+    },
+    {
+      "id": "CT",
+      "name": "Connecticut",
+      "items": [
+        {
+          "name": "state_ct",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              0
+            ],
+            [
+              25000,
+              200
+            ],
+            [
+              65000,
+              450
+            ],
+            [
+              115000,
+              550
+            ],
+            [
+              215000,
+              600
+            ],
+            [
+              265000,
+              650
+            ],
+            [
+              515000,
+              690
+            ],
+            [
+              null,
+              699
+            ]
+          ],
+          "label": "Connecticut income tax 2026, single"
+        }
+      ],
+      "note": "Connecticut recaptures the lower brackets at high incomes, so above roughly USD 200,000 the estimate is low."
+    },
+    {
+      "id": "DC",
+      "name": "District of Columbia",
+      "items": [
+        {
+          "name": "state_dc",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              16100,
+              0
+            ],
+            [
+              26100,
+              400
+            ],
+            [
+              56100,
+              600
+            ],
+            [
+              76100,
+              650
+            ],
+            [
+              266100,
+              850
+            ],
+            [
+              516100,
+              925
+            ],
+            [
+              1016100,
+              975
+            ],
+            [
+              null,
+              1075
+            ]
+          ],
+          "label": "District of Columbia income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "DE",
+      "name": "Delaware",
+      "items": [
+        {
+          "name": "state_de",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              5250,
+              0
+            ],
+            [
+              8250,
+              220
+            ],
+            [
+              13250,
+              390
+            ],
+            [
+              23250,
+              480
+            ],
+            [
+              28250,
+              520
+            ],
+            [
+              63250,
+              555
+            ],
+            [
+              null,
+              660
+            ]
+          ],
+          "label": "Delaware income tax 2026, single",
+          "credit": 110
+        }
+      ],
+      "note": "Delaware: some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "FL",
+      "name": "Florida",
+      "items": [],
+      "note": "Florida has no state income tax on self-employment income."
+    },
+    {
+      "id": "GA",
+      "name": "Georgia",
+      "items": [
+        {
+          "name": "state_ga",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              519
+            ]
+          ],
+          "label": "Georgia income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Georgia: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly."
+    },
+    {
+      "id": "HI",
+      "name": "Hawaii",
+      "items": [
+        {
+          "name": "state_hi",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              5544,
+              0
+            ],
+            [
+              15144,
+              140
+            ],
+            [
+              19944,
+              320
+            ],
+            [
+              24744,
+              550
+            ],
+            [
+              29544,
+              640
+            ],
+            [
+              41544,
+              680
+            ],
+            [
+              53544,
+              720
+            ],
+            [
+              130544,
+              760
+            ],
+            [
+              180544,
+              790
+            ],
+            [
+              230544,
+              825
+            ],
+            [
+              280544,
+              900
+            ],
+            [
+              330544,
+              1000
+            ],
+            [
+              null,
+              1100
+            ]
+          ],
+          "label": "Hawaii income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "IA",
+      "name": "Iowa",
+      "items": [
+        {
+          "name": "state_ia",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              380
+            ]
+          ],
+          "label": "Iowa income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Iowa: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly. some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "ID",
+      "name": "Idaho",
+      "items": [
+        {
+          "name": "state_id",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              4811,
+              0
+            ],
+            [
+              null,
+              530
+            ]
+          ],
+          "label": "Idaho income tax 2026, single (flat rate)"
+        }
+      ]
+    },
+    {
+      "id": "IL",
+      "name": "Illinois",
+      "items": [
+        {
+          "name": "state_il",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              495
+            ]
+          ],
+          "label": "Illinois income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Illinois: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly."
+    },
+    {
+      "id": "IN",
+      "name": "Indiana",
+      "items": [
+        {
+          "name": "state_in",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              295
+            ]
+          ],
+          "label": "Indiana income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Indiana: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly. some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "KS",
+      "name": "Kansas",
+      "items": [
+        {
+          "name": "state_ks",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12765,
+              0
+            ],
+            [
+              35765,
+              520
+            ],
+            [
+              null,
+              558
+            ]
+          ],
+          "label": "Kansas income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "KY",
+      "name": "Kentucky",
+      "items": [
+        {
+          "name": "state_ky",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              350
+            ]
+          ],
+          "label": "Kentucky income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Kentucky: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly. some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "LA",
+      "name": "Louisiana",
+      "items": [
+        {
+          "name": "state_la",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              300
+            ]
+          ],
+          "label": "Louisiana income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Louisiana: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly."
+    },
+    {
+      "id": "MA",
+      "name": "Massachusetts",
+      "items": [
+        {
+          "name": "state_ma",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              4400,
+              0
+            ],
+            [
+              1087550,
+              500
+            ],
+            [
+              null,
+              900
+            ]
+          ],
+          "label": "Massachusetts income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "MD",
+      "name": "Maryland",
+      "items": [
+        {
+          "name": "state_md",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              6550,
+              0
+            ],
+            [
+              7550,
+              200
+            ],
+            [
+              8550,
+              300
+            ],
+            [
+              9550,
+              400
+            ],
+            [
+              106550,
+              475
+            ],
+            [
+              131550,
+              500
+            ],
+            [
+              156550,
+              525
+            ],
+            [
+              256550,
+              550
+            ],
+            [
+              506550,
+              575
+            ],
+            [
+              1006550,
+              625
+            ],
+            [
+              null,
+              650
+            ]
+          ],
+          "label": "Maryland income tax 2026, single"
+        }
+      ],
+      "note": "Maryland counties add a local income tax of 2.25% to 3.3%: enter it as extra income tax."
+    },
+    {
+      "id": "ME",
+      "name": "Maine",
+      "items": [
+        {
+          "name": "state_me",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              13650,
+              0
+            ],
+            [
+              41049,
+              580
+            ],
+            [
+              78499,
+              675
+            ],
+            [
+              null,
+              715
+            ]
+          ],
+          "label": "Maine income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "MI",
+      "name": "Michigan",
+      "items": [
+        {
+          "name": "state_mi",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              425
+            ]
+          ],
+          "label": "Michigan income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Michigan: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly. some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "MN",
+      "name": "Minnesota",
+      "items": [
+        {
+          "name": "state_mn",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15300,
+              0
+            ],
+            [
+              48610,
+              535
+            ],
+            [
+              124730,
+              680
+            ],
+            [
+              218450,
+              785
+            ],
+            [
+              null,
+              985
+            ]
+          ],
+          "label": "Minnesota income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "MO",
+      "name": "Missouri",
+      "items": [
+        {
+          "name": "state_mo",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              17448,
+              0
+            ],
+            [
+              18796,
+              200
+            ],
+            [
+              20144,
+              250
+            ],
+            [
+              21492,
+              300
+            ],
+            [
+              22840,
+              350
+            ],
+            [
+              24188,
+              400
+            ],
+            [
+              25536,
+              450
+            ],
+            [
+              null,
+              470
+            ]
+          ],
+          "label": "Missouri income tax 2026, single"
+        }
+      ],
+      "note": "Missouri: some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "MS",
+      "name": "Mississippi",
+      "items": [
+        {
+          "name": "state_ms",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              10000,
+              0
+            ],
+            [
+              null,
+              400
+            ]
+          ],
+          "label": "Mississippi income tax 2026, single (flat rate)"
+        }
+      ]
+    },
+    {
+      "id": "MT",
+      "name": "Montana",
+      "items": [
+        {
+          "name": "state_mt",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              16100,
+              0
+            ],
+            [
+              63600,
+              470
+            ],
+            [
+              null,
+              565
+            ]
+          ],
+          "label": "Montana income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "NC",
+      "name": "North Carolina",
+      "items": [
+        {
+          "name": "state_nc",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              399
+            ]
+          ],
+          "label": "North Carolina income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "North Carolina: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly."
+    },
+    {
+      "id": "ND",
+      "name": "North Dakota",
+      "items": [
+        {
+          "name": "state_nd",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              64575,
+              0
+            ],
+            [
+              260925,
+              195
+            ],
+            [
+              null,
+              250
+            ]
+          ],
+          "label": "North Dakota income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "NE",
+      "name": "Nebraska",
+      "items": [
+        {
+          "name": "state_ne",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              8850,
+              0
+            ],
+            [
+              12980,
+              246
+            ],
+            [
+              33610,
+              351
+            ],
+            [
+              null,
+              455
+            ]
+          ],
+          "label": "Nebraska income tax 2026, single",
+          "credit": 176
+        }
+      ]
+    },
+    {
+      "id": "NH",
+      "name": "New Hampshire",
+      "items": [],
+      "note": "New Hampshire has no state income tax on self-employment income."
+    },
+    {
+      "id": "NJ",
+      "name": "New Jersey",
+      "items": [
+        {
+          "name": "state_nj",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              1000,
+              0
+            ],
+            [
+              21000,
+              140
+            ],
+            [
+              36000,
+              175
+            ],
+            [
+              41000,
+              350
+            ],
+            [
+              76000,
+              553
+            ],
+            [
+              501000,
+              637
+            ],
+            [
+              1001000,
+              897
+            ],
+            [
+              null,
+              1075
+            ]
+          ],
+          "label": "New Jersey income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "NM",
+      "name": "New Mexico",
+      "items": [
+        {
+          "name": "state_nm",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              16100,
+              0
+            ],
+            [
+              21600,
+              150
+            ],
+            [
+              32600,
+              320
+            ],
+            [
+              49600,
+              430
+            ],
+            [
+              82600,
+              470
+            ],
+            [
+              226100,
+              490
+            ],
+            [
+              null,
+              590
+            ]
+          ],
+          "label": "New Mexico income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "NV",
+      "name": "Nevada",
+      "items": [],
+      "note": "Nevada has no state income tax on self-employment income."
+    },
+    {
+      "id": "NY",
+      "name": "New York",
+      "items": [
+        {
+          "name": "state_ny",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              8000,
+              0
+            ],
+            [
+              16500,
+              390
+            ],
+            [
+              19700,
+              440
+            ],
+            [
+              21900,
+              515
+            ],
+            [
+              88650,
+              540
+            ],
+            [
+              223400,
+              590
+            ],
+            [
+              1085550,
+              685
+            ],
+            [
+              5008000,
+              965
+            ],
+            [
+              25008000,
+              1030
+            ],
+            [
+              null,
+              1090
+            ]
+          ],
+          "label": "New York income tax 2026, single"
+        }
+      ],
+      "note": "New York recaptures the lower brackets at high incomes, so above roughly USD 200,000 the estimate is low. New York City adds about 3.1% to 3.9%: enter it as extra income tax."
+    },
+    {
+      "id": "OH",
+      "name": "Ohio",
+      "items": [
+        {
+          "name": "state_oh",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              26050,
+              0
+            ],
+            [
+              null,
+              275
+            ]
+          ],
+          "label": "Ohio income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Ohio: some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "OK",
+      "name": "Oklahoma",
+      "items": [
+        {
+          "name": "state_ok",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              11100,
+              0
+            ],
+            [
+              12250,
+              250
+            ],
+            [
+              14550,
+              350
+            ],
+            [
+              null,
+              450
+            ]
+          ],
+          "label": "Oklahoma income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "OR",
+      "name": "Oregon",
+      "items": [
+        {
+          "name": "state_or",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              2910,
+              0
+            ],
+            [
+              7460,
+              475
+            ],
+            [
+              14310,
+              675
+            ],
+            [
+              127910,
+              875
+            ],
+            [
+              null,
+              990
+            ]
+          ],
+          "label": "Oregon income tax 2026, single",
+          "credit": 256
+        }
+      ],
+      "note": "Oregon: some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "PA",
+      "name": "Pennsylvania",
+      "items": [
+        {
+          "name": "state_pa",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              307
+            ]
+          ],
+          "label": "Pennsylvania income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Pennsylvania: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly. some cities or counties add a local income tax; enter it as extra income tax."
+    },
+    {
+      "id": "RI",
+      "name": "Rhode Island",
+      "items": [
+        {
+          "name": "state_ri",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              16450,
+              0
+            ],
+            [
+              98500,
+              375
+            ],
+            [
+              202900,
+              475
+            ],
+            [
+              null,
+              599
+            ]
+          ],
+          "label": "Rhode Island income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "SC",
+      "name": "South Carolina",
+      "items": [
+        {
+          "name": "state_sc",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              8350,
+              0
+            ],
+            [
+              11990,
+              0
+            ],
+            [
+              26580,
+              300
+            ],
+            [
+              null,
+              600
+            ]
+          ],
+          "label": "South Carolina income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "SD",
+      "name": "South Dakota",
+      "items": [],
+      "note": "South Dakota has no state income tax on self-employment income."
+    },
+    {
+      "id": "TN",
+      "name": "Tennessee",
+      "items": [],
+      "note": "Tennessee has no state income tax on self-employment income."
+    },
+    {
+      "id": "TX",
+      "name": "Texas",
+      "items": [],
+      "note": "Texas has no state income tax on self-employment income."
+    },
+    {
+      "id": "UT",
+      "name": "Utah",
+      "items": [
+        {
+          "name": "state_ut",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              null,
+              450
+            ]
+          ],
+          "label": "Utah income tax 2026, single (flat rate)"
+        }
+      ],
+      "note": "Utah: the flat rate is applied to all profit; the state's own deductions or exemptions would lower it slightly."
+    },
+    {
+      "id": "VA",
+      "name": "Virginia",
+      "items": [
+        {
+          "name": "state_va",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              9680,
+              0
+            ],
+            [
+              12680,
+              200
+            ],
+            [
+              14680,
+              300
+            ],
+            [
+              26680,
+              500
+            ],
+            [
+              null,
+              575
+            ]
+          ],
+          "label": "Virginia income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "VT",
+      "name": "Vermont",
+      "items": [
+        {
+          "name": "state_vt",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              12950,
+              0
+            ],
+            [
+              62350,
+              335
+            ],
+            [
+              132650,
+              660
+            ],
+            [
+              262650,
+              760
+            ],
+            [
+              null,
+              875
+            ]
+          ],
+          "label": "Vermont income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "WA",
+      "name": "Washington",
+      "items": [],
+      "note": "Washington has no state income tax on self-employment income."
+    },
+    {
+      "id": "WI",
+      "name": "Wisconsin",
+      "items": [
+        {
+          "name": "state_wi",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              14660,
+              0
+            ],
+            [
+              29770,
+              350
+            ],
+            [
+              66610,
+              440
+            ],
+            [
+              347380,
+              530
+            ],
+            [
+              null,
+              765
+            ]
+          ],
+          "label": "Wisconsin income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "WV",
+      "name": "West Virginia",
+      "items": [
+        {
+          "name": "state_wv",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              2000,
+              0
+            ],
+            [
+              12000,
+              222
+            ],
+            [
+              27000,
+              296
+            ],
+            [
+              42000,
+              333
+            ],
+            [
+              62000,
+              444
+            ],
+            [
+              null,
+              482
+            ]
+          ],
+          "label": "West Virginia income tax 2026, single"
+        }
+      ]
+    },
+    {
+      "id": "WY",
+      "name": "Wyoming",
+      "items": [],
+      "note": "Wyoming has no state income tax on self-employment income."
     }
   ]
 }

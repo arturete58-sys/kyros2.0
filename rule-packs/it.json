@@ -186,11 +186,13 @@
   "sources": [
     {
       "title": "European Commission: VAT rates in EU member states",
-      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en",
+      "official": true
     },
     {
       "title": "Agenzia delle Entrate",
-      "url": "https://www.agenziaentrate.gov.it"
+      "url": "https://www.agenziaentrate.gov.it",
+      "official": true
     }
   ]
 }

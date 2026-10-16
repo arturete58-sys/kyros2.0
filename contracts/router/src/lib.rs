@@ -32,10 +32,26 @@ impl Router {
     /// Pays `gross` of `token` from `from` to the owner of `vault`, split by the
     /// vault's rule. `reference` is the invoice reference (e.g. a hash of the
     /// invoice number), echoed in the events for reconciliation.
-    pub fn pay(e: Env, from: Address, vault: Address, token: Address, gross: i128, reference: BytesN<32>) -> Split {
+    pub fn pay(
+        e: Env,
+        from: Address,
+        vault: Address,
+        token: Address,
+        gross: i128,
+        reference: BytesN<32>,
+    ) -> Split {
         from.require_auth();
         let s = VaultClient::new(&e, &vault).receive(&from, &token, &gross, &reference);
-        Paid { vault, reference, from, token, gross, net: s.net, reserve: s.reserve }.publish(&e);
+        Paid {
+            vault,
+            reference,
+            from,
+            token,
+            gross,
+            net: s.net,
+            reserve: s.reserve,
+        }
+        .publish(&e);
         s
     }
 

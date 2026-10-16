@@ -26,7 +26,16 @@ struct W {
 }
 
 fn spain(e: &Env) -> Rule {
-    Rule { vat_bps: 2100, buckets: vec![e, Bucket { name: Symbol::new(e, "irpf"), bps: 2000 }] }
+    Rule {
+        vat_bps: 2100,
+        buckets: vec![
+            e,
+            Bucket {
+                name: Symbol::new(e, "irpf"),
+                bps: 2000,
+            },
+        ],
+    }
 }
 
 fn world() -> W {
@@ -41,10 +50,25 @@ fn world() -> W {
     StellarAssetClient::new(&e, &token).mint(&payer, &(10_000 * UNIT));
     let id = e.register(
         ReserveVault,
-        (owner.clone(), spain(&e), tax.clone(), NOTICE, PeriodKind::Quarter, DUE_OFFSET, vec![&e, token.clone()]),
+        (
+            owner.clone(),
+            spain(&e),
+            tax.clone(),
+            NOTICE,
+            PeriodKind::Quarter,
+            DUE_OFFSET,
+            vec![&e, token.clone()],
+        ),
     );
     let v = ReserveVaultClient::new(&e, &id);
-    W { e, v, token, owner, payer, tax }
+    W {
+        e,
+        v,
+        token,
+        owner,
+        payer,
+        tax,
+    }
 }
 
 fn bal(w: &W, a: &Address) -> i128 {
@@ -59,7 +83,10 @@ fn r(w: &W) -> BytesN<32> {
 fn a_payment_is_split_between_the_owner_and_the_vault() {
     let w = world();
     let s = w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
-    assert_eq!((s.net, s.vat, s.reserve), (800 * UNIT, 210 * UNIT, 410 * UNIT));
+    assert_eq!(
+        (s.net, s.vat, s.reserve),
+        (800 * UNIT, 210 * UNIT, 410 * UNIT)
+    );
     assert_eq!(bal(&w, &w.owner), 800 * UNIT);
     assert_eq!(bal(&w, &w.v.address), 410 * UNIT);
     let q = w.v.current_period();
@@ -82,7 +109,10 @@ fn the_reserve_is_locked_until_the_due_date() {
     w.e.ledger().set_timestamp(APR_1_2027 + DUE_OFFSET);
     assert_eq!(w.v.release(&q, &w.token), 410 * UNIT);
     assert_eq!(bal(&w, &w.owner), 1_210 * UNIT);
-    assert_eq!(w.v.try_release(&q, &w.token), Err(Ok(VaultError::NothingToRelease)));
+    assert_eq!(
+        w.v.try_release(&q, &w.token),
+        Err(Ok(VaultError::NothingToRelease))
+    );
 }
 
 #[test]
@@ -92,8 +122,14 @@ fn tax_can_be_paid_at_any_time_but_only_to_the_destination() {
     let q = w.v.current_period();
     w.v.pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT));
     assert_eq!(bal(&w, &w.tax), 210 * UNIT);
-    assert_eq!(w.v.try_pay_tax(&q, &w.token, &symbol_short!("vat"), &1), Err(Ok(VaultError::ExceedsReserve)));
-    assert_eq!(w.v.try_pay_tax(&q, &w.token, &symbol_short!("nope"), &1), Err(Ok(VaultError::UnknownBucket)));
+    assert_eq!(
+        w.v.try_pay_tax(&q, &w.token, &symbol_short!("vat"), &1),
+        Err(Ok(VaultError::ExceedsReserve))
+    );
+    assert_eq!(
+        w.v.try_pay_tax(&q, &w.token, &symbol_short!("nope"), &1),
+        Err(Ok(VaultError::UnknownBucket))
+    );
     let p = w.v.period(&q, &w.token);
     assert_eq!(p.paid, 210 * UNIT);
     assert_eq!(p.buckets.get(symbol_short!("irpf")).unwrap(), 200 * UNIT);
@@ -125,15 +161,36 @@ fn a_new_destination_waits_for_the_notice_period() {
     assert_eq!(w.v.try_cancel(), Err(Ok(VaultError::AlreadyInForce)));
     w.v.apply_pending();
     assert_eq!(w.v.pending_destination(), None);
-    assert_eq!(w.v.try_apply_pending(), Err(Ok(VaultError::NoPendingChange)));
+    assert_eq!(
+        w.v.try_apply_pending(),
+        Err(Ok(VaultError::NoPendingChange))
+    );
 }
 
 #[test]
 fn a_new_rule_applies_only_after_notice_and_must_be_valid() {
     let w = world();
-    let bad = Rule { vat_bps: 2100, buckets: vec![&w.e, Bucket { name: symbol_short!("x"), bps: 10_001 }] };
+    let bad = Rule {
+        vat_bps: 2100,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: symbol_short!("x"),
+                bps: 10_001,
+            },
+        ],
+    };
     assert_eq!(w.v.try_propose_rule(&bad), Err(Ok(VaultError::InvalidRule)));
-    let lower = Rule { vat_bps: 2100, buckets: vec![&w.e, Bucket { name: symbol_short!("irpf"), bps: 700 }] };
+    let lower = Rule {
+        vat_bps: 2100,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: symbol_short!("irpf"),
+                bps: 700,
+            },
+        ],
+    };
     w.v.propose_rule(&lower);
     assert_eq!(w.v.quote(&(1_210 * UNIT)).reserve, 410 * UNIT);
     w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
@@ -145,7 +202,16 @@ fn a_scheduled_rule_switches_on_its_date_and_never_before_the_notice() {
     let w = world();
     // VAT goes from 21% to 22% thirty days from now; the owner signs today.
     let date = FEB_10_2027 + 30 * 86_400;
-    let higher = Rule { vat_bps: 2200, buckets: vec![&w.e, Bucket { name: symbol_short!("irpf"), bps: 2000 }] };
+    let higher = Rule {
+        vat_bps: 2200,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: symbol_short!("irpf"),
+                bps: 2000,
+            },
+        ],
+    };
     assert_eq!(w.v.propose_rule_at(&higher, &date), date);
     // The notice has run but the date has not come: the old rate still applies.
     w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
@@ -156,17 +222,34 @@ fn a_scheduled_rule_switches_on_its_date_and_never_before_the_notice() {
     w.e.ledger().set_timestamp(date);
     assert_eq!(w.v.quote(&(1_220 * UNIT)).vat, 220 * UNIT);
     // A date sooner than the notice is pushed back to the end of the notice.
-    let lower = Rule { vat_bps: 2100, buckets: vec![&w.e, Bucket { name: symbol_short!("irpf"), bps: 2000 }] };
+    let lower = Rule {
+        vat_bps: 2100,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: symbol_short!("irpf"),
+                bps: 2000,
+            },
+        ],
+    };
     assert_eq!(w.v.propose_rule_at(&lower, &(date + 1)), date + NOTICE);
 }
 
 #[test]
 fn only_accepted_tokens_and_positive_amounts() {
     let w = world();
-    let other = w.e.register_stellar_asset_contract_v2(Address::generate(&w.e)).address();
+    let other =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
     assert!(!w.v.accepts(&other));
-    assert_eq!(w.v.try_receive(&w.payer, &other, &UNIT, &r(&w)), Err(Ok(VaultError::TokenNotAccepted)));
-    assert_eq!(w.v.try_receive(&w.payer, &w.token, &0, &r(&w)), Err(Ok(VaultError::InvalidAmount)));
+    assert_eq!(
+        w.v.try_receive(&w.payer, &other, &UNIT, &r(&w)),
+        Err(Ok(VaultError::TokenNotAccepted))
+    );
+    assert_eq!(
+        w.v.try_receive(&w.payer, &w.token, &0, &r(&w)),
+        Err(Ok(VaultError::InvalidAmount))
+    );
 }
 
 #[test]
@@ -185,10 +268,98 @@ fn money_out_needs_the_owner() {
     let e = Env::default();
     e.ledger().set_timestamp(FEB_10_2027);
     let owner = Address::generate(&e);
-    let token = e.register_stellar_asset_contract_v2(Address::generate(&e)).address();
-    let id = e.register(ReserveVault, (owner, spain(&e), Address::generate(&e), NOTICE, PeriodKind::Quarter, DUE_OFFSET, vec![&e, token.clone()]));
+    let token = e
+        .register_stellar_asset_contract_v2(Address::generate(&e))
+        .address();
+    let id = e.register(
+        ReserveVault,
+        (
+            owner,
+            spain(&e),
+            Address::generate(&e),
+            NOTICE,
+            PeriodKind::Quarter,
+            DUE_OFFSET,
+            vec![&e, token.clone()],
+        ),
+    );
     let v = ReserveVaultClient::new(&e, &id);
     // No authorization mocked: owner-only calls fail.
-    assert!(v.try_pay_tax(&(2027 * 4), &token, &symbol_short!("vat"), &1).is_err());
+    assert!(v
+        .try_pay_tax(&(2027 * 4), &token, &symbol_short!("vat"), &1)
+        .is_err());
     assert!(v.try_propose_destination(&Address::generate(&e)).is_err());
+}
+
+fn registry(w: &W, notice: u64) -> kyros_rate_registry::RateRegistryClient<'static> {
+    let id = w.e.register(
+        kyros_rate_registry::RateRegistry,
+        (Address::generate(&w.e), notice),
+    );
+    let r = kyros_rate_registry::RateRegistryClient::new(&w.e, &id);
+    r.seed(&symbol_short!("ES"), &symbol_short!("standard"), &2100);
+    r
+}
+
+#[test]
+fn a_vault_that_follows_the_registry_changes_vat_on_the_legal_date_without_a_signature() {
+    let w = world();
+    let reg = registry(&w, NOTICE);
+    let (es, std) = (symbol_short!("ES"), symbol_short!("standard"));
+    w.v.follow(&reg.address, &es, &std, &2500);
+    assert_eq!(w.v.feed().unwrap().country, es);
+    // The law changes: 22% from a date published 30 days ahead.
+    let date = FEB_10_2027 + 30 * 86_400;
+    reg.publish(&es, &std, &date, &2200);
+    assert_eq!(w.v.quote(&(1_210 * UNIT)).vat, 210 * UNIT);
+    w.e.ledger().set_timestamp(date);
+    // No call from the owner: payments now use 22%, and the user's 20% income-tax reserve is untouched.
+    let before = bal(&w, &w.owner);
+    let s = w.v.receive(&w.payer, &w.token, &(1_220 * UNIT), &r(&w));
+    assert_eq!(s.vat, 220 * UNIT);
+    assert_eq!(s.parts.get(0).unwrap(), 200 * UNIT);
+    assert_eq!(bal(&w, &w.owner) - before, 800 * UNIT);
+    assert_eq!(w.v.config().rule.vat_bps, 2200);
+}
+
+#[test]
+fn following_is_bounded_and_can_stop_at_any_time() {
+    let w = world();
+    let (es, std) = (symbol_short!("ES"), symbol_short!("standard"));
+    // A registry with less notice than the vault is refused.
+    let fast = registry(&w, NOTICE - 1);
+    assert_eq!(
+        w.v.try_follow(&fast.address, &es, &std, &2500),
+        Err(Ok(VaultError::RegistryNoticeTooShort))
+    );
+    let reg = registry(&w, NOTICE);
+    // Following must change nothing today.
+    assert_eq!(
+        w.v.try_follow(
+            &reg.address,
+            &symbol_short!("ES"),
+            &symbol_short!("reduced"),
+            &2500
+        ),
+        Err(Ok(VaultError::UnknownRate))
+    );
+    assert_eq!(
+        w.v.try_follow(&reg.address, &es, &std, &2000),
+        Err(Ok(VaultError::RateMismatch))
+    );
+    w.v.follow(&reg.address, &es, &std, &2300);
+    // A rate above the owner's ceiling is ignored: the vault keeps its own 21%.
+    let date = FEB_10_2027 + 30 * 86_400;
+    reg.publish(&es, &std, &date, &9000);
+    w.e.ledger().set_timestamp(date);
+    assert_eq!(w.v.quote(&(1_210 * UNIT)).vat, 210 * UNIT);
+    // A legal change within the ceiling applies, and unfollowing keeps it as the vault's own.
+    reg.publish(&es, &std, &(date + NOTICE), &2200);
+    w.e.ledger().set_timestamp(date + NOTICE);
+    assert_eq!(w.v.unfollow(), 2200);
+    assert_eq!(w.v.feed(), None);
+    reg.publish(&es, &std, &(date + 2 * NOTICE), &2300);
+    w.e.ledger().set_timestamp(date + 2 * NOTICE);
+    assert_eq!(w.v.config().rule.vat_bps, 2200);
+    assert_eq!(w.v.try_unfollow(), Err(Ok(VaultError::NotFollowing)));
 }

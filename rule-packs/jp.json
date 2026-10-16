@@ -14,6 +14,24 @@
         "standard": 1000,
         "reduced": 800
       }
+    },
+    {
+      "from": "2027-04-01",
+      "proposed": true,
+      "rates": {
+        "standard": 1000,
+        "reduced": 100
+      },
+      "note": "Government plan (Cabinet decision of 15 September 2026): food at 1% from 1 April 2027 to 31 March 2029; the bill goes to the autumn 2026 Diet session"
+    },
+    {
+      "from": "2029-04-01",
+      "proposed": true,
+      "rates": {
+        "standard": 1000,
+        "reduced": 800
+      },
+      "note": "Back to 8% after the two-year cut, under the same plan"
     }
   ],
   "period": "Year",
@@ -162,7 +180,19 @@
   "sources": [
     {
       "title": "National Tax Agency",
-      "url": "https://www.nta.go.jp/english/"
+      "url": "https://www.nta.go.jp/english/",
+      "official": true
+    },
+    {
+      "title": "National Tax Agency: consumption tax rates 10% and 8% (official)",
+      "url": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/shohi/6303.htm",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "Zeiken: LDP and Ishin outline, food consumption tax to 1% from April 2027",
+      "url": "https://www.zeiken.co.jp/news/25969013.php",
+      "checked": "2026-10-16"
     }
   ]
 }

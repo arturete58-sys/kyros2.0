@@ -144,6 +144,11 @@
       "Solidarity surcharge and church tax are not included; pension insurance is voluntary for most freelancers. Health insurance is treated as fully deductible."
     ]
   },
+  "prepayment": {
+    "method": "prior-year",
+    "bps": 10000,
+    "note": "The Finanzamt sets quarterly prepayments (10 March, June, September, December) in a notice, generally from the tax of the last assessment (§ 37 EStG); enter that tax to match the notice."
+  },
   "notes": [
     "Income tax is progressive (up to 45%) plus solidarity surcharge and, if applicable, church tax; 30% of the base is a suggested reserve, not a calculation.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
@@ -151,11 +156,18 @@
   "sources": [
     {
       "title": "European Commission: VAT rates in EU member states",
-      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en",
+      "official": true
     },
     {
       "title": "Bundeszentralamt für Steuern",
       "url": "https://www.bzst.de"
+    },
+    {
+      "title": "§ 37 EStG, Einkommensteuer-Vorauszahlung (official text)",
+      "url": "https://www.gesetze-im-internet.de/estg/__37.html",
+      "official": true,
+      "checked": "2026-10-16"
     }
   ]
 }

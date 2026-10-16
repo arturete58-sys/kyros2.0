@@ -219,7 +219,8 @@
   "sources": [
     {
       "title": "Bureau of Internal Revenue",
-      "url": "https://www.bir.gov.ph"
+      "url": "https://www.bir.gov.ph",
+      "official": true
     }
   ]
 }

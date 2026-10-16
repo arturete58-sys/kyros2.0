@@ -1085,9 +1085,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kyros-rate-registry"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "kyros-reserve-vault"
 version = "0.1.0"
 dependencies = [
+ "kyros-rate-registry",
  "kyros-types",
  "soroban-sdk",
 ]

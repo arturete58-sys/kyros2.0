@@ -116,11 +116,18 @@
   "sources": [
     {
       "title": "Federal Tax Administration (ESTV)",
-      "url": "https://www.estv.admin.ch"
+      "url": "https://www.estv.admin.ch",
+      "official": true
     },
     {
       "title": "Bill Alps: Swiss VAT rising to 8.5% in 2028",
       "url": "https://bill-alps.ch/en/blog/swiss-vat-increase-8-5-percent-2028/"
+    },
+    {
+      "title": "Federal Tax Administration: current Swiss VAT rates (official)",
+      "url": "https://www.estv.admin.ch/estv/en/home/mehrwertsteuer/mwst-steuersaetze.html",
+      "checked": "2026-10-16",
+      "official": true
     }
   ]
 }

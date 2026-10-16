@@ -32,7 +32,7 @@
   "presets": [
     {
       "id": "household-services",
-      "label": "Business household, services: VAT 5% + personal income tax 2% of revenue",
+      "label": "Business household, services: VAT 5% + personal income tax 2% above VND 500 million",
       "vatBps": 0,
       "buckets": [
         {
@@ -82,13 +82,12 @@
                 200
               ]
             ],
-            "label": "Personal income tax on revenue, 2% for services",
-            "basis": "revenue",
-            "mode": "flat"
+            "label": "Personal income tax, 2% of revenue above VND 500 million (percentage method)",
+            "basis": "revenue"
           }
         ],
         "notes": [
-          "Households with revenue up to VND 500 million a year owe neither tax (2026 threshold); above it the rates apply to the whole revenue."
+          "Households with revenue up to VND 500 million a year owe neither tax (2026). Above it, VAT is 5% of revenue and personal income tax 2% of the revenue above VND 500 million; between VND 500 million and 3 billion a household may instead pay 15% of revenue minus expenses, keeping the method for two years."
         ]
       }
     },
@@ -153,6 +152,12 @@
     {
       "title": "Viet An Law: calculating business household tax in 2026",
       "url": "https://vietanlaw.com/calculating-business-household-tax-in-vietnam-2026/"
+    },
+    {
+      "title": "Diên Khánh People's Committee (Khánh Hòa): business household tax from 2026 (official)",
+      "url": "https://dienkhanh.khanhhoa.gov.vn/Resources/Docs/N%C4%83m%202026/UBND/TL%20tuye%CC%82n%20truye%CC%82%CC%80n%20dinh%20kem%20TB85%20cho%20HKD_ban%20c%E1%BA%ADp%20nhat%20KHH%20gui%20lai%2006.02.2026.pdf",
+      "official": true,
+      "checked": "2026-10-16"
     }
   ]
 }

@@ -26,18 +26,48 @@ fn world() -> W {
     let e = Env::default();
     e.mock_all_auths();
     e.ledger().set_timestamp(1_802_260_800);
-    let token = e.register_stellar_asset_contract_v2(Address::generate(&e)).address();
+    let token = e
+        .register_stellar_asset_contract_v2(Address::generate(&e))
+        .address();
     let owner = Address::generate(&e);
     let payer = Address::generate(&e);
     StellarAssetClient::new(&e, &token).mint(&payer, &(10_000 * UNIT));
-    let rule = Rule { vat_bps: 2100, buckets: vec![&e, Bucket { name: Symbol::new(&e, "irpf"), bps: 2000 }] };
+    let rule = Rule {
+        vat_bps: 2100,
+        buckets: vec![
+            &e,
+            Bucket {
+                name: Symbol::new(&e, "irpf"),
+                bps: 2000,
+            },
+        ],
+    };
     let vault = ReserveVaultClient::new(
         &e,
-        &e.register(ReserveVault, (owner.clone(), rule, Address::generate(&e), 86_400u64, PeriodKind::Quarter, 0u64, vec![&e, token.clone()])),
+        &e.register(
+            ReserveVault,
+            (
+                owner.clone(),
+                rule,
+                Address::generate(&e),
+                86_400u64,
+                PeriodKind::Quarter,
+                0u64,
+                vec![&e, token.clone()],
+            ),
+        ),
     );
     let inbox = InboxClient::new(&e, &e.register(Inbox, (vault.address.clone(),)));
     let router = RouterClient::new(&e, &e.register(Router, ()));
-    W { e, router, vault, inbox, token, owner, payer }
+    W {
+        e,
+        router,
+        vault,
+        inbox,
+        token,
+        owner,
+        payer,
+    }
 }
 
 fn bal(w: &W, a: &Address) -> i128 {
@@ -48,7 +78,13 @@ fn bal(w: &W, a: &Address) -> i128 {
 fn the_router_splits_inside_the_payers_transaction() {
     let w = world();
     let reference = BytesN::from_array(&w.e, &[9; 32]);
-    let s = w.router.pay(&w.payer, &w.vault.address, &w.token, &(1_210 * UNIT), &reference);
+    let s = w.router.pay(
+        &w.payer,
+        &w.vault.address,
+        &w.token,
+        &(1_210 * UNIT),
+        &reference,
+    );
     // The payer authorized one tree: the router call, and through it both transfers.
     let auths = w.e.auths();
     assert_eq!(auths.len(), 1);
@@ -69,7 +105,10 @@ fn the_router_splits_inside_the_payers_transaction() {
 #[test]
 fn the_router_quotes_the_vault_rule() {
     let w = world();
-    assert_eq!(w.router.quote(&w.vault.address, &(121 * UNIT)).net, 80 * UNIT);
+    assert_eq!(
+        w.router.quote(&w.vault.address, &(121 * UNIT)).net,
+        80 * UNIT
+    );
 }
 
 #[test]
@@ -86,7 +125,10 @@ fn anyone_can_sweep_an_inbox_and_only_the_owner_and_vault_are_paid() {
     assert_eq!(bal(&w, &w.vault.address), 41 * UNIT);
     assert_eq!(bal(&w, &w.inbox.address), 0);
     assert_eq!(w.inbox.sweeps(), 1);
-    assert_eq!(w.inbox.try_sweep(&w.token), Err(Ok(InboxError::NothingToSweep)));
+    assert_eq!(
+        w.inbox.try_sweep(&w.token),
+        Err(Ok(InboxError::NothingToSweep))
+    );
     let p = w.vault.period(&w.vault.current_period(), &w.token);
     assert_eq!(p.buckets.get(symbol_short!("vat")).unwrap(), 21 * UNIT);
 }
@@ -94,9 +136,14 @@ fn anyone_can_sweep_an_inbox_and_only_the_owner_and_vault_are_paid() {
 #[test]
 fn tokens_the_vault_does_not_accept_go_back_to_the_owner() {
     let w = world();
-    let other = w.e.register_stellar_asset_contract_v2(Address::generate(&w.e)).address();
+    let other =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
     StellarAssetClient::new(&w.e, &other).mint(&w.inbox.address, &(5 * UNIT));
-    assert_eq!(w.inbox.try_return_unaccepted(&w.token), Err(Ok(InboxError::TokenAccepted)));
+    assert_eq!(
+        w.inbox.try_return_unaccepted(&w.token),
+        Err(Ok(InboxError::TokenAccepted))
+    );
     w.e.set_auths(&[]);
     assert_eq!(w.inbox.return_unaccepted(&other), 5 * UNIT);
     assert_eq!(TokenClient::new(&w.e, &other).balance(&w.owner), 5 * UNIT);
@@ -107,6 +154,110 @@ fn a_router_payment_without_the_payers_signature_fails() {
     let w = world();
     w.e.set_auths(&[]);
     let reference = BytesN::from_array(&w.e, &[1; 32]);
-    assert!(w.router.try_pay(&w.payer, &w.vault.address, &w.token, &UNIT, &reference).is_err());
+    assert!(w
+        .router
+        .try_pay(&w.payer, &w.vault.address, &w.token, &UNIT, &reference)
+        .is_err());
     assert_eq!(bal(&w, &w.owner), 0);
+}
+
+#[test]
+fn moving_country_moves_the_inbox_to_a_new_vault_after_the_notice() {
+    let w = world();
+    // Spain (quarterly, 21% + 20%) to Germany (yearly, 19% + 30%): a new vault, same owner.
+    let de = Rule {
+        vat_bps: 1900,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: Symbol::new(&w.e, "est"),
+                bps: 3000,
+            },
+        ],
+    };
+    let new_vault = ReserveVaultClient::new(
+        &w.e,
+        &w.e.register(
+            ReserveVault,
+            (
+                w.owner.clone(),
+                de,
+                Address::generate(&w.e),
+                86_400u64,
+                PeriodKind::Year,
+                300 * 86_400u64,
+                vec![&w.e, w.token.clone()],
+            ),
+        ),
+    );
+    // Someone else's vault is refused.
+    let stranger = ReserveVaultClient::new(
+        &w.e,
+        &w.e.register(
+            ReserveVault,
+            (
+                Address::generate(&w.e),
+                Rule {
+                    vat_bps: 0,
+                    buckets: vec![&w.e],
+                },
+                Address::generate(&w.e),
+                0u64,
+                PeriodKind::Year,
+                0u64,
+                vec![&w.e, w.token.clone()],
+            ),
+        ),
+    );
+    assert_eq!(
+        w.inbox.try_propose_vault(&stranger.address),
+        Err(Ok(InboxError::NotSameOwner))
+    );
+    let ready = w.inbox.propose_vault(&new_vault.address);
+    assert_eq!(ready, 1_802_260_800 + 86_400);
+    // During the notice, payments to the inbox still go through the Spanish vault.
+    let t = TokenClient::new(&w.e, &w.token);
+    t.transfer(&w.payer, &w.inbox.address, &(121 * UNIT));
+    w.inbox.sweep(&w.token);
+    assert_eq!(bal(&w, &w.vault.address), 41 * UNIT);
+    // After it, the same address pays into the German vault; the Spanish reserve stays where it was.
+    w.e.ledger().set_timestamp(ready);
+    assert_eq!(w.inbox.vault(), new_vault.address);
+    assert_eq!(w.inbox.try_cancel_move(), Err(Ok(InboxError::AlreadyMoved)));
+    t.transfer(&w.payer, &w.inbox.address, &(1_190 * UNIT));
+    let s = w.inbox.sweep(&w.token);
+    assert_eq!((s.vat, s.reserve), (190 * UNIT, 490 * UNIT));
+    assert_eq!(bal(&w, &new_vault.address), 490 * UNIT);
+    assert_eq!(bal(&w, &w.vault.address), 41 * UNIT);
+}
+
+#[test]
+fn a_move_can_be_cancelled_during_the_notice() {
+    let w = world();
+    let other = ReserveVaultClient::new(
+        &w.e,
+        &w.e.register(
+            ReserveVault,
+            (
+                w.owner.clone(),
+                Rule {
+                    vat_bps: 500,
+                    buckets: vec![&w.e],
+                },
+                Address::generate(&w.e),
+                0u64,
+                PeriodKind::Quarter,
+                0u64,
+                vec![&w.e, w.token.clone()],
+            ),
+        ),
+    );
+    w.inbox.propose_vault(&other.address);
+    w.inbox.cancel_move();
+    w.e.ledger().set_timestamp(1_802_260_800 + 2 * 86_400);
+    assert_eq!(w.inbox.vault(), w.vault.address);
+    assert_eq!(
+        w.inbox.try_cancel_move(),
+        Err(Ok(InboxError::NoPendingMove))
+    );
 }

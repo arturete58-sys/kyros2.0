@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["types", "reserve-vault", "router", "inbox"]
+members = ["types", "reserve-vault", "router", "inbox", "rate-registry"]
 
 [workspace.package]
 edition = "2021"

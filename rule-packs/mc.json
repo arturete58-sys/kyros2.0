@@ -1,0 +1,96 @@
+{
+  "$schema": "./schema.json",
+  "id": "mc",
+  "country": "MC",
+  "name": "Monaco: self-employed and small businesses",
+  "version": "2026.3",
+  "reviewed": "2026-10-16",
+  "currency": "EUR",
+  "vatName": "TVA",
+  "vatRates": [
+    {
+      "from": "2014-01-01",
+      "rates": {
+        "standard": 2000,
+        "intermediate": 1000,
+        "reduced": 550,
+        "super_reduced": 210
+      },
+      "note": "Monaco applies VAT on the same basis and at the same rates as France"
+    }
+  ],
+  "period": "Quarter",
+  "dueOffsetDays": 31,
+  "dueNote": "VAT is declared monthly or quarterly as in France. ISB, where it applies, is paid in quarterly instalments (February, May, August, November) and a return by 31 March.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "TVA 20%, no income tax for residents (non-French nationals)",
+      "vatBps": 2000,
+      "vatRate": "standard",
+      "buckets": [],
+      "covers": []
+    },
+    {
+      "id": "reduced-vat",
+      "label": "TVA 10%, no income tax",
+      "vatBps": 1000,
+      "vatRate": "intermediate",
+      "buckets": [],
+      "covers": []
+    },
+    {
+      "id": "isb",
+      "label": "TVA 20% + ISB 25% (commercial activity with 25% or more of turnover outside Monaco)",
+      "vatBps": 2000,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "isb",
+          "bps": 2500,
+          "label": "Impôt sur les bénéfices, 25% of profit (reserve on revenue, so on the high side)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "isb",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                2500
+              ]
+            ],
+            "label": "ISB 25% of profit"
+          }
+        ],
+        "notes": [
+          "When ISB applies, it applies to the whole profit."
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "Monaco has no personal income tax for its residents, except French nationals, who are taxed by France under the 1963 convention.",
+    "ISB (25%) applies to industrial and commercial activities, including individual businesses, that make 25% or more of their turnover outside Monaco; civil activities are not subject to it.",
+    "Self-employed people pay fixed social contributions (CAMTI health, CARTI pension) outside the vault.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Gouvernement Princier, Mon Entreprise: VAT (official)",
+      "url": "https://monentreprise.gouv.mc/en/themes/accounting-obligations-and-tax/tax/vat/vat",
+      "official": true,
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "KPMG Monaco: ISB scope, 25% rate and calendar",
+      "url": "https://assets.kpmg.com/content/dam/kpmg/mc/newsletters/KPMG-Monaco_Newsletter-2025-No4_Fiscalite_Calendrier_ISB.pdf"
+    }
+  ]
+}

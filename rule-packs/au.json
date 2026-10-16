@@ -105,7 +105,14 @@
     },
     {
       "title": "Australian Taxation Office",
-      "url": "https://www.ato.gov.au"
+      "url": "https://www.ato.gov.au",
+      "official": true
+    },
+    {
+      "title": "ATO: how Australian GST works, 10% and A$75,000 threshold (official)",
+      "url": "https://www.ato.gov.au/businesses-and-organisations/international-tax-for-business/gst-for-non-resident-businesses/how-australian-gst-works",
+      "checked": "2026-10-16",
+      "official": true
     }
   ]
 }

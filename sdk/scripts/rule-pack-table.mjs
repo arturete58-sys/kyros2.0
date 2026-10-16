@@ -5,6 +5,7 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { precisionOf } from '../dist/index.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..');
@@ -23,14 +24,17 @@ const rows = packs.map((p) => {
   const rates = Object.values(inForce(p)).filter((v) => v > 0).sort((a, b) => b - a);
   const vat = rates.length ? `${p.vatName ?? 'VAT'} ${rates.map(pct).join(' / ')}` : p.vatName ? `${p.vatName}: see notes` : 'none';
   const changes = (p.vatRates ?? []).filter((t) => t.from > today).map((t) => `${t.from}${t.proposed ? ' (proposed)' : ''}`);
-  const presets = p.presets.map((x) => `\`${x.id}\``).join(', ');
-  return `| [${p.country}](../rule-packs/${p.id}.json) | ${country(p)} | ${p.currency} | ${vat}${changes.length ? `; changes ${changes.join(', ')}` : ''} | ${p.period} + ${p.dueOffsetDays} days | ${presets} | ${p.estimate || p.presets.some((x) => x.estimate) ? 'yes' : 'no'} |`;
+  const LABEL = { exact: 'exact', presumptive: 'presumptive', 'exact-on-profit': 'exact on profit', estimate: 'estimate', none: 'none' };
+  const presets = p.presets.map((x) => `\`${x.id}\` (${LABEL[precisionOf(p, x.id)]})`).join(', ');
+  const official = (p.sources ?? []).filter((x) => x.official).length;
+  const checked = (p.sources ?? []).filter((x) => x.checked).length;
+  return `| [${p.country}](../rule-packs/${p.id}.json) | ${country(p)} | ${p.currency} | ${vat}${changes.length ? `; changes ${changes.join(', ')}` : ''} | ${p.period} + ${p.dueOffsetDays} days | ${presets} | ${official} official, ${checked} checked ${p.reviewed ?? ''} |`;
 });
 
 const table = [
   `## Jurisdictions (${packs.length})`,
   '',
-  '| Pack | Jurisdiction | Currency | Consumption tax in force | Calendar | Presets | Reserve check |',
+  '| Pack | Jurisdiction | Currency | Consumption tax in force | Calendar | Presets (precision of the reserve check) | Sources |',
   '| --- | --- | --- | --- | --- | --- | --- |',
   ...rows,
 ].join('\n');

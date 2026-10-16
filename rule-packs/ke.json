@@ -137,7 +137,8 @@
     },
     {
       "title": "Kenya Revenue Authority",
-      "url": "https://www.kra.go.ke"
+      "url": "https://www.kra.go.ke",
+      "official": true
     }
   ]
 }

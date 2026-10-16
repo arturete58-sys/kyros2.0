@@ -42,7 +42,8 @@ Every behaviour that matters is enforced by a contract:
 | [`contracts/reserve-vault`](contracts/reserve-vault) | Reserve Vault: one per user, owner = user, no admin |
 | [`contracts/router`](contracts/router) | Router: shared, stateless entry point for integrated payers |
 | [`contracts/inbox`](contracts/inbox) | Inbox: one per user, a payment address that needs no integration |
-| [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check, SEP-7 links, event reader and CSV export, keeper |
+| [`contracts/rate-registry`](contracts/rate-registry) | Rate Registry: dated VAT rates per country on-chain, published at least a fixed notice ahead; vaults can follow it |
+| [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check with precision and objective targets, registry sync, country moves, SEP-7 links, event reader and CSV export, keeper |
 | [`rule-packs`](rule-packs) | Rule packs for 42 jurisdictions: dated VAT tables, presets, fiscal calendars and tax estimates, with their JSON schema |
 | [`test-vectors`](test-vectors) | Split and calendar cases checked by both the Rust and the SDK tests |
 | [`docs`](docs) | Architecture, Stellar integration, rule packs, latest testnet run |
@@ -60,7 +61,7 @@ A 1,210 USDC invoice with 21% VAT and a 20% income-tax prepayment: **800 to the 
 
 ## Any country, the user's own reserve
 
-Each [rule pack](docs/rule-packs.md) carries the country's VAT tables with the dates they apply from, suggested presets and a simplified tax estimate. The user picks a VAT rate and the reserve they want; the SDK tells them whether that reserve is enough for their country, regime, activity and expected income. When a country's VAT changes, the owner signs the new rule once, ahead of time, and the vault switches on the day the new rate applies.
+Each [rule pack](docs/rule-packs.md) carries the country's VAT tables with the dates they apply from, suggested presets and a simplified tax estimate. The user picks a VAT rate and the reserve they want; the SDK tells them whether that reserve is enough for their country, regime, activity and expected income. When a country's VAT changes, the vault switches on the legal date: either it follows the on-chain Rate Registry (no signature), or the owner signs the new rule once, ahead of time. Moving to another country moves the user's inbox to a vault built from the new country's pack, keeping the same payment address.
 
 ```ts
 import { loadRulePack, checkReserve, vatUpdatePlan } from 'kyros-sdk';
@@ -126,7 +127,7 @@ Soroban contracts and authorization · Stellar Asset Contracts (USDC, EURC) thro
 
 Early, open-source and on testnet. The contracts have not been audited yet; do not use them with real funds before an audit.
 
-Rule packs cover 42 jurisdictions ([docs/rule-packs.md](docs/rule-packs.md)): crypto hubs (UAE, Switzerland, Singapore, Hong Kong, Malta, Cyprus, Estonia, Portugal, Georgia, Andorra, El Salvador, Panama, Puerto Rico, the Bahamas), the countries with the highest crypto adoption (India, the United States, Pakistan, Vietnam, Brazil, Nigeria, Indonesia, Ukraine, the Philippines, the UK, Japan, Argentina, South Korea, Thailand, Türkiye, Mexico, Colombia, Kenya, South Africa) and the main EU economies, Canada and Australia. A [weekly check](.github/workflows/vat-rates.yml) compares the EU and UK VAT tables with an independent dataset. Rule packs are information, not tax advice: they suggest percentages and dates, the user confirms them, and the contract enforces what the user chose.
+Rule packs cover 46 jurisdictions ([docs/rule-packs.md](docs/rule-packs.md)): crypto hubs and low-tax jurisdictions (UAE, Bahrain, Switzerland, Liechtenstein, Monaco, Singapore, Hong Kong, Malta, Cyprus, Estonia, Portugal, Georgia, Andorra, El Salvador, Panama, Puerto Rico, the Bahamas, the Cayman Islands), the countries with the highest crypto adoption (India, the United States with all 50 states, Pakistan, Vietnam, Brazil, Nigeria, Indonesia, Ukraine, the Philippines, the UK, Japan, Argentina, South Korea, Thailand, Türkiye, Mexico, Colombia, Kenya, South Africa) and the main EU economies, Canada and Australia. Each preset says how far its reserve check can be trusted (exact, presumptive, exact on profit, estimate). A weekly [law watch](.github/workflows/law-watch.yml) compares the EU packs with the European Commission's official database and watches every official page the packs cite. Rule packs are information, not tax advice: they suggest percentages and dates, the user confirms them, and the contract enforces what the user chose.
 
 ## Team
 

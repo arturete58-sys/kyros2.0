@@ -106,7 +106,14 @@
     },
     {
       "title": "SARS",
-      "url": "https://www.sars.gov.za"
+      "url": "https://www.sars.gov.za",
+      "official": true
+    },
+    {
+      "title": "SARS: Value-Added Tax, 15% and the R2.3 million threshold from 1 April 2026 (official)",
+      "url": "https://www.sars.gov.za/tax-types/value-added-tax/",
+      "checked": "2026-10-16",
+      "official": true
     }
   ]
 }

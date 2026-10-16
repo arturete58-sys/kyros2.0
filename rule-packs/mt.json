@@ -124,7 +124,8 @@
     },
     {
       "title": "Commissioner for Revenue",
-      "url": "https://cfr.gov.mt"
+      "url": "https://cfr.gov.mt",
+      "official": true
     }
   ]
 }

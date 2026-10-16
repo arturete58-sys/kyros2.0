@@ -118,7 +118,14 @@ pub fn split(e: &Env, rule: &Rule, gross: i128) -> Split {
         parts.push_back(p);
         reserve += p;
     }
-    Split { gross, base, vat, parts, reserve, net: gross - reserve }
+    Split {
+        gross,
+        base,
+        vat,
+        parts,
+        reserve,
+        net: gross - reserve,
+    }
 }
 
 // ---- Calendar (UTC), after Howard Hinnant's civil-date algorithms ----
@@ -192,6 +199,17 @@ pub trait VaultApi {
     /// Pulls `gross` of `token` from `from`: the net amount to the owner, the
     /// reserve to the vault, booked to the current period.
     fn receive(e: Env, from: Address, token: Address, gross: i128, reference: BytesN<32>) -> Split;
+    /// Seconds a change to the vault waits before it takes effect.
+    fn notice_secs(e: Env) -> u64;
+}
+
+/// What a vault reads from a Kyros Rate Registry.
+#[contractclient(name = "RegistryClient")]
+pub trait RegistryApi {
+    /// The rate `name` of `country` in force at `at` (Unix seconds), in bps.
+    fn rate_at(e: Env, country: Symbol, name: Symbol, at: u64) -> Option<u32>;
+    /// The least time between publishing a rate and the rate applying.
+    fn min_notice(e: Env) -> u64;
 }
 
 #[cfg(test)]

@@ -144,6 +144,11 @@ export class KyrosClient {
     return this.create(deployer, wasmHash, [addr(vault)]);
   }
 
+  /** A Rate Registry; `minNoticeSecs` is fixed for its lifetime. */
+  deployRegistry(deployer: Keypair, wasmHash: Buffer, admin: string, minNoticeSecs: bigint) {
+    return this.create(deployer, wasmHash, [addr(admin), u64(minNoticeSecs)]);
+  }
+
   // ---- operations (unsigned) ----
 
   /** The Router payment the payer signs: split inside the payer's own transaction. */
@@ -178,6 +183,44 @@ export class KyrosClient {
 
   applyPendingOp(vault: string): xdr.Operation {
     return new Contract(vault).call('apply_pending');
+  }
+
+  // VAT that follows the law: a vault reads its VAT from a Rate Registry.
+
+  /** Owner: follow `country`/`rate` in `registry`; refused unless today's rate equals the vault's VAT. */
+  followOp(vault: string, f: { registry: string; country: string; rate: string; maxBps: number }): xdr.Operation {
+    return new Contract(vault).call('follow', addr(f.registry), xdr.ScVal.scvSymbol(f.country), xdr.ScVal.scvSymbol(f.rate), u32(f.maxBps));
+  }
+
+  /** Owner: stop following, at once; the vault keeps the VAT in force as its own. */
+  unfollowOp(vault: string): xdr.Operation {
+    return new Contract(vault).call('unfollow');
+  }
+
+  /** Publisher: the rate in force today for a rate the registry does not list yet. */
+  seedRateOp(registry: string, country: string, rate: string, bps: number): xdr.Operation {
+    return new Contract(registry).call('seed', xdr.ScVal.scvSymbol(country), xdr.ScVal.scvSymbol(rate), u32(bps));
+  }
+
+  /** Publisher: a rate applying from `from` (UNIX seconds), at least the registry's notice ahead. */
+  publishRateOp(registry: string, country: string, rate: string, from: bigint, bps: number): xdr.Operation {
+    return new Contract(registry).call('publish', xdr.ScVal.scvSymbol(country), xdr.ScVal.scvSymbol(rate), u64(from), u32(bps));
+  }
+
+  /** Publisher: withdraw a future entry (e.g. a reform voted down). */
+  withdrawRateOp(registry: string, country: string, rate: string, from: bigint): xdr.Operation {
+    return new Contract(registry).call('withdraw', xdr.ScVal.scvSymbol(country), xdr.ScVal.scvSymbol(rate), u64(from));
+  }
+
+  // Moving country: the inbox (the user's payment address) moves to a new vault after the notice.
+
+  /** Owner: move the inbox to `newVault` (same owner) after the current vault's notice. */
+  proposeVaultOp(inbox: string, newVault: string): xdr.Operation {
+    return new Contract(inbox).call('propose_vault', addr(newVault));
+  }
+
+  cancelMoveOp(inbox: string): xdr.Operation {
+    return new Contract(inbox).call('cancel_move');
   }
 
   /** A plain SEP-41 transfer, e.g. a payment into an inbox. */
@@ -217,6 +260,28 @@ export class KyrosClient {
     const buckets: Record<string, bigint> = {};
     for (const [k, v] of Object.entries((n.buckets ?? {}) as Record<string, bigint>)) buckets[k] = BigInt(v);
     return { buckets, reserved: BigInt(n.reserved as bigint), paid: BigInt(n.paid as bigint), released: BigInt(n.released as bigint) };
+  }
+
+  /** The registry a vault follows for its VAT, or null. */
+  async feed(vault: string): Promise<{ registry: string; country: string; rate: string; maxBps: number } | null> {
+    const n = scValToNative(await this.read(vault, 'feed')) as Record<string, unknown> | null | undefined;
+    if (!n) return null;
+    return { registry: String(n.registry), country: String(n.country), rate: String(n.rate), maxBps: Number(n.max_bps) };
+  }
+
+  /** A registry's dated entries for one rate, oldest first. */
+  async rateSchedule(registry: string, country: string, rate: string): Promise<{ from: bigint; bps: number }[]> {
+    const n = scValToNative(await this.read(registry, 'schedule', xdr.ScVal.scvSymbol(country), xdr.ScVal.scvSymbol(rate))) as { from: bigint; bps: number }[];
+    return (n ?? []).map((x) => ({ from: BigInt(x.from), bps: Number(x.bps) }));
+  }
+
+  async registryMinNotice(registry: string): Promise<bigint> {
+    return BigInt(scValToNative(await this.read(registry, 'min_notice')) as bigint);
+  }
+
+  /** The vault an inbox pays into now. */
+  async inboxVault(inbox: string): Promise<string> {
+    return String(scValToNative(await this.read(inbox, 'vault')));
   }
 
   async balance(token: string, holder: string): Promise<bigint> {

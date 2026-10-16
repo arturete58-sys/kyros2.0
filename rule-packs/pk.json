@@ -144,7 +144,8 @@
   "sources": [
     {
       "title": "Federal Board of Revenue",
-      "url": "https://www.fbr.gov.pk"
+      "url": "https://www.fbr.gov.pk",
+      "official": true
     },
     {
       "title": "Nukta: freelancers' tax rate in the 2026-27 budget",

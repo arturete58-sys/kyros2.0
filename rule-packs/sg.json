@@ -149,7 +149,8 @@
   "sources": [
     {
       "title": "IRAS",
-      "url": "https://www.iras.gov.sg"
+      "url": "https://www.iras.gov.sg",
+      "official": true
     }
   ]
 }

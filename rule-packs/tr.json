@@ -124,7 +124,8 @@
     },
     {
       "title": "Gelir İdaresi Başkanlığı",
-      "url": "https://www.gib.gov.tr"
+      "url": "https://www.gib.gov.tr",
+      "official": true
     }
   ]
 }

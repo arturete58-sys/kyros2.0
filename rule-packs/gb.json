@@ -125,6 +125,11 @@
       "Scotland has its own income tax bands."
     ]
   },
+  "prepayment": {
+    "method": "prior-year",
+    "bps": 10000,
+    "note": "Two payments on account (31 January and 31 July), each half of last year's Self Assessment bill; none if last year's bill was under GBP 1,000. The balance is due on 31 January after the tax year."
+  },
   "notes": [
     "Income tax is progressive (20%, 40%, 45%) after the personal allowance; 30% is a suggested reserve.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
@@ -132,11 +137,14 @@
   "sources": [
     {
       "title": "GOV.UK: VAT rates",
-      "url": "https://www.gov.uk/vat-rates"
+      "url": "https://www.gov.uk/vat-rates",
+      "official": true,
+      "checked": "2026-10-16"
     },
     {
       "title": "GOV.UK: Self Assessment payments on account",
-      "url": "https://www.gov.uk/understand-self-assessment-bill/payments-on-account"
+      "url": "https://www.gov.uk/understand-self-assessment-bill/payments-on-account",
+      "official": true
     }
   ]
 }

@@ -90,7 +90,8 @@
   "sources": [
     {
       "title": "Dirección General de Ingresos",
-      "url": "https://dgi.mef.gob.pa"
+      "url": "https://dgi.mef.gob.pa",
+      "official": true
     }
   ]
 }

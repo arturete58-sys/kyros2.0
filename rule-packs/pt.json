@@ -160,11 +160,13 @@
   "sources": [
     {
       "title": "European Commission: VAT rates in EU member states",
-      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en",
+      "official": true
     },
     {
       "title": "Portal das Finanças",
-      "url": "https://www.portaldasfinancas.gov.pt"
+      "url": "https://www.portaldasfinancas.gov.pt",
+      "official": true
     }
   ]
 }

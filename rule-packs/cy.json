@@ -127,7 +127,8 @@
     },
     {
       "title": "Ministry of Finance, Tax Department",
-      "url": "https://www.mof.gov.cy"
+      "url": "https://www.mof.gov.cy",
+      "official": true
     }
   ]
 }

@@ -73,7 +73,8 @@
   "sources": [
     {
       "title": "Federal Tax Authority",
-      "url": "https://tax.gov.ae"
+      "url": "https://tax.gov.ae",
+      "official": true
     }
   ]
 }

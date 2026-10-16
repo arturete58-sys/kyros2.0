@@ -16,3 +16,4 @@ kyros-types = { workspace = true }
 [dev-dependencies]
 kyros-types = { workspace = true, features = ["testutils"] }
 soroban-sdk = { workspace = true, features = ["testutils"] }
+kyros-rate-registry = { path = "../rate-registry" }

@@ -1,0 +1,52 @@
+{
+  "$schema": "./schema.json",
+  "id": "ky",
+  "country": "KY",
+  "name": "Cayman Islands: residents",
+  "version": "2026.3",
+  "reviewed": "2026-10-16",
+  "currency": "KYD",
+  "vatName": "VAT",
+  "period": "Year",
+  "dueOffsetDays": 0,
+  "dueNote": "There is no income tax or VAT to reserve for; a vault is only useful for taxes owed elsewhere (e.g. US citizens, who are taxed on worldwide income).",
+  "presets": [
+    {
+      "id": "no-tax",
+      "label": "No income tax, no VAT",
+      "vatBps": 0,
+      "buckets": [],
+      "covers": []
+    },
+    {
+      "id": "us-person",
+      "label": "US citizen or green-card holder living in Cayman: reserve 30% for US federal tax",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "us_tax",
+          "bps": 3000,
+          "label": "US federal income and self-employment tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ],
+      "dueOffsetDays": 167
+    }
+  ],
+  "notes": [
+    "The Cayman Islands levy no direct taxes: no income, corporation, capital gains, property, inheritance or gift tax. Government revenue comes from import duties, stamp duties and fees.",
+    "US persons abroad still file US returns (due 15 June for those living abroad, with extensions); use the US pack's estimate for the amount.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Cayman Islands Government: finance and economy (official)",
+      "url": "https://gov.ky/finance-economy",
+      "official": true,
+      "checked": "2026-10-16"
+    }
+  ]
+}

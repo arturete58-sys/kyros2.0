@@ -186,7 +186,8 @@
     },
     {
       "title": "Receita Federal",
-      "url": "https://www.gov.br/receitafederal"
+      "url": "https://www.gov.br/receitafederal",
+      "official": true
     }
   ]
 }

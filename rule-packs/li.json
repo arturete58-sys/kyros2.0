@@ -1,0 +1,124 @@
+{
+  "$schema": "./schema.json",
+  "id": "li",
+  "country": "LI",
+  "name": "Liechtenstein: self-employed",
+  "version": "2026.3",
+  "reviewed": "2026-10-16",
+  "currency": "CHF",
+  "vatName": "MWST",
+  "vatRates": [
+    {
+      "from": "2018-01-01",
+      "rates": {
+        "standard": 770,
+        "reduced": 250,
+        "accommodation": 370
+      }
+    },
+    {
+      "from": "2024-01-01",
+      "rates": {
+        "standard": 810,
+        "reduced": 260,
+        "accommodation": 380
+      },
+      "note": "Raised in step with Switzerland (Art. 25 MWSTG)"
+    },
+    {
+      "from": "2028-01-01",
+      "proposed": true,
+      "rates": {
+        "standard": 850,
+        "reduced": 260,
+        "accommodation": 400
+      },
+      "note": "Liechtenstein adopts Swiss VAT rates under the 1994 VAT treaty; follows the Swiss vote expected on 29 November 2026"
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 120,
+  "dueNote": "VAT returns are quarterly, due 60 days after the quarter. Income tax (Erwerbssteuer) is assessed yearly.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "VAT 8.1% + income tax and AHV reserve 25%",
+      "vatBps": 810,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "National and communal income tax and AHV/IV/FAK"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "VAT 2.6% + reserve 25%",
+      "vatBps": 260,
+      "vatRate": "reduced",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "National and communal income tax and AHV/IV/FAK"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "accommodation-vat",
+      "label": "Accommodation VAT 3.8% + reserve 25%",
+      "vatBps": 380,
+      "vatRate": "accommodation",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "National and communal income tax and AHV/IV/FAK"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT registration threshold: reserve 25%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "National and communal income tax and AHV/IV/FAK"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    }
+  ],
+  "notes": [
+    "VAT rates are the Swiss ones: Liechtenstein must adopt Swiss VAT changes under its VAT treaty with Switzerland.",
+    "No reserve estimate: the national income tax is multiplied by a communal surcharge that each of the 11 communes sets. Compare the reserve with your adviser's figure.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Liechtenstein Government: report and motion on the VAT rate change from 1 January 2024 (official)",
+      "url": "https://www.llv.li/files/srk/bua_019_2023_bua_abanderung-der-mehrwertsteuer.pdf",
+      "official": true,
+      "checked": "2026-10-16"
+    }
+  ]
+}

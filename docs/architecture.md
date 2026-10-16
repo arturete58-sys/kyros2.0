@@ -1,12 +1,13 @@
 # Architecture
 
-Three Soroban contracts hold every rule that touches money. Everything off-chain (rule packs, keeper, indexer, web app) only suggests rules and shows balances; none of it holds funds or keys.
+Four Soroban contracts hold every rule that touches money or rates. Everything off-chain (rule packs, keeper, indexer, web app) only suggests rules and shows balances; none of it holds funds or keys.
 
 | Contract | Instances | Admin | Functions |
 | --- | --- | --- | --- |
-| Reserve Vault | one per user | none; the user is owner | `receive`, `quote`, `pay_tax`, `release`, `propose_rule`, `propose_rule_at`, `propose_destination`, `cancel`, `apply_pending`, reads |
+| Reserve Vault | one per user | none; the user is owner | `receive`, `quote`, `pay_tax`, `release`, `propose_rule`, `propose_rule_at`, `propose_destination`, `cancel`, `apply_pending`, `follow`, `unfollow`, reads |
 | Router | one, shared | none, no storage | `pay`, `quote` |
-| Inbox | one per user | none; tied to the user's vault | `sweep`, `return_unaccepted` |
+| Inbox | one per user | none; moved only by the vault owner, with notice | `sweep`, `return_unaccepted`, `propose_vault`, `cancel_move` |
+| Rate Registry | one per network | publisher (a multisig of rule-pack maintainers); holds no money | `seed`, `publish`, `withdraw`, `set_admin`, `rate`, `rate_at`, `schedule`, `min_notice` |
 
 ## Paying through the Router
 
@@ -67,6 +68,32 @@ Periods come from the rule pack: calendar months, quarters or years in UTC (quar
 
 `propose_rule` and `propose_destination` record a change that takes effect after the vault's notice period; `propose_rule_at(rule, effective_at)` sets a later date, used to follow a scheduled VAT change: the owner signs ahead and the vault switches on the day the new rate applies, never before the notice has run; until then the old rule and destination apply, and the owner can `cancel`. Both the proposal and the change emit events, so the user, an accountant or the app sees a change coming. A stolen key therefore cannot redirect the reserve at once.
 
+## VAT that follows the law
+
+A vault can follow one rate in the Rate Registry (`follow(registry, country, rate, max_bps)`). From then on `quote` and `receive` read the registry's rate for that moment, and the user's reserves stay as they are. When the law changes, the registry entry's date is the day the vault changes, with no signature.
+
+```mermaid
+sequenceDiagram
+  participant M as Maintainers (multisig)
+  participant R as Rate Registry
+  participant V as Reserve Vault (follows ES/standard)
+  participant C as Client
+  M->>R: publish(ES, standard, from = legal date, 2200)
+  Note over R: refused if from < now + min_notice
+  C->>V: pay before the date: 21%
+  C->>V: pay from the date: 22%, no owner action
+```
+
+The contract checks:
+- `follow` is refused unless the registry's `min_notice` is at least the vault's notice. It is also refused unless the registry's rate today equals the vault's VAT, so following changes nothing on day one.
+- A rate above the owner's `max_bps` is ignored, and the vault keeps its own rule.
+- `unfollow` applies at once and keeps the VAT in force as the vault's own.
+- In the registry, entries that have started to apply cannot be edited or withdrawn.
+
+## Moving country
+
+`propose_vault(new_vault)` on the inbox needs the vault owner's signature, and the new vault must belong to the same owner. The move takes effect after the current vault's notice, and `cancel_move` withdraws it until then. The payment address stays the same. The old vault keeps its reserves, pays the old country's taxes from them and releases the rest on its own due dates. No locked money moves between vaults.
+
 ## Storage
 
 - Instance: config (owner, rule, tax destination, notice, period kind, due offset, accepted tokens) and pending changes. Extended on every write.
@@ -74,11 +101,11 @@ Periods come from the rule pack: calendar months, quarters or years in UTC (quar
 
 ## Errors
 
-`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce` (vault); `NothingToSweep`, `TokenAccepted` (inbox).
+`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries` (registry).
 
 ## Security notes
 
-- No admin keys and no upgrade path. A new version is a new contract the owner moves to by choice.
+- No admin keys over money and no upgrade path. A new version is a new contract the owner moves to by choice. The Rate Registry has a publisher but holds no money; it can only change the VAT of vaults that chose to follow it, never sooner than its fixed notice, never above each owner's ceiling, and owners can stop following at any time.
 - Integer arithmetic in 128 bits; every bucket rounds down and the remainder goes to the net amount, so the parts always add up to the gross. Shared test vectors check the same results in Rust and TypeScript.
 - Each vault accepts an allow-list of tokens (USDC and EURC Stellar Asset Contracts).
 - The inbox authorizes only the two transfers the vault needs for a given sweep, with exact amounts and recipients.

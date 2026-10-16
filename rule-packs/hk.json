@@ -24,7 +24,8 @@
       "covers": [
         "incomeTax",
         "social"
-      ]
+      ],
+      "precision": "exact-on-profit"
     }
   ],
   "estimate": {
@@ -67,7 +68,8 @@
   "sources": [
     {
       "title": "Inland Revenue Department",
-      "url": "https://www.ird.gov.hk"
+      "url": "https://www.ird.gov.hk",
+      "official": true
     }
   ]
 }

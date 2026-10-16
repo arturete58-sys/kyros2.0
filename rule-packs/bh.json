@@ -1,0 +1,62 @@
+{
+  "$schema": "./schema.json",
+  "id": "bh",
+  "country": "BH",
+  "name": "Bahrain: self-employed and small businesses",
+  "version": "2026.3",
+  "reviewed": "2026-10-16",
+  "currency": "BHD",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2019-01-01",
+      "rates": {
+        "standard": 500
+      }
+    },
+    {
+      "from": "2022-01-01",
+      "rates": {
+        "standard": 1000
+      },
+      "note": "Raised to 10% by Decree-Law No. 33 of 2021"
+    }
+  ],
+  "period": "Quarter",
+  "dueOffsetDays": 31,
+  "dueNote": "Businesses below BHD 3 million file VAT quarterly, by the last day of the month after the quarter.",
+  "presets": [
+    {
+      "id": "vat-only",
+      "label": "VAT 10%, no income tax",
+      "vatBps": 1000,
+      "vatRate": "standard",
+      "buckets": [],
+      "covers": []
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below BHD 37,500 a year: no VAT, no income tax",
+      "vatBps": 0,
+      "buckets": [],
+      "covers": []
+    }
+  ],
+  "notes": [
+    "Bahrain has no personal income tax. Corporate income tax applies to oil and gas companies, and a 15% domestic minimum top-up tax to large multinational groups only.",
+    "VAT registration is mandatory above BHD 37,500 of taxable supplies a year and voluntary from BHD 18,750.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Bahrain.bh: Value Added Tax in the Kingdom of Bahrain (official portal)",
+      "url": "https://bahrain.bh/wps/portal/en/!ut/p/z0/fYw9E8FAEIb_yjY3Q3Urhmh9FKFAyTVm4xYnsRduk_HzRadSPu8872OdPVgn1IUraYhCdc9HNz2N1hMsZkvEYrtf4XRXzPIsX4wxy-3Guv9CXwj359PNrTtHUX6rPZTSnFgMUhlbBb0xVEGuPj4Mlm0KwikBiYcgHSd9sKjBF9ek7EFjE87JYEd1y0Defzd6w6AjHfaP3xzEC5R0e1EQ21Tu-AEgDRvY",
+      "official": true
+    },
+    {
+      "title": "ClearTax: VAT in Bahrain (10% from 1 January 2022, thresholds)",
+      "url": "https://www.cleartax.com/bh/vat-in-bahrain",
+      "checked": "2026-10-16"
+    }
+  ]
+}

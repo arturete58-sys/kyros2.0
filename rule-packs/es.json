@@ -150,6 +150,11 @@
       "IRPF is settled in the annual return (June); the quarterly modelo 130 prepays 20% of the quarter's net profit. RETA is paid monthly by direct debit, outside the vault, unless the reserve is meant to cover it."
     ]
   },
+  "prepayment": {
+    "method": "share-of-profit",
+    "bps": 2000,
+    "note": "Modelo 130: each quarter, 20% of the net profit since 1 January, minus the earlier quarters' payments (by the 20th of April, July and October, and 30 January). The annual return (June) settles the rest."
+  },
   "notes": [
     "The income-tax prepayment of modelo 130 is 20% of the quarter's net profit (income minus deductible expenses). Kyros reserves 20% of the taxable base of each payment, which is never less than what is due; the surplus is released after the due date.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
@@ -157,15 +162,24 @@
   "sources": [
     {
       "title": "Ley 37/1992 del IVA (tipos impositivos, arts. 90 y 91)",
-      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740"
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740",
+      "official": true
     },
     {
       "title": "AEAT: modelo 303, IVA autoliquidación",
-      "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G414.shtml"
+      "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G414.shtml",
+      "official": true
     },
     {
       "title": "AEAT: modelo 130, IRPF pago fraccionado",
-      "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G601.shtml"
+      "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G601.shtml",
+      "official": true
+    },
+    {
+      "title": "AEAT: pagos fraccionados, estimación directa (official)",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/folleto-actividades-economicas/3-impuesto-sobre-renta-personas-fisicas/3_7-pagos-fraccionados.html",
+      "official": true,
+      "checked": "2026-10-16"
     }
   ]
 }

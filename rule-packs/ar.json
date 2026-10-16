@@ -78,7 +78,8 @@
   "sources": [
     {
       "title": "ARCA",
-      "url": "https://www.arca.gob.ar"
+      "url": "https://www.arca.gob.ar",
+      "official": true
     },
     {
       "title": "Calcular Sueldo: ARCA publishes the 2026 Ganancias scales",

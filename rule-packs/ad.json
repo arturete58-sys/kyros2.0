@@ -86,7 +86,8 @@
   "sources": [
     {
       "title": "Departament de Tributs i de Fronteres",
-      "url": "https://www.impostos.ad"
+      "url": "https://www.impostos.ad",
+      "official": true
     }
   ]
 }

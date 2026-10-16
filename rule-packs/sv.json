@@ -91,7 +91,8 @@
     },
     {
       "title": "Ministerio de Hacienda",
-      "url": "https://www.mh.gob.sv"
+      "url": "https://www.mh.gob.sv",
+      "official": true
     }
   ]
 }

@@ -132,7 +132,8 @@
   "sources": [
     {
       "title": "Estonian Tax and Customs Board (EMTA)",
-      "url": "https://www.emta.ee"
+      "url": "https://www.emta.ee",
+      "official": true
     },
     {
       "title": "Palgakulu: Estonian tax rates 2026",

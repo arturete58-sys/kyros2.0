@@ -11,7 +11,11 @@
  *  7. after the due date the rest of the period is released to the freelancer;
  *  8. a scheduled VAT change (Thailand, 7% to 10%) is signed ahead with propose_rule_at:
  *     the vault keeps 7% until the change time and charges 10% from then on;
- *  9. the vault's events are read back and exported as CSV.
+ *  9. a Rate Registry is filled from the Spain rule pack and the Spanish vault follows it: a
+ *     published change (21% to 22%, a demo date) applies with no signature from the owner;
+ * 10. the owner moves to Germany: a new vault from the German pack, and the same inbox pays
+ *     into it after the notice, while the Spanish vault keeps its reserves;
+ * 11. the vault's events are read back and exported as CSV.
  *
  * For the demo the vault uses 4-minute periods and a 2-minute notice, so the
  * whole cycle fits in one run; real vaults use the rule pack's quarters.
@@ -26,6 +30,7 @@ import { vaultEvents, toCsv } from '../events.js';
 import { Keeper } from '../keeper.js';
 import { periodLabel } from '../periods.js';
 import { loadRulePack, termsFromPack, vatUpdatePlan } from '../rulepacks.js';
+import { changeCountryPlan, registrySyncPlan } from '../registry.js';
 import { formatAmount, parseAmount } from '../split.js';
 
 const args = process.argv.slice(2);
@@ -105,6 +110,7 @@ async function main(): Promise<void> {
   const routerHash = await c.upload(k.keeper, wasm('kyros_router'));
   const vaultHash = await c.upload(k.keeper, wasm('kyros_reserve_vault'));
   const inboxHash = await c.upload(k.keeper, wasm('kyros_inbox'));
+  const registryHash = await c.upload(k.keeper, wasm('kyros_rate_registry'));
   const router = await c.deployRouter(k.keeper, routerHash);
   const terms = termsFromPack(loadRulePack('es'), 'general');
   const period = { kind: 'Seconds' as const, seconds: 240n };
@@ -199,6 +205,49 @@ async function main(): Promise<void> {
     detail: `${plan.message} Demo date: ${new Date(Number(effectiveAt) * 1000).toISOString()}; before it, 1,070 still splits as VAT ${formatAmount(thBefore.vat)} (vault ${thVault.contractId})`,
   });
 
+  log('rate registry filled from the Spain pack; the Spanish vault follows it');
+  const registry = await c.deployRegistry(k.keeper, registryHash, k.keeper.publicKey(), 120n);
+  const es = loadRulePack('es');
+  const nowSecs = BigInt(Math.floor(Date.now() / 1000));
+  const seeds = registrySyncPlan(es, {}, nowSecs, 120n).filter((a) => a.kind === 'seed' && a.rate === 'standard');
+  for (const a of seeds) if (a.kind === 'seed') await c.send(k.keeper, c.seedRateOp(registry.contractId, es.country, a.rate, a.bps));
+  const followed = await c.send(k.freelancer, c.followOp(vault.contractId, { registry: registry.contractId, country: 'ES', rate: 'standard', maxBps: 2500 }));
+  steps.push({
+    step: 'Rate Registry deployed and seeded from the Spain rule pack (21%); the Spanish vault follows ES/standard, ceiling 25%',
+    ok: (await c.feed(vault.contractId))?.country === 'ES',
+    tx: followed.hash,
+    detail: `registry ${registry.contractId}`,
+  });
+  // A legal change, compressed to a few minutes for the demo: 22% from the date below.
+  const lawDate = BigInt(Math.floor(Date.now() / 1000)) + 150n;
+  const published = await c.send(k.keeper, c.publishRateOp(registry.contractId, 'ES', 'standard', lawDate, 2200));
+  steps.push({
+    step: 'The registry publishes a VAT change (demo: 21% to 22%), at least its 2-minute notice ahead',
+    ok: (await c.quote(vault.contractId, parseAmount('1210'))).vat === parseAmount('210'),
+    tx: published.hash,
+    detail: `applies from ${new Date(Number(lawDate) * 1000).toISOString()}; until then the vault still charges 21%`,
+  });
+
+  log('moving to Germany: new vault, inbox moves after the notice');
+  const move = changeCountryPlan({ period: 'Seconds', dueOffsetSecs: 0n, following: true }, { pack: loadRulePack('de'), presetId: 'standard' }, '2026-10-16');
+  const deVault = await c.deployVault(k.keeper, vaultHash, {
+    owner: k.freelancer.publicKey(),
+    rule: move.rule,
+    taxDestination: k.newDestination.publicKey(),
+    noticeSecs: 120n,
+    period: { kind: move.period },
+    dueOffsetSecs: move.dueOffsetSecs,
+    tokens: [token],
+  });
+  const moved = await c.send(k.freelancer, c.proposeVaultOp(inbox.contractId, deVault.contractId));
+  const movedAt = Date.now();
+  steps.push({
+    step: 'The owner moves to Germany: a vault from the German pack, and propose_vault on the same inbox (2-minute notice)',
+    ok: !move.sameVault && (await c.inboxVault(inbox.contractId)) === vault.contractId,
+    tx: moved.hash,
+    detail: `new vault ${deVault.contractId}; ${move.steps.length} steps in the plan; until the notice ends the inbox still pays the Spanish vault`,
+  });
+
   const due = await c.dueDate(vault.contractId, pid);
   const waitMs = Number(due) * 1000 - Date.now() + 15_000;
   log(`waiting ${Math.ceil(waitMs / 1000)} s for the due date`);
@@ -213,7 +262,7 @@ async function main(): Promise<void> {
   log('the same Router with vaults from other countries');
   for (const [pack, preset, amount, label] of [
     ['de', 'standard', '1190', 'Germany: VAT 19% + income tax reserve 30%'],
-    ['us', 'no-state-income-tax', '1000', 'United States: no VAT, federal and self-employment reserve 30%'],
+    ['us', 'self-employed', '1000', 'United States: no VAT, federal and self-employment reserve 30%'],
     ['ae', 'vat-only', '1050', 'United Arab Emirates: VAT 5%, no income tax'],
   ] as const) {
     const t = termsFromPack(loadRulePack(pack), preset);
@@ -252,6 +301,30 @@ async function main(): Promise<void> {
     ok: thQuote.vat === parseAmount('100') && (await c.balance(token, thVault.contractId)) - thHeld === thQuote.reserve,
     tx: thPaid.hash,
     detail: `1,100 KUSD: net ${formatAmount(thQuote.net)}, VAT ${formatAmount(thQuote.vat)}, income tax reserve ${formatAmount(thQuote.reserve - thQuote.vat)}`,
+  });
+
+  const moveWait = Math.max(Number(lawDate) * 1000, movedAt + 120_000) - Date.now() + 10_000;
+  if (moveWait > 0) {
+    log(`waiting ${Math.ceil(moveWait / 1000)} s for the legal date and the inbox notice`);
+    await sleep(moveWait);
+  }
+  const esQuote = await c.quote(vault.contractId, parseAmount('1220'));
+  const esPaid = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: vault.contractId, token, amount: parseAmount('1220'), reference: invoiceReference('INV-2027-002') }));
+  steps.push({
+    step: 'After the legal date the Spanish vault charges 22% on its own: the owner signed nothing',
+    ok: esQuote.vat === parseAmount('220') && esQuote.parts[0] === parseAmount('200'),
+    tx: esPaid.hash,
+    detail: `1,220 KUSD: net ${formatAmount(esQuote.net)}, VAT ${formatAmount(esQuote.vat)}, income tax ${formatAmount(esQuote.parts[0])}`,
+  });
+  const esHeld = await c.balance(token, vault.contractId);
+  await c.send(k.client, c.transferOp(token, k.client.publicKey(), inbox.contractId, parseAmount('1190')));
+  const [movedSweep] = await keeper.tick();
+  const deHeld = await c.balance(token, deVault.contractId);
+  steps.push({
+    step: 'After the notice the same inbox pays into the German vault (19% VAT + 30% reserve); the Spanish vault keeps what it holds',
+    ok: !movedSweep?.error && (await c.inboxVault(inbox.contractId)) === deVault.contractId && deHeld === parseAmount('490') && (await c.balance(token, vault.contractId)) === esHeld,
+    tx: movedSweep?.hash,
+    detail: movedSweep?.error ?? `1,190 KUSD to the inbox: German vault +${formatAmount(deHeld)} (VAT 190, reserve 300)`,
   });
 
   log('reading events');

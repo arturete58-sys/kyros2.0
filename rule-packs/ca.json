@@ -204,7 +204,14 @@
     },
     {
       "title": "Canada Revenue Agency",
-      "url": "https://www.canada.ca/en/revenue-agency.html"
+      "url": "https://www.canada.ca/en/revenue-agency.html",
+      "official": true
+    },
+    {
+      "title": "Canada Revenue Agency: GST/HST rates by province (official)",
+      "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/charge-collect-which-rate/calculator.html",
+      "checked": "2026-10-16",
+      "official": true
     }
   ]
 }

@@ -164,7 +164,20 @@
     },
     {
       "title": "Direktorat Jenderal Pajak",
-      "url": "https://www.pajak.go.id"
+      "url": "https://www.pajak.go.id",
+      "official": true
+    },
+    {
+      "title": "DJP: PP 20/2026, 0.5% final tax for individual MSMEs without time limit (official site)",
+      "url": "https://pajak.go.id/en/node/119950",
+      "checked": "2026-10-16",
+      "official": true
+    },
+    {
+      "title": "DJP: PPN 12% on 11/12 of the base (official)",
+      "url": "https://www.pajak.go.id/sites/default/files/2025-02/SP-4%20PEMERINTAH%20TERBITKAN%20ATURAN%20DPP%20NILAI%20LAIN%20DAN%20BESARAN%20TERTENTU%20PPN.pdf",
+      "checked": "2026-10-16",
+      "official": true
     }
   ]
 }

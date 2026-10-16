@@ -121,7 +121,8 @@
   "sources": [
     {
       "title": "National Tax Service",
-      "url": "https://www.nts.go.kr"
+      "url": "https://www.nts.go.kr",
+      "official": true
     }
   ]
 }

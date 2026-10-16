@@ -14,9 +14,15 @@ fn num(v: &serde_json::Value) -> i128 {
 fn rule(e: &Env, vat: u32, buckets: &[(&str, u32)]) -> Rule {
     let mut b = Vec::new(e);
     for (n, bps) in buckets {
-        b.push_back(Bucket { name: Symbol::new(e, n), bps: *bps });
+        b.push_back(Bucket {
+            name: Symbol::new(e, n),
+            bps: *bps,
+        });
     }
-    Rule { vat_bps: vat, buckets: b }
+    Rule {
+        vat_bps: vat,
+        buckets: b,
+    }
 }
 
 #[test]
@@ -40,9 +46,15 @@ fn every_shared_split_vector_matches() {
     for c in cases {
         let mut b = Vec::new(&e);
         for x in c["buckets"].as_array().unwrap() {
-            b.push_back(Bucket { name: Symbol::new(&e, x["name"].as_str().unwrap()), bps: x["bps"].as_u64().unwrap() as u32 });
+            b.push_back(Bucket {
+                name: Symbol::new(&e, x["name"].as_str().unwrap()),
+                bps: x["bps"].as_u64().unwrap() as u32,
+            });
         }
-        let r = Rule { vat_bps: c["vat_bps"].as_u64().unwrap() as u32, buckets: b };
+        let r = Rule {
+            vat_bps: c["vat_bps"].as_u64().unwrap() as u32,
+            buckets: b,
+        };
         assert_eq!(validate(&e, &r), Ok(()));
         let s = split(&e, &r, num(&c["gross"]));
         let name: String = c["rule"].as_str().unwrap().into();
@@ -74,12 +86,30 @@ fn parts_always_add_up_and_net_is_never_negative() {
 #[test]
 fn invalid_rules_are_refused() {
     let e = Env::default();
-    assert_eq!(validate(&e, &rule(&e, 10_001, &[])), Err(RuleError::VatTooHigh));
-    assert_eq!(validate(&e, &rule(&e, 2100, &[("a", 6_000), ("b", 4_001)])), Err(RuleError::BucketsOverBase));
-    assert_eq!(validate(&e, &rule(&e, 2100, &[("a", 1), ("a", 2)])), Err(RuleError::DuplicateBucket));
-    assert_eq!(validate(&e, &rule(&e, 2100, &[("vat", 1)])), Err(RuleError::ReservedName));
-    let many: std::vec::Vec<(&str, u32)> = ["a", "b", "c", "d", "e", "f", "g", "h", "i"].iter().map(|n| (*n, 1)).collect();
-    assert_eq!(validate(&e, &rule(&e, 0, &many)), Err(RuleError::TooManyBuckets));
+    assert_eq!(
+        validate(&e, &rule(&e, 10_001, &[])),
+        Err(RuleError::VatTooHigh)
+    );
+    assert_eq!(
+        validate(&e, &rule(&e, 2100, &[("a", 6_000), ("b", 4_001)])),
+        Err(RuleError::BucketsOverBase)
+    );
+    assert_eq!(
+        validate(&e, &rule(&e, 2100, &[("a", 1), ("a", 2)])),
+        Err(RuleError::DuplicateBucket)
+    );
+    assert_eq!(
+        validate(&e, &rule(&e, 2100, &[("vat", 1)])),
+        Err(RuleError::ReservedName)
+    );
+    let many: std::vec::Vec<(&str, u32)> = ["a", "b", "c", "d", "e", "f", "g", "h", "i"]
+        .iter()
+        .map(|n| (*n, 1))
+        .collect();
+    assert_eq!(
+        validate(&e, &rule(&e, 0, &many)),
+        Err(RuleError::TooManyBuckets)
+    );
 }
 
 #[test]
@@ -87,12 +117,25 @@ fn periods_match_an_independent_calendar() {
     let v = vectors();
     for p in v["periods"].as_array().unwrap() {
         let ts: u64 = p["ts"].as_str().unwrap().parse().unwrap();
-        for (kind, key) in [(PeriodKind::Month, "month"), (PeriodKind::Quarter, "quarter"), (PeriodKind::Year, "year"), (PeriodKind::Seconds(60), "seconds60")] {
+        for (kind, key) in [
+            (PeriodKind::Month, "month"),
+            (PeriodKind::Quarter, "quarter"),
+            (PeriodKind::Year, "year"),
+            (PeriodKind::Seconds(60), "seconds60"),
+        ] {
             let want = &p[key];
             let id = period_of(&kind, ts);
             assert_eq!(id as u64, want["id"].as_u64().unwrap(), "{key} {ts}");
-            assert_eq!(period_start(&kind, id).to_string(), want["start"].as_str().unwrap(), "{key} {ts}");
-            assert_eq!(period_end(&kind, id).to_string(), want["end"].as_str().unwrap(), "{key} {ts}");
+            assert_eq!(
+                period_start(&kind, id).to_string(),
+                want["start"].as_str().unwrap(),
+                "{key} {ts}"
+            );
+            assert_eq!(
+                period_end(&kind, id).to_string(),
+                want["end"].as_str().unwrap(),
+                "{key} {ts}"
+            );
             assert!(period_start(&kind, id) <= ts && ts < period_end(&kind, id));
         }
     }

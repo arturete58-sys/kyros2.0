@@ -263,7 +263,8 @@
   "sources": [
     {
       "title": "URSSAF: auto-entrepreneur",
-      "url": "https://www.autoentrepreneur.urssaf.fr"
+      "url": "https://www.autoentrepreneur.urssaf.fr",
+      "official": true
     },
     {
       "title": "SalaireClair: charges auto-entrepreneur 2026",
@@ -271,7 +272,8 @@
     },
     {
       "title": "European Commission: VAT rates in EU member states",
-      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en",
+      "official": true
     }
   ]
 }

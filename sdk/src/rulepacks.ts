@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PeriodKind } from './periods.js';
 import { type Rule, validateRule } from './split.js';
-import type { Estimate } from './estimate.js';
+import type { Estimate, Precision, Prepayment, Region } from './estimate.js';
 
 export type CalendarPeriod = 'Month' | 'Quarter' | 'Year';
 /** What a preset's reserve buckets are meant to cover, for the reserve check. */
@@ -34,6 +34,8 @@ export interface RulePackPreset {
   period?: CalendarPeriod;
   /** Overrides the pack's due offset for this preset. */
   dueOffsetDays?: number;
+  /** Overrides the computed precision of the reserve check (see `precisionOf`). */
+  precision?: Precision;
 }
 
 export interface RulePack {
@@ -55,6 +57,10 @@ export interface RulePack {
   presets: RulePackPreset[];
   /** Simplified annual tax estimate used by `checkReserve`. */
   estimate?: Estimate;
+  /** How the law sets income-tax prepayments, when it does so objectively. */
+  prepayment?: Prepayment;
+  /** Regions with their own income tax (US states), chosen with `ReserveInput.region`. */
+  regions?: Region[];
   notes?: string[];
   sources?: { title: string; url: string }[];
 }

@@ -226,7 +226,8 @@
     },
     {
       "title": "Income Tax Department",
-      "url": "https://www.incometax.gov.in"
+      "url": "https://www.incometax.gov.in",
+      "official": true
     }
   ]
 }

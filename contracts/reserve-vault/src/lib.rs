@@ -13,12 +13,21 @@
 //!   account used to pay the tax in euros.
 //! - **Notice.** A new rule or destination takes effect only after the
 //!   notice period, and both the proposal and the change emit events.
+//! - **VAT that follows the law (opt-in).** The owner can have the vault read
+//!   its VAT rate from a Kyros Rate Registry, so a legal change applies on
+//!   its date with no signature. The registry must give at least the vault's
+//!   own notice, the owner sets a ceiling, and `unfollow` works at any time.
 //!
 //! No admin and no upgrade path: Kyros never controls a vault. A new version
 //! is a new contract the owner moves to by choice.
 #![no_std]
-use kyros_types::{period_end, period_of, split, validate, vat_symbol, PeriodKind, Rule, Split};
-use soroban_sdk::{contract, contracterror, contractevent, contractimpl, contracttype, token, Address, BytesN, Env, Map, Symbol, Vec};
+use kyros_types::{
+    period_end, period_of, split, validate, vat_symbol, PeriodKind, RegistryClient, Rule, Split,
+};
+use soroban_sdk::{
+    contract, contracterror, contractevent, contractimpl, contracttype, token, Address, BytesN,
+    Env, Map, Symbol, Vec,
+};
 
 const DAY_IN_LEDGERS: u32 = 17_280;
 /// Period entries live at least ~13 months after their last change.
@@ -46,6 +55,28 @@ pub enum VaultError {
     NoTokens = 10,
     /// The change has already taken effect.
     AlreadyInForce = 11,
+    /// The vault is not following a rate registry.
+    NotFollowing = 12,
+    /// The registry's advance notice is shorter than the vault's.
+    RegistryNoticeTooShort = 13,
+    /// The registry does not list this rate.
+    UnknownRate = 14,
+    /// The registry's rate today differs from the vault's VAT, or is above the ceiling:
+    /// align the rule first, so following changes nothing today.
+    RateMismatch = 15,
+}
+
+/// Where the vault reads its VAT rate while it follows a registry.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Feed {
+    pub registry: Address,
+    /// Country code, e.g. `ES`.
+    pub country: Symbol,
+    /// Rate name in that country, e.g. `standard`.
+    pub rate: Symbol,
+    /// Highest VAT the vault accepts from the registry; above it the vault keeps its own rule.
+    pub max_bps: u32,
 }
 
 #[contracttype]
@@ -102,6 +133,7 @@ enum Key {
     PendingRule,
     PendingDestination,
     Period(u32, Address),
+    Feed,
 }
 
 #[contractevent(topics = ["kyros_vault", "received"])]
@@ -168,6 +200,22 @@ pub struct DestinationApplied {
     pub destination: Address,
 }
 
+#[contractevent(topics = ["kyros_vault", "vat_followed"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VatFollowed {
+    pub registry: Address,
+    pub country: Symbol,
+    pub rate: Symbol,
+    pub max_bps: u32,
+}
+
+#[contractevent(topics = ["kyros_vault", "vat_unfollowed"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VatUnfollowed {
+    /// The VAT the vault keeps from now on (the registry's rate when it stopped following).
+    pub vat_bps: u32,
+}
+
 #[contractevent(topics = ["kyros_vault", "change_cancelled"])]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ChangeCancelled {
@@ -180,7 +228,9 @@ fn now(e: &Env) -> u64 {
 }
 
 fn bump_instance(e: &Env) {
-    e.storage().instance().extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);
+    e.storage()
+        .instance()
+        .extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);
 }
 
 fn stored_config(e: &Env) -> Config {
@@ -212,19 +262,46 @@ fn active(e: &Env) -> Config {
     c
 }
 
+fn feed(e: &Env) -> Option<Feed> {
+    e.storage().instance().get(&Key::Feed)
+}
+
+/// The VAT the registry gives now, if the vault follows one and the rate is within the ceiling.
+fn followed_vat(e: &Env, f: &Feed) -> Option<u32> {
+    RegistryClient::new(e, &f.registry)
+        .rate_at(&f.country, &f.rate, &now(e))
+        .filter(|b| *b <= f.max_bps)
+}
+
+/// The config in force now with the followed VAT applied: what payments use.
+fn effective(e: &Env) -> Config {
+    let mut c = active(e);
+    if let Some(f) = feed(e) {
+        if let Some(bps) = followed_vat(e, &f) {
+            c.rule.vat_bps = bps;
+        }
+    }
+    c
+}
+
 fn load_period(e: &Env, id: u32, token: &Address) -> PeriodState {
-    e.storage().persistent().get(&Key::Period(id, token.clone())).unwrap_or(PeriodState {
-        buckets: Map::new(e),
-        reserved: 0,
-        paid: 0,
-        released: 0,
-    })
+    e.storage()
+        .persistent()
+        .get(&Key::Period(id, token.clone()))
+        .unwrap_or(PeriodState {
+            buckets: Map::new(e),
+            reserved: 0,
+            paid: 0,
+            released: 0,
+        })
 }
 
 fn save_period(e: &Env, id: u32, token: &Address, s: &PeriodState) {
     let k = Key::Period(id, token.clone());
     e.storage().persistent().set(&k, s);
-    e.storage().persistent().extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+    e.storage()
+        .persistent()
+        .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
 }
 
 fn check_rule(e: &Env, rule: &Rule) -> Result<(), VaultError> {
@@ -250,7 +327,15 @@ impl ReserveVault {
         if tokens.is_empty() {
             return Err(VaultError::NoTokens);
         }
-        let c = Config { owner, rule, tax_destination, notice_secs, period, due_offset_secs, tokens };
+        let c = Config {
+            owner,
+            rule,
+            tax_destination,
+            notice_secs,
+            period,
+            due_offset_secs,
+            tokens,
+        };
         e.storage().instance().set(&Key::Config, &c);
         bump_instance(&e);
         Ok(())
@@ -258,9 +343,19 @@ impl ReserveVault {
 
     // ---- Reads ----
 
-    /// The config in force now (a pending change whose notice has passed is included).
+    /// The config in force now (a pending change whose notice has passed is
+    /// included; while following a registry, the rule shows the followed VAT).
     pub fn config(e: Env) -> Config {
-        active(&e)
+        effective(&e)
+    }
+
+    /// The registry the vault follows for its VAT, if any.
+    pub fn feed(e: Env) -> Option<Feed> {
+        feed(&e)
+    }
+
+    pub fn notice_secs(e: Env) -> u64 {
+        stored_config(&e).notice_secs
     }
 
     pub fn pending_rule(e: Env) -> Option<PendingRule> {
@@ -281,7 +376,7 @@ impl ReserveVault {
 
     /// The split the current rule gives for `gross`.
     pub fn quote(e: Env, gross: i128) -> Split {
-        split(&e, &active(&e).rule, gross)
+        split(&e, &effective(&e).rule, gross)
     }
 
     pub fn current_period(e: Env) -> u32 {
@@ -304,12 +399,18 @@ impl ReserveVault {
     /// the net amount to the owner, the reserve into the vault, booked to the
     /// current period. Called by the Router (the payer authorizes) and by the
     /// user's Inbox (the inbox contract authorizes).
-    pub fn receive(e: Env, from: Address, token: Address, gross: i128, reference: BytesN<32>) -> Result<Split, VaultError> {
+    pub fn receive(
+        e: Env,
+        from: Address,
+        token: Address,
+        gross: i128,
+        reference: BytesN<32>,
+    ) -> Result<Split, VaultError> {
         from.require_auth();
         if gross <= 0 {
             return Err(VaultError::InvalidAmount);
         }
-        let c = active(&e);
+        let c = effective(&e);
         if !c.tokens.contains(&token) {
             return Err(VaultError::TokenNotAccepted);
         }
@@ -324,10 +425,12 @@ impl ReserveVault {
         let id = period_of(&c.period, now(&e));
         let mut p = load_period(&e, id, &token);
         let vat = vat_symbol(&e);
-        p.buckets.set(vat.clone(), p.buckets.get(vat).unwrap_or(0) + s.vat);
+        p.buckets
+            .set(vat.clone(), p.buckets.get(vat).unwrap_or(0) + s.vat);
         for (i, b) in c.rule.buckets.iter().enumerate() {
             let part = s.parts.get(i as u32).unwrap();
-            p.buckets.set(b.name.clone(), p.buckets.get(b.name).unwrap_or(0) + part);
+            p.buckets
+                .set(b.name.clone(), p.buckets.get(b.name).unwrap_or(0) + part);
         }
         p.reserved += s.reserve;
         save_period(&e, id, &token, &p);
@@ -351,22 +454,42 @@ impl ReserveVault {
 
     /// Sends `amount` from a period's bucket to the tax destination. Allowed at
     /// any time; this is the only way reserve leaves before the due date.
-    pub fn pay_tax(e: Env, period: u32, token: Address, bucket: Symbol, amount: i128) -> Result<(), VaultError> {
+    pub fn pay_tax(
+        e: Env,
+        period: u32,
+        token: Address,
+        bucket: Symbol,
+        amount: i128,
+    ) -> Result<(), VaultError> {
         let c = active(&e);
         c.owner.require_auth();
         if amount <= 0 {
             return Err(VaultError::InvalidAmount);
         }
         let mut p = load_period(&e, period, &token);
-        let held = p.buckets.get(bucket.clone()).ok_or(VaultError::UnknownBucket)?;
+        let held = p
+            .buckets
+            .get(bucket.clone())
+            .ok_or(VaultError::UnknownBucket)?;
         if amount > held {
             return Err(VaultError::ExceedsReserve);
         }
         p.buckets.set(bucket.clone(), held - amount);
         p.paid += amount;
         save_period(&e, period, &token, &p);
-        token::Client::new(&e, &token).transfer(&e.current_contract_address(), &c.tax_destination, &amount);
-        TaxPaid { token, period, bucket, amount, destination: c.tax_destination }.publish(&e);
+        token::Client::new(&e, &token).transfer(
+            &e.current_contract_address(),
+            &c.tax_destination,
+            &amount,
+        );
+        TaxPaid {
+            token,
+            period,
+            bucket,
+            amount,
+            destination: c.tax_destination,
+        }
+        .publish(&e);
         Ok(())
     }
 
@@ -391,7 +514,12 @@ impl ReserveVault {
         p.released += total;
         save_period(&e, period, &token, &p);
         token::Client::new(&e, &token).transfer(&e.current_contract_address(), &c.owner, &total);
-        Released { token, period, amount: total }.publish(&e);
+        Released {
+            token,
+            period,
+            amount: total,
+        }
+        .publish(&e);
         Ok(total)
     }
 
@@ -413,7 +541,13 @@ impl ReserveVault {
         check_rule(&e, &rule)?;
         Self::fold(&e);
         let ready_at = (now(&e) + c.notice_secs).max(effective_at);
-        e.storage().instance().set(&Key::PendingRule, &PendingRule { rule: rule.clone(), ready_at });
+        e.storage().instance().set(
+            &Key::PendingRule,
+            &PendingRule {
+                rule: rule.clone(),
+                ready_at,
+            },
+        );
         bump_instance(&e);
         RuleProposed { rule, ready_at }.publish(&e);
         Ok(ready_at)
@@ -425,10 +559,87 @@ impl ReserveVault {
         c.owner.require_auth();
         Self::fold(&e);
         let ready_at = now(&e) + c.notice_secs;
-        e.storage().instance().set(&Key::PendingDestination, &PendingDestination { destination: destination.clone(), ready_at });
+        e.storage().instance().set(
+            &Key::PendingDestination,
+            &PendingDestination {
+                destination: destination.clone(),
+                ready_at,
+            },
+        );
         bump_instance(&e);
-        DestinationProposed { destination, ready_at }.publish(&e);
+        DestinationProposed {
+            destination,
+            ready_at,
+        }
+        .publish(&e);
         Ok(ready_at)
+    }
+
+    // ---- VAT that follows the law ----
+
+    /// Starts reading the VAT rate from `registry` (`country`, `rate`), so
+    /// legal changes apply on their date with no signature. Changes nothing
+    /// today: the registry's current rate must equal the vault's VAT. The
+    /// registry must give at least the vault's own notice. A rate above
+    /// `max_bps` is ignored and the vault keeps its own rule.
+    pub fn follow(
+        e: Env,
+        registry: Address,
+        country: Symbol,
+        rate: Symbol,
+        max_bps: u32,
+    ) -> Result<(), VaultError> {
+        let c = effective(&e);
+        c.owner.require_auth();
+        let r = RegistryClient::new(&e, &registry);
+        if r.min_notice() < c.notice_secs {
+            return Err(VaultError::RegistryNoticeTooShort);
+        }
+        let today = r
+            .rate_at(&country, &rate, &now(&e))
+            .ok_or(VaultError::UnknownRate)?;
+        if today != c.rule.vat_bps || today > max_bps || max_bps > 10_000 {
+            return Err(VaultError::RateMismatch);
+        }
+        e.storage().instance().set(
+            &Key::Feed,
+            &Feed {
+                registry: registry.clone(),
+                country: country.clone(),
+                rate: rate.clone(),
+                max_bps,
+            },
+        );
+        bump_instance(&e);
+        VatFollowed {
+            registry,
+            country,
+            rate,
+            max_bps,
+        }
+        .publish(&e);
+        Ok(())
+    }
+
+    /// Stops following the registry, at once. The vault keeps the VAT in
+    /// force at this moment as its own.
+    pub fn unfollow(e: Env) -> Result<u32, VaultError> {
+        let c = effective(&e);
+        c.owner.require_auth();
+        if feed(&e).is_none() {
+            return Err(VaultError::NotFollowing);
+        }
+        Self::fold(&e);
+        let mut stored = stored_config(&e);
+        stored.rule.vat_bps = c.rule.vat_bps;
+        e.storage().instance().set(&Key::Config, &stored);
+        e.storage().instance().remove(&Key::Feed);
+        bump_instance(&e);
+        VatUnfollowed {
+            vat_bps: c.rule.vat_bps,
+        }
+        .publish(&e);
+        Ok(c.rule.vat_bps)
     }
 
     /// Withdraws pending changes that have not taken effect yet.
@@ -438,7 +649,11 @@ impl ReserveVault {
         let r = pending_rule(&e).filter(|p| t < p.ready_at).is_some();
         let d = pending_destination(&e).filter(|p| t < p.ready_at).is_some();
         if !r && !d {
-            return if pending_rule(&e).is_some() || pending_destination(&e).is_some() { Err(VaultError::AlreadyInForce) } else { Err(VaultError::NoPendingChange) };
+            return if pending_rule(&e).is_some() || pending_destination(&e).is_some() {
+                Err(VaultError::AlreadyInForce)
+            } else {
+                Err(VaultError::NoPendingChange)
+            };
         }
         if r {
             e.storage().instance().remove(&Key::PendingRule);
@@ -446,7 +661,11 @@ impl ReserveVault {
         if d {
             e.storage().instance().remove(&Key::PendingDestination);
         }
-        ChangeCancelled { rule: r, destination: d }.publish(&e);
+        ChangeCancelled {
+            rule: r,
+            destination: d,
+        }
+        .publish(&e);
         Ok(())
     }
 
@@ -481,7 +700,10 @@ impl ReserveVault {
             if t >= p.ready_at {
                 c.tax_destination = p.destination.clone();
                 e.storage().instance().remove(&Key::PendingDestination);
-                DestinationApplied { destination: p.destination }.publish(e);
+                DestinationApplied {
+                    destination: p.destination,
+                }
+                .publish(e);
                 applied = true;
             }
         }

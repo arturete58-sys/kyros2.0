@@ -83,8 +83,8 @@ test('the Spain rule pack loads and gives valid vault terms', () => {
 
 test('every bundled rule pack is valid, and presets can override the calendar', () => {
   const ids = listRulePacks();
-  const expected = ['ad', 'ae', 'ar', 'au', 'br', 'bs', 'ca', 'ch', 'co', 'cy', 'de', 'ee', 'es', 'fr', 'gb', 'ge', 'hk', 'id', 'ie', 'in', 'it', 'jp', 'ke', 'kr',
-    'lu', 'mt', 'mx', 'ng', 'nl', 'pa', 'ph', 'pk', 'pr', 'pt', 'sg', 'sv', 'th', 'tr', 'ua', 'us', 'vn', 'za'];
+  const expected = ['ad', 'ae', 'ar', 'au', 'bh', 'br', 'bs', 'ca', 'ch', 'co', 'cy', 'de', 'ee', 'es', 'fr', 'gb', 'ge', 'hk', 'id', 'ie', 'in', 'it', 'jp', 'ke', 'kr',
+    'ky', 'li', 'lu', 'mc', 'mt', 'mx', 'ng', 'nl', 'pa', 'ph', 'pk', 'pr', 'pt', 'sg', 'sv', 'th', 'tr', 'ua', 'us', 'vn', 'za'];
   assert.deepEqual(ids, expected);
   for (const id of ids) {
     const pack = loadRulePack(id);
@@ -235,10 +235,28 @@ test('reserve check: short, ok, generous, and exact regimes', () => {
   assert.equal(checkReserve(loadRulePack('ch'), 'standard', { revenue: 100_000 }).status, 'unknown');
 
   // Extra regional tax and fixed contributions entered by the user.
-  const us = checkReserve(loadRulePack('us'), 'no-state-income-tax', { revenue: 100_000, activity: 'software' });
-  const usState = checkReserve(loadRulePack('us'), 'no-state-income-tax', { revenue: 100_000, activity: 'software', extraIncomeTaxBps: 500 });
+  const us = checkReserve(loadRulePack('us'), 'self-employed', { revenue: 100_000, activity: 'software' });
+  const usState = checkReserve(loadRulePack('us'), 'self-employed', { revenue: 100_000, activity: 'software', extraIncomeTaxBps: 500 });
   assert.ok(usState.requiredBps! > us.requiredBps!);
   assert.equal(us.expenses, 10_000);
+});
+
+test('United States: federal 2026 with QBI and half SE deduction, plus the state the user lives in', () => {
+  const us = loadRulePack('us');
+  // USD 100,000 profit, Texas (no state income tax).
+  const tx = checkReserve(us, 'self-employed', { revenue: 100_000, expenses: 0, region: 'TX' });
+  // SE tax: 100,000 x 92.35% x 15.3% = 14,129.55.
+  assert.equal(Math.round(tx.social!), 14_130);
+  // Income tax: (100,000 - 7,064.78 half SE - 16,100) = 76,835.22 taxable; QBI 20% -> 61,468.18;
+  // 10% x 12,400 + 12% x 38,000 + 22% x 11,068.18 = 8,235
+  assert.equal(Math.round(tx.incomeTax!), 8_235);
+  assert.equal(tx.precision, 'estimate');
+  // California adds its own brackets; Florida adds nothing; an unknown state is refused.
+  const ca = checkReserve(us, 'self-employed', { revenue: 100_000, expenses: 0, region: 'CA' });
+  assert.ok(ca.incomeTax! - tx.incomeTax! > 4_000 && ca.incomeTax! - tx.incomeTax! < 7_000);
+  assert.equal(checkReserve(us, 'self-employed', { revenue: 100_000, expenses: 0, region: 'FL' }).incomeTax, tx.incomeTax);
+  assert.throws(() => checkReserve(us, 'self-employed', { revenue: 1, region: 'XX' }));
+  assert.equal(us.regions!.length, 51);
 });
 
 test('every pack with an estimate gives a sensible answer across incomes', () => {
@@ -254,4 +272,65 @@ test('every pack with an estimate gives a sensible answer across incomes', () =>
       }
     }
   }
+});
+
+test('the registry plan publishes enacted changes ahead and never proposals', async () => {
+  const { registryEntries, registrySyncPlan } = await import('../registry.js');
+  const day = (d: string) => BigInt(Date.parse(`${d}T00:00:00Z`) / 1000);
+  const now = day('2026-10-16');
+  const week = 7n * 86_400n;
+
+  // Thailand: 7% today, 10% from 1 October 2027.
+  const th = loadRulePack('th');
+  assert.deepEqual(registryEntries(th).standard, [{ from: day('2025-10-01'), bps: 700 }, { from: day('2027-10-01'), bps: 1000 }]);
+  const plan = registrySyncPlan(th, {}, now, week);
+  assert.deepEqual(plan.map((a) => a.kind), ['seed', 'publish']);
+  // Already on chain: nothing to do.
+  assert.equal(registrySyncPlan(th, registryEntries(th), now, week).length, 0);
+  // Close to the date, the change can no longer be published in time.
+  assert.equal(registrySyncPlan(th, { standard: [{ from: day('2025-10-01'), bps: 700 }] }, day('2027-09-28'), week)[0].kind, 'late');
+
+  // Vietnam: the temporary 8% ends; its goods fall back to the standard 10%.
+  const vn = registryEntries(loadRulePack('vn'));
+  assert.deepEqual(vn.temporary_reduced.at(-1), { from: day('2027-01-01'), bps: 1000 });
+
+  // Switzerland: 8.5% is only proposed, so it is never published; a stale future entry is withdrawn.
+  const ch = loadRulePack('ch');
+  assert.ok(!registrySyncPlan(ch, {}, now, week).some((a) => a.kind === 'publish'));
+  const withdraw = registrySyncPlan(ch, { standard: [{ from: day('2024-01-01'), bps: 810 }, { from: day('2028-01-01'), bps: 850 }] }, now, week);
+  assert.deepEqual(withdraw.filter((a) => a.rate === 'standard').map((a) => a.kind), ['withdraw']);
+});
+
+test('moving country: same calendar keeps the vault, a new calendar moves the inbox', async () => {
+  const { changeCountryPlan } = await import('../registry.js');
+  // Spain (quarterly + 30 days) to France (quarterly + 31 days): different due offset, new vault.
+  const toFr = changeCountryPlan({ period: 'Quarter', dueOffsetSecs: 30n * 86_400n }, { pack: loadRulePack('fr'), presetId: 'micro-bnc-vat' }, '2026-10-16');
+  assert.equal(toFr.sameVault, false);
+  assert.ok(toFr.steps.some((s) => s.startsWith('propose_vault')));
+  // Germany to the Netherlands with the user's own 25% reserve.
+  const de = loadRulePack('de');
+  const toNl = changeCountryPlan(
+    { period: de.period, dueOffsetSecs: BigInt(de.dueOffsetDays) * 86_400n },
+    { pack: loadRulePack('nl'), presetId: 'standard', reserves: [{ name: 'ib', bps: 2500 }] },
+    '2026-10-16',
+  );
+  assert.deepEqual(toNl.rule, { vatBps: 2100, buckets: [{ name: 'ib', bps: 2500 }] });
+  assert.deepEqual(toNl.follow, { country: 'NL', rate: 'standard' });
+  // Same calendar as Ireland? Year + 304 vs Year + 120: still a new vault. Same pack calendar: same vault.
+  const same = changeCountryPlan({ period: 'Year', dueOffsetSecs: 120n * 86_400n, following: true }, { pack: loadRulePack('nl'), presetId: 'standard' }, '2026-10-16');
+  assert.equal(same.sameVault, true);
+  assert.equal(same.steps[0].startsWith('unfollow'), true);
+});
+
+test('objective prepayments: last year\'s tax or a share of profit', () => {
+  // US: last year's tax USD 20,000 on AGI 160,000 -> 110% = 22,000; on 100,000 revenue that is 22%.
+  const us = checkReserve(loadRulePack('us'), 'self-employed', { revenue: 100_000, expenses: 0, region: 'TX', lastYearTax: 20_000, lastYearIncome: 160_000 });
+  assert.deepEqual([Math.round(us.prepayment!.amount), us.prepayment!.requiredBps, us.prepayment!.covered], [22_000, 2200, true]);
+  // UK: two payments on account = last year's bill.
+  assert.equal(checkReserve(loadRulePack('gb'), 'standard', { revenue: 50_000, lastYearTax: 9_000, reserveBps: 1500 }).prepayment!.covered, false);
+  // Spain: modelo 130 = 20% of profit, objective whatever the final IRPF.
+  const es = checkReserve(loadRulePack('es'), 'general', { revenue: 80_000, expenses: 8_000 });
+  assert.equal(es.prepayment!.amount, 14_400);
+  // No rule: no prepayment figure.
+  assert.equal(checkReserve(loadRulePack('nl'), 'standard', { revenue: 50_000, lastYearTax: 5_000 }).prepayment, undefined);
 });

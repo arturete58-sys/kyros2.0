@@ -113,7 +113,13 @@
     },
     {
       "title": "Revenue Department",
-      "url": "https://www.rd.go.th"
+      "url": "https://www.rd.go.th",
+      "official": true
+    },
+    {
+      "title": "KPMG: Royal Decree No. 807 keeps VAT at 7% until 30 September 2027",
+      "url": "https://kpmg.com/us/en/taxnewsflash/news/2026/09/thailand-reduced-7-percent-vat-rate-extended-through-september-2027.html",
+      "checked": "2026-10-16"
     }
   ]
 }

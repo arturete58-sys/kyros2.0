@@ -145,7 +145,8 @@
     },
     {
       "title": "Departamento de Hacienda",
-      "url": "https://hacienda.pr.gov"
+      "url": "https://hacienda.pr.gov",
+      "official": true
     }
   ]
 }
