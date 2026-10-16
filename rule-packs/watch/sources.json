@@ -1,0 +1,418 @@
+{
+  "https://www.impostos.ad": {
+    "pack": "ad",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://tax.gov.ae": {
+    "pack": "ae",
+    "hash": "cb591837a0514789",
+    "figures": [
+      "23.3%",
+      "5%",
+      "67%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.arca.gob.ar": {
+    "pack": "ar",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://bahrain.bh/wps/portal/en/!ut/p/z0/fYw9E8FAEIb_yjY3Q3Urhmh9FKFAyTVm4xYnsRduk_HzRadSPu8872OdPVgn1IUraYhCdc9HNz2N1hMsZkvEYrtf4XRXzPIsX4wxy-3Guv9CXwj359PNrTtHUX6rPZTSnFgMUhlbBb0xVEGuPj4Mlm0KwikBiYcgHSd9sKjBF9ek7EFjE87JYEd1y0Defzd6w6AjHfaP3xzEC5R0e1EQ21Tu-AEgDRvY": {
+    "pack": "bh",
+    "hash": "fe6c6ed0e8d24ad3",
+    "figures": [
+      "0%",
+      "10%",
+      "46%",
+      "BHD37,500"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.gov.br/receitafederal": {
+    "pack": "br",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.canada.ca/en/revenue-agency.html": {
+    "pack": "ca",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/charge-collect-which-rate/calculator.html": {
+    "pack": "ca",
+    "hash": "4c89035597935f13",
+    "figures": [
+      "0%",
+      "13%",
+      "14%",
+      "15%",
+      "5%",
+      "6%",
+      "7%",
+      "9.975%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.estv.admin.ch": {
+    "pack": "ch",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.estv.admin.ch/estv/en/home/mehrwertsteuer/mwst-steuersaetze.html": {
+    "pack": "ch",
+    "hash": "e8480f39d295712f",
+    "figures": [
+      "2,6%",
+      "3,8%",
+      "8,1%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.dian.gov.co": {
+    "pack": "co",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en": {
+    "pack": "pt",
+    "hash": "baf0ab6dbb34f7db",
+    "figures": [
+      "12%",
+      "15%",
+      "5%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.emta.ee": {
+    "pack": "ee",
+    "hash": "28fdae8deae31d6e",
+    "figures": [
+      "50%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.boe.es/buscar/act.php?id=BOE-A-1992-28740": {
+    "pack": "es",
+    "hash": "f6966f4c3e35b1b5",
+    "figures": [
+      "0,50porciento",
+      "0porciento",
+      "1,4porciento",
+      "1,75porciento",
+      "100porciento",
+      "10porciento",
+      "110porciento",
+      "1porciento",
+      "21porciento",
+      "25porciento",
+      "2porciento",
+      "33porciento",
+      "4%",
+      "40porciento",
+      "4porciento",
+      "5,2porciento",
+      "50porciento",
+      "90porciento"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G414.shtml": {
+    "pack": "es",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://sede.agenciatributaria.gob.es/Sede/procedimientos/G601.shtml": {
+    "pack": "es",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/folleto-actividades-economicas/3-impuesto-sobre-renta-personas-fisicas/3_7-pagos-fraccionados.html": {
+    "pack": "es",
+    "hash": "cab881bd9330543a",
+    "figures": [
+      "0,5%",
+      "2%",
+      "20%",
+      "3%",
+      "4%",
+      "60%",
+      "70%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.gov.uk/vat-rates": {
+    "pack": "gb",
+    "hash": "d3ee5382fabfb860",
+    "figures": [
+      "0%",
+      "17.5%",
+      "20%",
+      "5%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.gov.uk/understand-self-assessment-bill/payments-on-account": {
+    "pack": "gb",
+    "hash": "a909bcbb11a94e9f",
+    "figures": [
+      "80%",
+      "£1,000",
+      "£1,200",
+      "£1,500",
+      "£1,800",
+      "£2,700",
+      "£3,000",
+      "£4,500"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.rs.ge": {
+    "pack": "ge",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.ird.gov.hk": {
+    "pack": "hk",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.pajak.go.id": {
+    "pack": "id",
+    "hash": "49a4eaeb9aabbf3c",
+    "figures": [
+      "R2026"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.revenue.ie": {
+    "pack": "ie",
+    "hash": "ff39e28d319d5857",
+    "figures": [
+      "€892,000"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.revenue.ie/en/self-assessment-and-self-employment/guide-to-self-assessment/what-is-preliminary-tax.aspx": {
+    "pack": "ie",
+    "hash": "f7764a62bcbdd591",
+    "figures": [
+      "100%",
+      "105%",
+      "90%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.incometax.gov.in": {
+    "pack": "in",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.agenziaentrate.gov.it": {
+    "pack": "it",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.nta.go.jp/english/": {
+    "pack": "jp",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.nta.go.jp/taxes/shiraberu/taxanswer/shohi/6303.htm": {
+    "pack": "jp",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.kra.go.ke": {
+    "pack": "ke",
+    "hash": "4e1ac35eca633a6d",
+    "figures": [
+      "R157.7824",
+      "R8.4033"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.nts.go.kr": {
+    "pack": "kr",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://gov.ky/finance-economy": {
+    "pack": "ky",
+    "hash": "f496eae50a9f7b4e",
+    "figures": [
+      "$300,000",
+      "1percent",
+      "2.4percent",
+      "2percent",
+      "3.3percent",
+      "4.2percent",
+      "5.2percent",
+      "7.5percent",
+      "9.5percent"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://monentreprise.gouv.mc/en/themes/accounting-obligations-and-tax/tax/vat/vat": {
+    "pack": "mc",
+    "hash": "db7cd956bb28534c",
+    "figures": [
+      "10%",
+      "20%",
+      "5.5%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.sat.gob.mx": {
+    "pack": "mx",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.belastingdienst.nl": {
+    "pack": "nl",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://dgi.mef.gob.pa": {
+    "pack": "pa",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.bir.gov.ph": {
+    "pack": "ph",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.fbr.gov.pk": {
+    "pack": "pk",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://hacienda.pr.gov": {
+    "pack": "pr",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.portaldasfinancas.gov.pt": {
+    "pack": "pt",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.iras.gov.sg": {
+    "pack": "sg",
+    "hash": "d9a847a1a79ab448",
+    "figures": [
+      "0%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.mh.gob.sv": {
+    "pack": "sv",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.rd.go.th": {
+    "pack": "th",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.gib.gov.tr": {
+    "pack": "tr",
+    "hash": "e3b0c44298fc1c14",
+    "figures": [],
+    "seen": "2026-10-16"
+  },
+  "https://www.irs.gov/pub/irs-drop/rp-25-32.pdf": {
+    "pack": "us",
+    "hash": "27422167837bf80e",
+    "figures": [
+      "sha256:e9ada115fb43a4af5ea326ca91edd40ab0bf29b9be01d2c13d7b8fa96214635b"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes": {
+    "pack": "us",
+    "hash": "b5543022e246d540",
+    "figures": [
+      "$1,000",
+      "100%",
+      "90%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax-social-security-and-medicare-taxes": {
+    "pack": "us",
+    "hash": "bccc6706b997ebef",
+    "figures": [
+      "$108.28",
+      "$125,000",
+      "$168,600",
+      "$200,000",
+      "$250,000",
+      "0.9%",
+      "12.4%",
+      "15.3%",
+      "2.9%"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://dienkhanh.khanhhoa.gov.vn/Resources/Docs/N%C4%83m%202026/UBND/TL%20tuye%CC%82n%20truye%CC%82%CC%80n%20dinh%20kem%20TB85%20cho%20HKD_ban%20c%E1%BA%ADp%20nhat%20KHH%20gui%20lai%2006.02.2026.pdf": {
+    "pack": "vn",
+    "hash": "dfb3781978b56c0e",
+    "figures": [
+      "sha256:1efc218b333e8a4be63081384eaa50ff9689fc043a16976a72f621e59d97cce1"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.sars.gov.za": {
+    "pack": "za",
+    "hash": "7da2f4f0ce839f22",
+    "figures": [
+      "R8022",
+      "R8023",
+      "R8024",
+      "R8025"
+    ],
+    "seen": "2026-10-16"
+  },
+  "https://www.sars.gov.za/tax-types/value-added-tax/": {
+    "pack": "za",
+    "hash": "05845735268ad6c1",
+    "figures": [
+      "0%",
+      "0.5%",
+      "0.5percent",
+      "15%",
+      "15.5%",
+      "16%",
+      "R120000",
+      "R50000"
+    ],
+    "seen": "2026-10-16"
+  }
+}
