@@ -13,8 +13,7 @@
       "rates": {
         "standard": 2300,
         "reduced": 1350,
-        "second_reduced": 900,
-        "livestock": 480
+        "second_reduced": 900
       }
     }
   ],
@@ -151,6 +150,7 @@
     "note": "Preliminary tax by 31 October: at least 100% of last year's tax (or 90% of this year's, or 105% of the year before last by direct debit) avoids interest."
   },
   "notes": [
+    "The special 4.8% rate for livestock is left out: no preset uses it and the European Commission's TEDB does not list it among Ireland's rates.",
     "Rates: 23% standard, 13.5% reduced, 9% second reduced (since 1 July 2026 also restaurant and catering food and hairdressing).",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
@@ -167,6 +167,12 @@
     {
       "title": "Revenue: what is preliminary tax (official)",
       "url": "https://www.revenue.ie/en/self-assessment-and-self-employment/guide-to-self-assessment/what-is-preliminary-tax.aspx",
+      "official": true,
+      "checked": "2026-10-16"
+    },
+    {
+      "title": "European Commission TEDB, VAT Retrieval Service (official), compared weekly by the law watch",
+      "url": "https://ec.europa.eu/taxation_customs/tedb/",
       "official": true,
       "checked": "2026-10-16"
     }
