@@ -363,3 +363,447 @@ fn following_is_bounded_and_can_stop_at_any_time() {
     assert_eq!(w.v.config().rule.vat_bps, 2200);
     assert_eq!(w.v.try_unfollow(), Err(Ok(VaultError::NotFollowing)));
 }
+
+// ---- Reserve in the tax's currency, yield and anchors ----
+
+mod mocks {
+    use kyros_types::{Asset, PriceData};
+    use soroban_sdk::{contract, contractimpl, token, Address, Env, Map};
+
+    /// A SEP-40 oracle whose prices the test sets.
+    #[contract]
+    pub struct Oracle;
+
+    #[contractimpl]
+    impl Oracle {
+        pub fn set(e: Env, asset: Asset, price: i128, timestamp: u64) {
+            let mut m: Map<Asset, PriceData> =
+                e.storage().instance().get(&0u32).unwrap_or(Map::new(&e));
+            m.set(asset, PriceData { price, timestamp });
+            e.storage().instance().set(&0u32, &m);
+        }
+        pub fn lastprice(e: Env, asset: Asset) -> Option<PriceData> {
+            let m: Map<Asset, PriceData> = e.storage().instance().get(&0u32)?;
+            m.get(asset)
+        }
+        pub fn decimals(_e: Env) -> u32 {
+            14
+        }
+    }
+
+    /// Pays `num/den` of `token_out` per `token_in` from its own balance.
+    #[contract]
+    pub struct Swapper;
+
+    #[contractimpl]
+    impl Swapper {
+        pub fn set_rate(e: Env, num: i128, den: i128) {
+            e.storage().instance().set(&0u32, &(num, den));
+        }
+        pub fn swap(
+            e: Env,
+            _token_in: Address,
+            token_out: Address,
+            amount_in: i128,
+            min_out: i128,
+            to: Address,
+        ) -> i128 {
+            let (num, den): (i128, i128) = e.storage().instance().get(&0u32).unwrap();
+            let out = amount_in * num / den;
+            // A real swapper refuses below min_out; this one returns what it has, so the vault's own check is tested.
+            let _ = min_out;
+            token::Client::new(&e, &token_out).transfer(&e.current_contract_address(), &to, &out);
+            out
+        }
+    }
+
+    /// A yield strategy for one owner: it holds the tokens; the test mints "interest" to it.
+    #[contract]
+    pub struct Yield;
+
+    #[contractimpl]
+    impl Yield {
+        pub fn __constructor(e: Env, owner: Address, asset: Address) {
+            e.storage().instance().set(&0u32, &(owner, asset));
+        }
+        pub fn owner(e: Env) -> Address {
+            let (o, _): (Address, Address) = e.storage().instance().get(&0u32).unwrap();
+            o
+        }
+        pub fn asset(e: Env) -> Address {
+            let (_, a): (Address, Address) = e.storage().instance().get(&0u32).unwrap();
+            a
+        }
+        pub fn deposit(e: Env, _amount: i128) {
+            Self::owner(e).require_auth();
+        }
+        pub fn withdraw(e: Env, amount: i128) -> i128 {
+            let owner = Self::owner(e.clone());
+            owner.require_auth();
+            let t = token::Client::new(&e, &Self::asset(e.clone()));
+            let out = amount.min(t.balance(&e.current_contract_address()));
+            t.transfer(&e.current_contract_address(), &owner, &out);
+            out
+        }
+        pub fn balance(e: Env) -> i128 {
+            token::Client::new(&e, &Self::asset(e.clone())).balance(&e.current_contract_address())
+        }
+    }
+}
+
+use kyros_types::Asset;
+use soroban_sdk::testutils::MuxedAddress as _;
+
+const HOUR: u64 = 3_600;
+/// 1 EUR = 1.16 USD, with the oracle's 14 decimals.
+const EUR_USD: i128 = 116_000_000_000_000;
+const ONE: i128 = 100_000_000_000_000;
+
+struct E2 {
+    w: W,
+    eurc: Address,
+    oracle: mocks::OracleClient<'static>,
+    swapper: mocks::SwapperClient<'static>,
+}
+
+/// A vault that accepts USDC (`w.token`) and EURC, with a fiat oracle and a swapper funded with EURC.
+fn euro_world() -> E2 {
+    let e = Env::default();
+    e.mock_all_auths();
+    e.ledger().set_timestamp(FEB_10_2027);
+    let usdc = e
+        .register_stellar_asset_contract_v2(Address::generate(&e))
+        .address();
+    let eurc = e
+        .register_stellar_asset_contract_v2(Address::generate(&e))
+        .address();
+    let owner = Address::generate(&e);
+    let payer = Address::generate(&e);
+    let tax = Address::generate(&e);
+    StellarAssetClient::new(&e, &usdc).mint(&payer, &(10_000 * UNIT));
+    let id = e.register(
+        ReserveVault,
+        (
+            owner.clone(),
+            spain(&e),
+            tax.clone(),
+            NOTICE,
+            PeriodKind::Quarter,
+            DUE_OFFSET,
+            vec![&e, usdc.clone(), eurc.clone()],
+        ),
+    );
+    let oracle = mocks::OracleClient::new(&e, &e.register(mocks::Oracle, ()));
+    let swapper = mocks::SwapperClient::new(&e, &e.register(mocks::Swapper, ()));
+    StellarAssetClient::new(&e, &eurc).mint(&swapper.address, &(10_000 * UNIT));
+    let v = ReserveVaultClient::new(&e, &id);
+    E2 {
+        w: W {
+            e,
+            v,
+            token: usdc,
+            owner,
+            payer,
+            tax,
+        },
+        eurc,
+        oracle,
+        swapper,
+    }
+}
+
+fn usd_to_eur(x: &E2) -> Conversion {
+    Conversion {
+        from_token: x.w.token.clone(),
+        to_token: x.eurc.clone(),
+        swapper: x.swapper.address.clone(),
+        oracle: x.oracle.address.clone(),
+        from_price: Asset::Other(symbol_short!("USD")),
+        to_price: Asset::Other(symbol_short!("EUR")),
+        max_slippage_bps: 100,
+        max_age_secs: HOUR,
+    }
+}
+
+fn prices(x: &E2, at: u64) {
+    x.oracle.set(&Asset::Other(symbol_short!("USD")), &ONE, &at);
+    x.oracle
+        .set(&Asset::Other(symbol_short!("EUR")), &EUR_USD, &at);
+}
+
+fn eur(x: &E2, a: &Address) -> i128 {
+    TokenClient::new(&x.w.e, &x.eurc).balance(a)
+}
+
+#[test]
+fn reserve_received_in_dollars_is_kept_in_euros_after_the_notice() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::NoConversion)));
+    // A token the vault does not take is refused.
+    let mut bad = usd_to_eur(&x);
+    bad.to_token = Address::generate(&w.e);
+    assert_eq!(
+        w.v.try_propose_conversion(&bad),
+        Err(Ok(VaultError::InvalidConversion))
+    );
+    assert_eq!(
+        w.v.propose_conversion(&usd_to_eur(&x)),
+        FEB_10_2027 + NOTICE
+    );
+    assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::NoConversion)));
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    prices(&x, FEB_10_2027 + NOTICE - 60);
+    // The pool gives 0.86 EUR per dollar; the oracle says 1/1.16 = 0.8621, so 0.24% below: within the 1% tolerance.
+    x.swapper.set_rate(&86, &100);
+    let out = w.v.convert(&q);
+    assert_eq!(out, 3_526_000_000); // 410 USDC -> 352.6 EURC
+    let usd = w.v.period(&q, &w.token);
+    assert_eq!(usd.buckets.get(symbol_short!("vat")).unwrap(), 0);
+    assert_eq!(usd.converted, 410 * UNIT);
+    let eu = w.v.period(&q, &x.eurc);
+    // VAT 210/410 and income tax 200/410 of what came out.
+    assert_eq!(
+        eu.buckets.get(symbol_short!("irpf")).unwrap(),
+        1_720_000_000
+    );
+    assert_eq!(eu.buckets.get(symbol_short!("vat")).unwrap(), 1_806_000_000);
+    assert_eq!(eu.reserved, out);
+    assert_eq!(eur(&x, &w.v.address), out);
+    assert_eq!(w.v.position(&x.eurc).held, out);
+    assert_eq!(w.v.position(&w.token).held, 0);
+    // The tax is then paid in euros.
+    w.v.pay_tax(&q, &x.eurc, &symbol_short!("vat"), &1_806_000_000);
+    assert_eq!(eur(&x, &w.tax), 1_806_000_000);
+    assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::NothingToConvert)));
+}
+
+#[test]
+fn a_bad_swap_or_a_stale_price_converts_nothing() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    w.v.propose_conversion(&usd_to_eur(&x));
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    x.swapper.set_rate(&80, &100);
+    assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::PriceUnavailable)));
+    prices(&x, FEB_10_2027 + NOTICE - 2 * HOUR);
+    assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::PriceUnavailable)));
+    prices(&x, FEB_10_2027 + NOTICE);
+    // 0.80 per dollar is 7% below the oracle: refused, and nothing moved.
+    assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::SwapBelowFloor)));
+    assert_eq!(bal(w, &w.v.address), 410 * UNIT);
+    assert_eq!(w.v.period(&q, &w.token).converted, 0);
+    // The owner can stop converting at once.
+    w.v.stop_conversion();
+    assert_eq!(w.v.conversion(), None);
+    assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::NoConversion)));
+}
+
+fn yield_for(x: &E2, owner: &Address, asset: &Address) -> mocks::YieldClient<'static> {
+    let id = x.w.e.register(mocks::Yield, (owner.clone(), asset.clone()));
+    mocks::YieldClient::new(&x.w.e, &id)
+}
+
+#[test]
+fn part_of_the_reserve_earns_yield_and_the_buckets_keep_their_amounts() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    // A strategy that works for someone else is refused.
+    let foreign = yield_for(&x, &Address::generate(&w.e), &w.token);
+    assert_eq!(
+        w.v.try_propose_strategy(&foreign.address, &5_000),
+        Err(Ok(VaultError::InvalidStrategy))
+    );
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &5_000);
+    assert_eq!(w.v.try_invest(), Err(Ok(VaultError::NoStrategy)));
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    // Half of the 410 reserve goes to work.
+    assert_eq!(w.v.invest(), 205 * UNIT);
+    assert_eq!(w.v.invest(), 0);
+    let p = w.v.position(&w.token);
+    assert_eq!(
+        (p.held, p.liquid, p.invested, p.surplus),
+        (410 * UNIT, 205 * UNIT, 205 * UNIT, 0)
+    );
+    // The strategy earns 5 USDC.
+    StellarAssetClient::new(&w.e, &w.token).mint(&y.address, &(5 * UNIT));
+    assert_eq!(w.v.position(&w.token).surplus, 5 * UNIT);
+    let before = bal(w, &w.owner);
+    assert_eq!(w.v.harvest(&w.token), 5 * UNIT);
+    assert_eq!(bal(w, &w.owner) - before, 5 * UNIT);
+    assert_eq!(w.v.position(&w.token).surplus, 0);
+    // Paying more than is liquid takes the rest from the strategy.
+    w.v.pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+    w.v.pay_tax(&q, &w.token, &symbol_short!("irpf"), &(200 * UNIT));
+    assert_eq!(bal(w, &w.tax), 410 * UNIT);
+    assert_eq!(w.v.position(&w.token).held, 0);
+    // One strategy at a time; stopping brings everything home.
+    assert_eq!(
+        w.v.try_propose_strategy(&y.address, &5_000),
+        Err(Ok(VaultError::StrategyInUse))
+    );
+    w.v.stop_strategy();
+    assert_eq!(w.v.strategy(), None);
+    assert_eq!(w.v.try_stop_strategy(), Err(Ok(VaultError::NoStrategy)));
+}
+
+#[test]
+fn release_and_stop_bring_invested_reserve_back() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &10_000);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert_eq!(w.v.invest(), 410 * UNIT);
+    assert_eq!(bal(w, &w.v.address), 0);
+    w.e.ledger().set_timestamp(APR_1_2027 + DUE_OFFSET);
+    assert_eq!(w.v.release(&q, &w.token), 410 * UNIT);
+    assert_eq!(bal(w, &w.owner), 1_210 * UNIT);
+    // Interest earned after the release is still the owner's.
+    StellarAssetClient::new(&w.e, &w.token).mint(&y.address, &(2 * UNIT));
+    assert_eq!(w.v.stop_strategy(), 2 * UNIT);
+    assert_eq!(w.v.harvest(&w.token), 2 * UNIT);
+}
+
+/// Puts a classic account on the test ledger, so it can hold a trustline.
+fn create_account(e: &Env, address: &Address) {
+    use soroban_sdk::xdr;
+    extern crate alloc;
+    let account_id = match xdr::ScAddress::from(address) {
+        xdr::ScAddress::Account(a) => a,
+        _ => panic!("not an account"),
+    };
+    let key = xdr::LedgerKey::Account(xdr::LedgerKeyAccount {
+        account_id: account_id.clone(),
+    });
+    let entry = xdr::LedgerEntry {
+        data: xdr::LedgerEntryData::Account(xdr::AccountEntry {
+            account_id,
+            balance: 0,
+            flags: 0,
+            home_domain: Default::default(),
+            inflation_dest: None,
+            num_sub_entries: 0,
+            seq_num: xdr::SequenceNumber(0),
+            thresholds: xdr::Thresholds([1; 4]),
+            signers: xdr::VecM::default(),
+            ext: xdr::AccountEntryExt::V0,
+        }),
+        last_modified_ledger_seq: 0,
+        ext: xdr::LedgerEntryExt::V0,
+    };
+    e.host()
+        .add_ledger_entry(&alloc::rc::Rc::new(key), &alloc::rc::Rc::new(entry), None)
+        .unwrap();
+}
+
+#[test]
+fn an_anchor_payment_carries_its_memo_and_goes_only_to_the_destination() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    // The anchor's account becomes the destination after the notice.
+    let anchor = MuxedAddress::generate(&w.e).address();
+    create_account(&w.e, &anchor);
+    StellarAssetClient::new(&w.e, &w.token).trust(&anchor);
+    w.v.propose_destination(&anchor);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    let with_memo = MuxedAddress::new(anchor.clone(), 4_242);
+    w.v.pay_tax_to(
+        &q,
+        &w.token,
+        &symbol_short!("vat"),
+        &(210 * UNIT),
+        &with_memo,
+    );
+    assert_eq!(bal(w, &anchor), 210 * UNIT);
+    let elsewhere = MuxedAddress::new(MuxedAddress::generate(&w.e).address(), 4_242);
+    assert_eq!(
+        w.v.try_pay_tax_to(&q, &w.token, &symbol_short!("irpf"), &UNIT, &elsewhere),
+        Err(Ok(VaultError::WrongDestination))
+    );
+}
+
+#[test]
+fn an_invoice_with_irpf_withheld_splits_exactly() {
+    let w = world();
+    // Invoice: base 1,000, VAT 21% (210), client withholds 15% IRPF (150) and pays 1,060.
+    // The client's withholding already prepays income tax, so the reserve keeps 5% more.
+    let reference = BytesN::from_array(&w.e, &[9; 32]);
+    let terms = InvoiceTerms {
+        vat_bps: 2100,
+        withholding_bps: 1500,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: symbol_short!("irpf"),
+                bps: 500,
+            },
+        ],
+    };
+    w.v.expect_invoice(&reference, &terms);
+    assert_eq!(w.v.invoice(&reference), Some(terms));
+    let s = w.v.receive(&w.payer, &w.token, &(1_060 * UNIT), &reference);
+    assert_eq!(
+        (s.base, s.vat, s.reserve, s.net),
+        (1_000 * UNIT, 210 * UNIT, 260 * UNIT, 800 * UNIT)
+    );
+    let q = w.v.current_period();
+    let p = w.v.period(&q, &w.token);
+    assert_eq!(p.buckets.get(symbol_short!("vat")).unwrap(), 210 * UNIT);
+    assert_eq!(p.buckets.get(symbol_short!("irpf")).unwrap(), 50 * UNIT);
+    // A payment with another reference still follows the rule.
+    let s2 = w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    assert_eq!((s2.vat, s2.reserve), (210 * UNIT, 410 * UNIT));
+    // A client abroad: no VAT on the invoice, nothing withheld.
+    let abroad = BytesN::from_array(&w.e, &[8; 32]);
+    w.v.expect_invoice(
+        &abroad,
+        &InvoiceTerms {
+            vat_bps: 0,
+            withholding_bps: 0,
+            buckets: vec![
+                &w.e,
+                Bucket {
+                    name: symbol_short!("irpf"),
+                    bps: 2000,
+                },
+            ],
+        },
+    );
+    let s3 = w.v.receive(&w.payer, &w.token, &(1_000 * UNIT), &abroad);
+    assert_eq!((s3.vat, s3.reserve, s3.net), (0, 200 * UNIT, 800 * UNIT));
+    // Withholding plus buckets over the base is refused; forgetting works once.
+    assert_eq!(
+        w.v.try_expect_invoice(
+            &abroad,
+            &InvoiceTerms {
+                vat_bps: 2100,
+                withholding_bps: 1500,
+                buckets: vec![
+                    &w.e,
+                    Bucket {
+                        name: symbol_short!("irpf"),
+                        bps: 9000,
+                    },
+                ],
+            }
+        ),
+        Err(Ok(VaultError::InvalidTerms))
+    );
+    w.v.forget_invoice(&abroad);
+    assert_eq!(
+        w.v.try_forget_invoice(&abroad),
+        Err(Ok(VaultError::UnknownInvoice))
+    );
+}

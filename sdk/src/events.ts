@@ -10,7 +10,18 @@ export interface VaultEventRow {
   ledger: number;
   closedAt: string;
   txHash: string;
-  kind: 'received' | 'tax_paid' | 'released' | 'rule_proposed' | 'destination_proposed' | 'rule_applied' | 'destination_applied' | 'change_cancelled';
+  kind:
+    | 'received'
+    | 'tax_paid'
+    | 'released'
+    | 'rule_proposed'
+    | 'destination_proposed'
+    | 'rule_applied'
+    | 'destination_applied'
+    | 'change_cancelled'
+    | 'converted'
+    | 'invested'
+    | 'harvested';
   token?: string;
   period?: number;
   gross?: bigint;
@@ -22,9 +33,26 @@ export interface VaultEventRow {
   bucket?: string;
   from?: string;
   reference?: string;
+  /** Anchor memo (muxed id) of a tax payment. */
+  memo?: bigint;
+  /** A conversion: what went in (`amount`, in `token`) and what came out (`amountOut`, in `toToken`). */
+  amountOut?: bigint;
+  toToken?: string;
 }
 
-const KINDS = new Set(['received', 'tax_paid', 'released', 'rule_proposed', 'destination_proposed', 'rule_applied', 'destination_applied', 'change_cancelled']);
+const KINDS = new Set([
+  'received',
+  'tax_paid',
+  'released',
+  'rule_proposed',
+  'destination_proposed',
+  'rule_applied',
+  'destination_applied',
+  'change_cancelled',
+  'converted',
+  'invested',
+  'harvested',
+]);
 
 /** Every Kyros event of `vault` from `startLedger` on (RPC keeps a limited window of history). */
 export async function vaultEvents(server: rpc.Server, vault: string, startLedger: number): Promise<VaultEventRow[]> {
@@ -40,11 +68,26 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
       if (topics[0] !== 'kyros_vault' || !KINDS.has(String(topics[1]))) continue;
       const v = scValToNative(ev.value) as Record<string, unknown>;
       const big = (x: unknown) => (x === undefined ? undefined : BigInt(x as bigint));
+      const kind = topics[1] as VaultEventRow['kind'];
+      if (kind === 'converted') {
+        rows.push({
+          ledger: ev.ledger,
+          closedAt: ev.ledgerClosedAt,
+          txHash: ev.txHash,
+          kind,
+          period: Number(topics[2]),
+          token: String(v.from_token),
+          amount: big(v.amount_in),
+          toToken: String(v.to_token),
+          amountOut: big(v.amount_out),
+        });
+        continue;
+      }
       rows.push({
         ledger: ev.ledger,
         closedAt: ev.ledgerClosedAt,
         txHash: ev.txHash,
-        kind: topics[1] as VaultEventRow['kind'],
+        kind,
         token: topics[2] !== undefined ? String(topics[2]) : undefined,
         period: topics[3] !== undefined ? Number(topics[3]) : undefined,
         gross: big(v.gross),
@@ -56,6 +99,7 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
         bucket: v.bucket !== undefined ? String(v.bucket) : undefined,
         from: v.from !== undefined ? String(v.from) : undefined,
         reference: v.reference instanceof Uint8Array ? Buffer.from(v.reference).toString('hex') : undefined,
+        memo: v.memo !== undefined && v.memo !== null ? BigInt(v.memo as bigint) : undefined,
       });
     }
     if (res.events.length < 200 || !res.cursor) break;
@@ -68,7 +112,7 @@ const csvCell = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` 
 
 /** One CSV line per event, amounts in whole units, with a link to each transaction. */
 export function toCsv(rows: VaultEventRow[], explorerTx = (h: string) => `https://stellar.expert/explorer/public/tx/${h}`): string {
-  const head = ['closed_at', 'kind', 'period', 'token', 'gross', 'net', 'vat', 'other_reserve', 'amount', 'bucket', 'reference', 'tx'];
+  const head = ['closed_at', 'kind', 'period', 'token', 'gross', 'net', 'vat', 'other_reserve', 'amount', 'bucket', 'reference', 'to_token', 'amount_out', 'memo', 'tx'];
   const f = (x?: bigint) => (x === undefined ? '' : formatAmount(x));
   const lines = rows.map((r) =>
     [
@@ -83,6 +127,9 @@ export function toCsv(rows: VaultEventRow[], explorerTx = (h: string) => `https:
       f(r.amount),
       r.bucket ?? '',
       r.reference ?? '',
+      r.toToken ?? '',
+      f(r.amountOut),
+      r.memo?.toString() ?? '',
       explorerTx(r.txHash),
     ]
       .map(csvCell)

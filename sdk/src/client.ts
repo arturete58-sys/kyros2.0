@@ -19,7 +19,22 @@ import {
   xdr,
 } from '@stellar/stellar-sdk';
 import type { PeriodKind } from './periods.js';
-import { addr, bytes32, i128, periodKindFromNative, periodKindToScVal, ruleFromNative, ruleToScVal, splitFromScVal, u32, u64 } from './scval.js';
+import {
+  addr,
+  bytes32,
+  conversionFromNative,
+  conversionToScVal,
+  i128,
+  invoiceTermsToScVal,
+  periodKindFromNative,
+  periodKindToScVal,
+  ruleFromNative,
+  ruleToScVal,
+  splitFromScVal,
+  u32,
+  u64,
+  type Conversion,
+} from './scval.js';
 import type { Rule, Split } from './split.js';
 
 export interface KyrosClientOptions {
@@ -47,6 +62,23 @@ export interface PeriodState {
   reserved: bigint;
   paid: bigint;
   released: bigint;
+  /** Swapped out of this token into the reserve currency. */
+  converted: bigint;
+}
+
+/** A vault's yield strategy. */
+export interface Strategy {
+  adapter: string;
+  token: string;
+  maxBps: number;
+}
+
+/** Where the reserve in one token is: `surplus` is the owner's yield (negative after a loss). */
+export interface Position {
+  held: bigint;
+  liquid: bigint;
+  invested: bigint;
+  surplus: bigint;
 }
 
 export interface Sent {
@@ -144,6 +176,16 @@ export class KyrosClient {
     return this.create(deployer, wasmHash, [addr(vault)]);
   }
 
+  /** A swapper over the Soroswap router (holds nothing, no admin). */
+  deploySwapper(deployer: Keypair, wasmHash: Buffer, router: string) {
+    return this.create(deployer, wasmHash, [addr(router)]);
+  }
+
+  /** A Blend yield strategy for one vault: only `vault` can move what it lends. */
+  deployBlendYield(deployer: Keypair, wasmHash: Buffer, s: { vault: string; pool: string; asset: string }) {
+    return this.create(deployer, wasmHash, [addr(s.vault), addr(s.pool), addr(s.asset)]);
+  }
+
   /** A Rate Registry; `minNoticeSecs` is fixed for its lifetime. */
   deployRegistry(deployer: Keypair, wasmHash: Buffer, admin: string, minNoticeSecs: bigint) {
     return this.create(deployer, wasmHash, [addr(admin), u64(minNoticeSecs)]);
@@ -162,6 +204,15 @@ export class KyrosClient {
 
   payTaxOp(vault: string, p: { period: number; token: string; bucket: string; amount: bigint }): xdr.Operation {
     return new Contract(vault).call('pay_tax', u32(p.period), addr(p.token), xdr.ScVal.scvSymbol(p.bucket), i128(p.amount));
+  }
+
+  /**
+   * Pays tax to the destination with an anchor's memo: `to` is the
+   * destination account with the memo as muxed id (an M... address, see
+   * `anchor.ts`). The vault refuses any other account.
+   */
+  payTaxToOp(vault: string, p: { period: number; token: string; bucket: string; amount: bigint; to: string }): xdr.Operation {
+    return new Contract(vault).call('pay_tax_to', u32(p.period), addr(p.token), xdr.ScVal.scvSymbol(p.bucket), i128(p.amount), addr(p.to));
   }
 
   releaseOp(vault: string, period: number, token: string): xdr.Operation {
@@ -212,6 +263,59 @@ export class KyrosClient {
     return new Contract(registry).call('withdraw', xdr.ScVal.scvSymbol(country), xdr.ScVal.scvSymbol(rate), u64(from));
   }
 
+  // Invoices: payments carrying an invoice's reference split by its own terms.
+
+  /**
+   * Owner: register how an invoice's payments split (its VAT, what the
+   * client withholds, the reserve buckets). `reference` is `invoiceReference(number)`.
+   */
+  expectInvoiceOp(vault: string, reference: Uint8Array, t: { vatBps: number; withholdingBps: number; buckets: Rule['buckets'] }): xdr.Operation {
+    return new Contract(vault).call('expect_invoice', bytes32(reference), invoiceTermsToScVal(t));
+  }
+
+  forgetInvoiceOp(vault: string, reference: Uint8Array): xdr.Operation {
+    return new Contract(vault).call('forget_invoice', bytes32(reference));
+  }
+
+  // Reserve in the tax's currency: swap reserve received in USDC into EURC.
+
+  /** Owner: how to convert (swapper, oracle, tolerance); applies after the notice. */
+  proposeConversionOp(vault: string, c: Conversion): xdr.Operation {
+    return new Contract(vault).call('propose_conversion', conversionToScVal(c));
+  }
+
+  /** Owner: stop converting, at once. */
+  stopConversionOp(vault: string): xdr.Operation {
+    return new Contract(vault).call('stop_conversion');
+  }
+
+  /** Anyone (the keeper): swap what `period` holds in the from-token. */
+  convertOp(vault: string, period: number): xdr.Operation {
+    return new Contract(vault).call('convert', u32(period));
+  }
+
+  // Yield: lend part of the reserve through a strategy the owner chose.
+
+  /** Owner: a strategy that may hold up to `maxBps` of the reserve; applies after the notice. */
+  proposeStrategyOp(vault: string, adapter: string, maxBps: number): xdr.Operation {
+    return new Contract(vault).call('propose_strategy', addr(adapter), u32(maxBps));
+  }
+
+  /** Owner: stop at once and bring everything back. */
+  stopStrategyOp(vault: string): xdr.Operation {
+    return new Contract(vault).call('stop_strategy');
+  }
+
+  /** Anyone (the keeper): move liquid reserve into the strategy up to its share. */
+  investOp(vault: string): xdr.Operation {
+    return new Contract(vault).call('invest');
+  }
+
+  /** Owner: take what the reserve has earned. */
+  harvestOp(vault: string, token: string): xdr.Operation {
+    return new Contract(vault).call('harvest', addr(token));
+  }
+
   // Moving country: the inbox (the user's payment address) moves to a new vault after the notice.
 
   /** Owner: move the inbox to `newVault` (same owner) after the current vault's notice. */
@@ -259,7 +363,31 @@ export class KyrosClient {
     const n = scValToNative(await this.read(vault, 'period', u32(period), addr(token))) as Record<string, unknown>;
     const buckets: Record<string, bigint> = {};
     for (const [k, v] of Object.entries((n.buckets ?? {}) as Record<string, bigint>)) buckets[k] = BigInt(v);
-    return { buckets, reserved: BigInt(n.reserved as bigint), paid: BigInt(n.paid as bigint), released: BigInt(n.released as bigint) };
+    return {
+      buckets,
+      reserved: BigInt(n.reserved as bigint),
+      paid: BigInt(n.paid as bigint),
+      released: BigInt(n.released as bigint),
+      converted: BigInt((n.converted as bigint | undefined) ?? 0n),
+    };
+  }
+
+  /** The conversion in force, or null. */
+  async conversion(vault: string): Promise<Conversion | null> {
+    const n = scValToNative(await this.read(vault, 'conversion')) as Record<string, unknown> | null | undefined;
+    return n ? conversionFromNative(n) : null;
+  }
+
+  /** The yield strategy in force, or null. */
+  async strategy(vault: string): Promise<Strategy | null> {
+    const n = scValToNative(await this.read(vault, 'strategy')) as Record<string, unknown> | null | undefined;
+    return n ? { adapter: String(n.adapter), token: String(n.token), maxBps: Number(n.max_bps) } : null;
+  }
+
+  /** Where the reserve in `token` is and what it has earned. */
+  async position(vault: string, token: string): Promise<Position> {
+    const n = scValToNative(await this.read(vault, 'position', addr(token))) as Record<string, bigint>;
+    return { held: BigInt(n.held), liquid: BigInt(n.liquid), invested: BigInt(n.invested), surplus: BigInt(n.surplus) };
   }
 
   /** The registry a vault follows for its VAT, or null. */

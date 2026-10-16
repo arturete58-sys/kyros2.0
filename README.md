@@ -33,6 +33,10 @@ Every behaviour that matters is enforced by a contract:
 | Before the due date, only to the tax account | Vault `pay_tax()` pays the registered destination only |
 | No instant redirection with a stolen key | New rule or destination waits for a notice period; both emit events |
 | Proof of reserve without personal data | Contract state and events; only addresses, amounts and an invoice-reference hash go onchain |
+| An invoice splits exactly, IRPF withheld included | Vault `expect_invoice()`: a payment with the invoice's reference uses the invoice's VAT and withholding |
+| Reserve in the currency the tax is owed in | Vault `convert()`: USDC reserve swapped into EURC through Soroswap, never below the oracle price minus the owner's tolerance |
+| Idle reserve can earn (opt-in) | Vault strategy: part of the reserve lent on Blend; the buckets keep their amounts and the owner takes the interest |
+| Tax paid in euros through an anchor | Vault `pay_tax_to()`: to the destination with the anchor's memo; SDK for SEP-1/10/24/6 |
 
 ## What is in the repository
 
@@ -43,10 +47,12 @@ Every behaviour that matters is enforced by a contract:
 | [`contracts/router`](contracts/router) | Router: shared, stateless entry point for integrated payers |
 | [`contracts/inbox`](contracts/inbox) | Inbox: one per user, a payment address that needs no integration |
 | [`contracts/rate-registry`](contracts/rate-registry) | Rate Registry: dated VAT rates per country on-chain, published at least a fixed notice ahead; vaults can follow it |
-| [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check with precision and objective targets, registry sync, country moves, SEP-7 links, event reader and CSV export, keeper |
-| [`rule-packs`](rule-packs) | Rule packs for 42 jurisdictions: dated VAT tables, presets, fiscal calendars and tax estimates, with their JSON schema |
+| [`contracts/swap-soroswap`](contracts/swap-soroswap) | Swapper over Soroswap, for the euro reserve (tested against the mainnet bytecode) |
+| [`contracts/yield-blend`](contracts/yield-blend) | Yield strategy over a Blend v2 pool, one per vault (tested against Blend's contracts) |
+| [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check with precision and objective targets, registry sync, country moves, SEP-7 links, event reader and CSV export, keeper; anchors (SEP-1/10/24/6); invoices in UBL/Peppol and Facturae, VERI\*FACTU records and QR |
+| [`rule-packs`](rule-packs) | Rule packs for 46 jurisdictions: dated VAT tables, presets, fiscal calendars and tax estimates, with their JSON schema |
 | [`test-vectors`](test-vectors) | Split and calendar cases checked by both the Rust and the SDK tests |
-| [`docs`](docs) | Architecture, Stellar integration, rule packs, latest testnet run |
+| [`docs`](docs) | Architecture, Stellar integration, rule packs, [invoicing](docs/invoicing.md), [euro reserve, yield and anchors](docs/euro-reserve-yield-anchors.md), [backlog](docs/backlog.md), latest testnet run |
 
 ## The split
 
@@ -117,7 +123,7 @@ KEEPER_SECRET=S... npx kyros-keeper --network testnet --watch <inbox>:<token>
 
 ## Testnet
 
-The [testnet demo workflow](.github/workflows/testnet-demo.yml) deploys the three contracts and runs the whole cycle with real transactions: a Router payment, an inbox payment swept by the keeper, a tax payment, a refused early release, a refused early change of destination, the release after the due date, and the CSV export. The latest results, with every transaction link, are in [docs/testnet](docs/testnet).
+The [testnet demo workflow](.github/workflows/testnet-demo.yml) deploys the contracts and runs the whole cycle with real transactions: a Router payment, an inbox payment swept by the keeper, an invoice with IRPF withheld split by its own terms, a tax payment with an anchor-style memo, a refused early release, a refused early change of destination, the release after the due date, scheduled and registry-followed VAT changes, a move to another country, a reserve converted to euros through the Soroswap testnet router, and the CSV export. The latest results, with every transaction link, are in [docs/testnet](docs/testnet).
 
 ## Stellar building blocks
 

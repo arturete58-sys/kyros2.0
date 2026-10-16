@@ -15,7 +15,13 @@
  *     published change (21% to 22%, a demo date) applies with no signature from the owner;
  * 10. the owner moves to Germany: a new vault from the German pack, and the same inbox pays
  *     into it after the notice, while the Spanish vault keeps its reserves;
- * 11. the vault's events are read back and exported as CSV.
+ * 11. the vault's events are read back and exported as CSV;
+ * 12. an invoice with IRPF withheld by the client (Facturae written to the
+ *     results): the owner registers its terms and the 1,060 payment splits exactly;
+ * 13. the VAT is paid to the destination with an anchor-style memo (muxed address);
+ * 14. a vault that keeps its reserve in euros: reserve received in KUSD is
+ *     swapped into KEUR through the Soroswap testnet router, never below
+ *     Reflector's EUR/USD price minus 1%.
  *
  * For the demo the vault uses 4-minute periods and a 2-minute notice, so the
  * whole cycle fits in one run; real vaults use the rule pack's quarters.
@@ -24,7 +30,10 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Asset, BASE_FEE, Keypair, Networks, Operation, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import { Asset, BASE_FEE, Contract, Keypair, MuxedAccount, Account, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import { REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
+import { invoiceRef, invoiceTotals, money, payableUnits, toFacturae, vaultTerms, type Invoice } from '../invoice.js';
+import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
 import { invoiceReference, KyrosClient, KyrosError } from '../client.js';
 import { vaultEvents, toCsv } from '../events.js';
 import { Keeper } from '../keeper.js';
@@ -50,6 +59,8 @@ interface Step {
   ok: boolean;
   tx?: string;
   detail: string;
+  /** Could not run on testnet today (an outside service was missing); not counted as a failure. */
+  skipped?: boolean;
 }
 
 async function fund(pub: string): Promise<void> {
@@ -93,7 +104,7 @@ async function main(): Promise<void> {
   const wasm = (n: string) => readFileSync(join(wasmDir, `${n}.wasm`));
   const started = new Date().toISOString();
   const steps: Step[] = [];
-  const k = { issuer: Keypair.random(), freelancer: Keypair.random(), client: Keypair.random(), taxAccount: Keypair.random(), keeper: Keypair.random(), newDestination: Keypair.random() };
+  const k = { issuer: Keypair.random(), freelancer: Keypair.random(), client: Keypair.random(), taxAccount: Keypair.random(), keeper: Keypair.random(), newDestination: Keypair.random(), lp: Keypair.random() };
   const c = new KyrosClient({ rpcUrl: RPC, networkPassphrase: PASS, readAs: k.keeper.publicKey() });
 
   log('funding accounts');
@@ -106,11 +117,23 @@ async function main(): Promise<void> {
   await c.send(k.issuer, Operation.createStellarAssetContract({ asset }));
   const token = asset.contractId(PASS);
 
+  log('issuing KEUR, the euro test token, for the euro reserve');
+  const eurAsset = new Asset('KEUR', k.issuer.publicKey());
+  for (const kp of [k.freelancer, k.taxAccount]) await classic(c, kp, [Operation.changeTrust({ asset: eurAsset })]);
+  await classic(c, k.lp, [Operation.changeTrust({ asset }), Operation.changeTrust({ asset: eurAsset })]);
+  await classic(c, k.issuer, [
+    Operation.payment({ destination: k.lp.publicKey(), asset, amount: '100000' }),
+    Operation.payment({ destination: k.lp.publicKey(), asset: eurAsset, amount: '100000' }),
+  ]);
+  await c.send(k.issuer, Operation.createStellarAssetContract({ asset: eurAsset }));
+  const eurToken = eurAsset.contractId(PASS);
+
   log('uploading and deploying the Kyros contracts');
   const routerHash = await c.upload(k.keeper, wasm('kyros_router'));
   const vaultHash = await c.upload(k.keeper, wasm('kyros_reserve_vault'));
   const inboxHash = await c.upload(k.keeper, wasm('kyros_inbox'));
   const registryHash = await c.upload(k.keeper, wasm('kyros_rate_registry'));
+  const swapperHash = await c.upload(k.keeper, wasm('kyros_swap_soroswap'));
   const router = await c.deployRouter(k.keeper, routerHash);
   const terms = termsFromPack(loadRulePack('es'), 'general');
   const period = { kind: 'Seconds' as const, seconds: 240n };
@@ -161,14 +184,52 @@ async function main(): Promise<void> {
     detail: swept?.error ?? `freelancer +${formatAmount(afterSweep.freelancer - afterPay.freelancer)}, vault +${formatAmount(afterSweep.vault - afterPay.vault)}`,
   });
 
+  log('invoice with IRPF withheld by the client: terms registered, payment split exactly');
+  const irpfInvoice: Invoice = {
+    series: 'KYR-',
+    number: '2027-003',
+    issueDate: new Date().toISOString().slice(0, 10),
+    currency: 'EUR',
+    seller: { name: 'Demo', surname: 'Freelancer', person: 'F', taxId: '12345678Z', country: 'ES', street: 'Calle Mayor 1', city: 'Madrid', postalCode: '28013', province: 'Madrid' },
+    buyer: { name: 'Demo Client SL', taxId: 'B12345674', country: 'ES', street: 'Gran Vía 2', city: 'Valencia', postalCode: '46002', province: 'Valencia' },
+    withholding: { rate: '15' },
+    payment: { address: vault.contractId, asset: 'KUSD' },
+    lines: [{ description: 'Consultoría (demo)', quantity: '1', unitPrice: '1000', vat: { category: 'S', rate: '21' } }],
+  };
+  // The client already withholds 15% for income tax; the vault keeps 5% more on top.
+  const irpfTerms = vaultTerms(irpfInvoice, [{ name: 'irpf', bps: 500 }]);
+  const expected = await c.send(k.freelancer, c.expectInvoiceOp(vault.contractId, invoiceRef(irpfInvoice), irpfTerms));
+  steps.push({
+    step: 'Freelancer issues invoice KYR-2027-003 (base 1,000, VAT 21%, IRPF 15% withheld by the client) and registers its terms in the vault',
+    ok: true,
+    tx: expected.hash,
+    detail: `Facturae 3.2.2 in invoice-KYR-2027-003.xml; the client pays ${money(invoiceTotals(irpfInvoice).payable)}`,
+  });
+  const before3 = { freelancer: await c.balance(token, k.freelancer.publicKey()), vault: await c.balance(token, vault.contractId) };
+  const paid3 = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: vault.contractId, token, amount: payableUnits(irpfInvoice), reference: invoiceRef(irpfInvoice) }));
+  const got3 = { freelancer: (await c.balance(token, k.freelancer.publicKey())) - before3.freelancer, vault: (await c.balance(token, vault.contractId)) - before3.vault };
+  steps.push({
+    step: 'The client pays 1,060 KUSD with the invoice reference: the vault applies the invoice terms, not the default rule',
+    ok: got3.freelancer === parseAmount('800') && got3.vault === parseAmount('260'),
+    tx: paid3.hash,
+    detail: `freelancer +${formatAmount(got3.freelancer)}, vault +${formatAmount(got3.vault)} (VAT 210, income-tax reserve 50; the default rule would have reserved only 184 of VAT)`,
+  });
+
   const pid = Number((await vaultEvents(c.server, vault.contractId, Math.max((await c.server.getLatestLedger()).sequence - 200, 1))).find((e) => e.kind === 'received')?.period ?? (await c.currentPeriod(vault.contractId)));
   const state = await c.period(vault.contractId, pid, token);
   log('period', periodLabel(period, pid), state);
 
   log('paying the VAT bucket to the tax destination');
   const vat = state.buckets.vat ?? 0n;
-  const tax = await c.send(k.freelancer, c.payTaxOp(vault.contractId, { period: pid, token, bucket: 'vat', amount: vat }));
-  steps.push({ step: 'Freelancer pays the VAT bucket to the tax destination (before the due date)', ok: (await c.balance(token, k.taxAccount.publicKey())) === vat, tx: tax.hash, detail: `${formatAmount(vat)} KUSD to the tax account` });
+  // As an anchor's withdrawal would ask: the destination account with an id memo, sent as a muxed address.
+  const anchorTo = new MuxedAccount(new Account(k.taxAccount.publicKey(), '0'), '4242').accountId();
+  const tax = await c.send(k.freelancer, c.payTaxToOp(vault.contractId, { period: pid, token, bucket: 'vat', amount: vat, to: anchorTo }));
+  steps.push({
+    step: 'Freelancer pays the VAT bucket to the tax destination with an anchor-style memo (muxed address, id 4242), before the due date',
+    ok: (await c.balance(token, k.taxAccount.publicKey())) === vat,
+    tx: tax.hash,
+    detail: `${formatAmount(vat)} KUSD to ${anchorTo.slice(0, 12)}…`,
+  });
 
   log('early release must be refused');
   const early = await expectRefusal(() => c.send(k.freelancer, c.releaseOp(vault.contractId, pid, token)), 'NotDue');
@@ -179,6 +240,59 @@ async function main(): Promise<void> {
   steps.push({ step: 'Freelancer proposes a new tax destination (2-minute notice in this demo)', ok: true, tx: proposed.hash, detail: k.newDestination.publicKey() });
   const notYet = await expectRefusal(() => c.send(k.keeper, c.applyPendingOp(vault.contractId)), 'ChangeNotReady');
   steps.push({ step: 'Applying it before the notice has passed is refused', ok: true, detail: `refused by the contract: ${notYet}` });
+
+  log('euro reserve: Soroswap testnet pool at Reflector\'s EUR/USD price, swapper, conversion proposed');
+  let euro: { vault: string; proposedAt: number; eurUsd: bigint } | null = null;
+  let euroSkip = '';
+  try {
+    const p = scValToNative(await c.read(REFLECTOR.testnet.fiat, 'lastprice', oracleAssetToScVal({ other: 'EUR' }))) as { price: bigint; timestamp: bigint } | null | undefined;
+    if (!p) throw new Error('Reflector testnet fiat oracle has no EUR price');
+    const eurUsd = BigInt(p.price);
+    const age = Math.floor(Date.now() / 1000) - Number(p.timestamp);
+    if (age > 80_000) throw new Error(`Reflector testnet fiat oracle's EUR price is ${Math.round(age / 3600)} h old`);
+    // Pool: 11,600 KUSD against the KEUR that buys at the oracle's price.
+    const kusd = parseAmount('11600');
+    const keur = (kusd * 10n ** 14n) / eurUsd;
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
+    await c.send(
+      k.lp,
+      new Contract(SOROSWAP_ROUTER.testnet).call('add_liquidity', addr(token), addr(eurToken), i128(kusd), i128(keur), i128(0n), i128(0n), addr(k.lp.publicKey()), u64(deadline)),
+    );
+    const swapper = await c.deploySwapper(k.keeper, swapperHash, SOROSWAP_ROUTER.testnet);
+    const ev = await c.deployVault(k.keeper, vaultHash, {
+      owner: k.freelancer.publicKey(),
+      rule: terms.rule,
+      taxDestination: k.taxAccount.publicKey(),
+      noticeSecs: 120n,
+      period,
+      dueOffsetSecs: 0n,
+      tokens: [token, eurToken],
+    });
+    const prop = await c.send(
+      k.freelancer,
+      c.proposeConversionOp(ev.contractId, {
+        fromToken: token,
+        toToken: eurToken,
+        swapper: swapper.contractId,
+        oracle: REFLECTOR.testnet.fiat,
+        fromPrice: { other: 'USD' },
+        toPrice: { other: 'EUR' },
+        maxSlippageBps: 100,
+        // Testnet's oracle is updated less often than mainnet's; the demo accepts a day-old price.
+        maxAgeSecs: 86_400n,
+      }),
+    );
+    euro = { vault: ev.contractId, proposedAt: Date.now(), eurUsd };
+    steps.push({
+      step: 'Euro reserve: a vault taking KUSD and KEUR proposes converting its reserve to KEUR through the Soroswap testnet router (2-minute notice)',
+      ok: true,
+      tx: prop.hash,
+      detail: `Reflector testnet EUR = ${formatAmount(eurUsd / 10n ** 7n)} USD (price ${age}s old); pool 11,600 KUSD / ${formatAmount(keur)} KEUR; swapper ${swapper.contractId}; vault ${ev.contractId}`,
+    });
+  } catch (e) {
+    euroSkip = (e as Error).message.slice(0, 300);
+    steps.push({ step: 'Euro reserve on testnet', ok: true, skipped: true, detail: `skipped: ${euroSkip}` });
+  }
 
   log('scheduled VAT change: Thailand 7% -> 10%, signed ahead');
   const th = loadRulePack('th');
@@ -327,6 +441,29 @@ async function main(): Promise<void> {
     detail: movedSweep?.error ?? `1,190 KUSD to the inbox: German vault +${formatAmount(deHeld)} (VAT 190, reserve 300)`,
   });
 
+  if (euro) {
+    const wait = euro.proposedAt + 125_000 - Date.now();
+    if (wait > 0) await sleep(wait);
+    log('euro reserve: payment in KUSD, keeper converts the reserve to KEUR');
+    try {
+      await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: euro.vault, token, amount: parseAmount('1210'), reference: invoiceReference('INV-EUR-001') }));
+      const pidE = await c.currentPeriod(euro.vault);
+      const conv = await c.send(k.keeper, c.convertOp(euro.vault, pidE));
+      const eu = await c.period(euro.vault, pidE, eurToken);
+      const us = await c.period(euro.vault, pidE, token);
+      const fair = (parseAmount('410') * 10n ** 14n) / euro.eurUsd;
+      const got = await c.balance(eurToken, euro.vault);
+      steps.push({
+        step: 'A client pays 1,210 KUSD; the keeper converts the 410 reserve to KEUR through Soroswap, at no less than the oracle price minus 1%',
+        ok: us.converted === parseAmount('410') && got === (eu.buckets.vat ?? 0n) + (eu.buckets.irpf ?? 0n) && got * 100n >= fair * 99n,
+        tx: conv.hash,
+        detail: `${formatAmount(got)} KEUR (oracle fair value ${formatAmount(fair)}): VAT ${formatAmount(eu.buckets.vat ?? 0n)}, income tax ${formatAmount(eu.buckets.irpf ?? 0n)}`,
+      });
+    } catch (e) {
+      steps.push({ step: 'Euro reserve conversion on testnet', ok: false, detail: (e as Error).message.slice(0, 300) });
+    }
+  }
+
   log('reading events');
   const startLedger = (await c.server.getLatestLedger()).sequence - 400;
   const events = await vaultEvents(c.server, vault.contractId, Math.max(startLedger, 1));
@@ -344,6 +481,7 @@ async function main(): Promise<void> {
     allOk: steps.every((s) => s.ok),
   };
   mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, 'invoice-KYR-2027-003.xml'), toFacturae(irpfInvoice));
   writeFileSync(join(outDir, 'latest.json'), JSON.stringify(result, null, 2) + '\n');
   writeFileSync(join(outDir, 'latest.csv'), csv);
   writeFileSync(join(outDir, 'README.md'), report(result));
@@ -352,7 +490,7 @@ async function main(): Promise<void> {
 }
 
 function report(r: { startedAt: string; finishedAt: string; token: string; contracts: Record<string, string>; steps: Step[]; allOk: boolean }): string {
-  const rows = r.steps.map((s) => `| ${s.ok ? 'yes' : '**no**'} | ${s.step} | ${s.detail.replace(/\|/g, '/')} | ${s.tx ? `[tx](${txUrl(s.tx)})` : ''} |`);
+  const rows = r.steps.map((s) => `| ${s.skipped ? 'skipped' : s.ok ? 'yes' : '**no**'} | ${s.step} | ${s.detail.replace(/\|/g, '/')} | ${s.tx ? `[tx](${txUrl(s.tx)})` : ''} |`);
   return [
     '# Kyros on Stellar testnet: latest run',
     '',

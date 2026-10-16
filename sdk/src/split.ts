@@ -62,6 +62,28 @@ export function split(rule: Rule, gross: bigint): Split {
   return { gross, base, vat, parts, reserve, net: gross - reserve };
 }
 
+/**
+ * `kyros_types::split_withheld`: an invoice from which the client withheld
+ * `withholdingBps` of the base (e.g. Spanish IRPF, 1500), so the gross is
+ * base + VAT - withholding. base = floor(gross * 10000 / (10000 + vat - wh));
+ * vat = floor(base * vat / 10000). With no withholding it is `split`.
+ */
+export function splitWithheld(rule: Rule, withholdingBps: number, gross: bigint): Split {
+  if (withholdingBps === 0) return split(rule, gross);
+  const base = (gross * BPS) / (BPS + BigInt(rule.vatBps) - BigInt(withholdingBps));
+  const vat = (base * BigInt(rule.vatBps)) / BPS;
+  const parts = rule.buckets.map((b) => (base * BigInt(b.bps)) / BPS);
+  const reserve = parts.reduce((a, p) => a + p, vat);
+  return { gross, base, vat, parts, reserve, net: gross - reserve };
+}
+
+/** Same check as the contract: the withholding and the buckets take at most the whole base. */
+export function validateWithholding(rule: Rule, withholdingBps: number): void {
+  validateRule(rule);
+  if (!Number.isInteger(withholdingBps) || withholdingBps < 0) throw new RuleError('invalid withholding');
+  if (rule.buckets.reduce((a, b) => a + b.bps, withholdingBps) > 10_000) throw new RuleError('withholding and buckets take more than the whole base');
+}
+
 /** Formats a 7-decimal amount: 12100000000n -> "1210". */
 export function formatAmount(units: bigint, decimals = 7): string {
   const neg = units < 0n;

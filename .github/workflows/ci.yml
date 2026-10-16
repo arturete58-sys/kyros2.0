@@ -51,3 +51,28 @@ jobs:
           cache-dependency-path: sdk/package-lock.json
       - run: npm ci
       - run: npm test
+
+  invoice-formats:
+    # The SDK's invoices against the official schemas and the EN 16931 / Peppol rules.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install lxml saxonche
+      - name: Build the SDK and write sample invoices
+        working-directory: sdk
+        run: |
+          npm ci
+          npm run build
+          node scripts/invoice-samples.mjs ../invoice-samples
+      - name: Fetch the schemas and rules
+        run: bash sdk/scripts/fetch-invoice-artefacts.sh invoice-artefacts
+      - name: Validate
+        run: python3 sdk/scripts/validate-invoices.py invoice-samples invoice-artefacts

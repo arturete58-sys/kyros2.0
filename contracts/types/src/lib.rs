@@ -109,6 +109,53 @@ pub fn validate(e: &Env, rule: &Rule) -> Result<(), RuleError> {
 /// Rounding never favours the net amount over the reserve by more than one
 /// unit per bucket, and the parts always add up to the gross exactly.
 pub fn split(e: &Env, rule: &Rule, gross: i128) -> Split {
+    split_withheld(e, rule, 0, gross)
+}
+
+/// Like `split`, for an invoice from which the client withheld
+/// `withholding_bps` of the base (e.g. Spanish IRPF, 1500) and paid it to the
+/// tax authority itself, so the gross received is base + VAT - withholding:
+///
+/// ```text
+/// base = floor(gross * 10000 / (10000 + vat_bps - withholding_bps))
+/// vat  = floor(base * vat_bps / 10000)   (with withholding)
+/// ```
+/// With no withholding it is exactly `split`. The buckets and the
+/// withholding together must not exceed the base (`validate_withholding`),
+/// so the net amount is never negative.
+pub fn split_withheld(e: &Env, rule: &Rule, withholding_bps: u32, gross: i128) -> Split {
+    if withholding_bps == 0 {
+        return split_plain(e, rule, gross);
+    }
+    let base = gross * BPS / (BPS + rule.vat_bps as i128 - withholding_bps as i128);
+    let vat = base * rule.vat_bps as i128 / BPS;
+    let mut parts = Vec::new(e);
+    let mut reserve = vat;
+    for b in rule.buckets.iter() {
+        let p = base * b.bps as i128 / BPS;
+        parts.push_back(p);
+        reserve += p;
+    }
+    Split {
+        gross,
+        base,
+        vat,
+        parts,
+        reserve,
+        net: gross - reserve,
+    }
+}
+
+/// A withholding is valid when it and the rule's buckets take at most the whole base.
+pub fn validate_withholding(rule: &Rule, withholding_bps: u32) -> bool {
+    let mut total = withholding_bps as i128;
+    for b in rule.buckets.iter() {
+        total += b.bps as i128;
+    }
+    total <= BPS
+}
+
+fn split_plain(e: &Env, rule: &Rule, gross: i128) -> Split {
     let base = gross * BPS / (BPS + rule.vat_bps as i128);
     let vat = gross - base;
     let mut parts = Vec::new(e);
@@ -210,6 +257,65 @@ pub trait RegistryApi {
     fn rate_at(e: Env, country: Symbol, name: Symbol, at: u64) -> Option<u32>;
     /// The least time between publishing a rate and the rate applying.
     fn min_notice(e: Env) -> u64;
+}
+
+/// A yield strategy a vault can lend part of its reserve through. One
+/// instance serves one vault (its `owner`), so the funds of different users
+/// never mix and nobody but the vault can move them.
+#[contractclient(name = "YieldClient")]
+pub trait YieldApi {
+    /// The vault this strategy works for.
+    fn owner(e: Env) -> Address;
+    /// The token it holds.
+    fn asset(e: Env) -> Address;
+    /// Puts to work `amount` of the asset, which the owner has already sent to the strategy.
+    fn deposit(e: Env, amount: i128);
+    /// Sends up to `amount` of the asset back to the owner and returns what it sent.
+    fn withdraw(e: Env, amount: i128) -> i128;
+    /// What the owner would get back now, in the asset's smallest unit.
+    fn balance(e: Env) -> i128;
+}
+
+/// Exchanges one token for another. A swapper holds nothing between calls.
+#[contractclient(name = "SwapClient")]
+pub trait SwapApi {
+    /// Swaps `amount_in` of `token_in`, which the caller has already sent to
+    /// the swapper, for at least `min_out` of `token_out`, sent to `to`.
+    /// Returns the amount sent.
+    fn swap(
+        e: Env,
+        token_in: Address,
+        token_out: Address,
+        amount_in: i128,
+        min_out: i128,
+        to: Address,
+    ) -> i128;
+}
+
+/// An asset as a SEP-40 price oracle names it: a Stellar token, or any other
+/// symbol such as a fiat currency (`EUR`).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Asset {
+    Stellar(Address),
+    Other(Symbol),
+}
+
+/// A SEP-40 price: `price` in the oracle's base asset with `decimals()` decimals.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PriceData {
+    pub price: i128,
+    pub timestamp: u64,
+}
+
+/// The part of a SEP-40 price oracle (e.g. Reflector) a vault reads.
+#[contractclient(name = "OracleClient")]
+pub trait OracleApi {
+    /// The latest price of `asset` in the base asset, if any.
+    fn lastprice(e: Env, asset: Asset) -> Option<PriceData>;
+    /// Decimals of every price.
+    fn decimals(e: Env) -> u32;
 }
 
 #[cfg(test)]

@@ -22,10 +22,67 @@ export const bytes32 = (b: Uint8Array) => {
   return xdr.ScVal.scvBytes(Buffer.from(b));
 };
 
+/** A SEP-40 asset: `{ other: 'EUR' }` or `{ stellar: 'C...' }`. */
+export function oracleAssetToScVal(a: { stellar: string } | { other: string }): xdr.ScVal {
+  return 'stellar' in a ? xdr.ScVal.scvVec([sym('Stellar'), addr(a.stellar)]) : xdr.ScVal.scvVec([sym('Other'), sym(a.other)]);
+}
+
+export function oracleAssetFromNative(v: unknown): { stellar: string } | { other: string } {
+  const a = v as unknown[];
+  return String(a[0]) === 'Stellar' ? { stellar: String(a[1]) } : { other: String(a[1]) };
+}
+
+/** The vault's `Conversion`: how reserve in `fromToken` becomes `toToken`. */
+export interface Conversion {
+  fromToken: string;
+  toToken: string;
+  swapper: string;
+  oracle: string;
+  fromPrice: { stellar: string } | { other: string };
+  toPrice: { stellar: string } | { other: string };
+  maxSlippageBps: number;
+  maxAgeSecs: bigint;
+}
+
+export function conversionToScVal(c: Conversion): xdr.ScVal {
+  return struct({
+    from_token: addr(c.fromToken),
+    to_token: addr(c.toToken),
+    swapper: addr(c.swapper),
+    oracle: addr(c.oracle),
+    from_price: oracleAssetToScVal(c.fromPrice),
+    to_price: oracleAssetToScVal(c.toPrice),
+    max_slippage_bps: u32(c.maxSlippageBps),
+    max_age_secs: u64(c.maxAgeSecs),
+  });
+}
+
+export function conversionFromNative(n: Record<string, unknown>): Conversion {
+  return {
+    fromToken: String(n.from_token),
+    toToken: String(n.to_token),
+    swapper: String(n.swapper),
+    oracle: String(n.oracle),
+    fromPrice: oracleAssetFromNative(n.from_price),
+    toPrice: oracleAssetFromNative(n.to_price),
+    maxSlippageBps: Number(n.max_slippage_bps),
+    maxAgeSecs: BigInt(n.max_age_secs as bigint),
+  };
+}
+
 export function ruleToScVal(rule: Rule): xdr.ScVal {
   return struct({
     vat_bps: u32(rule.vatBps),
     buckets: xdr.ScVal.scvVec(rule.buckets.map((b) => struct({ name: sym(b.name), bps: u32(b.bps) }))),
+  });
+}
+
+/** The vault's `InvoiceTerms`. */
+export function invoiceTermsToScVal(t: { vatBps: number; withholdingBps: number; buckets: Rule['buckets'] }): xdr.ScVal {
+  return struct({
+    vat_bps: u32(t.vatBps),
+    withholding_bps: u32(t.withholdingBps),
+    buckets: xdr.ScVal.scvVec(t.buckets.map((b) => struct({ name: sym(b.name), bps: u32(b.bps) }))),
   });
 }
 

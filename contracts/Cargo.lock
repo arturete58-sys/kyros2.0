@@ -1111,10 +1111,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "kyros-swap-soroswap"
+version = "0.1.0"
+dependencies = [
+ "kyros-reserve-vault",
+ "kyros-types",
+ "soroban-sdk",
+]
+
+[[package]]
 name = "kyros-types"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+ "soroban-sdk",
+]
+
+[[package]]
+name = "kyros-yield-blend"
+version = "0.1.0"
+dependencies = [
+ "kyros-reserve-vault",
+ "kyros-types",
  "soroban-sdk",
 ]
 
