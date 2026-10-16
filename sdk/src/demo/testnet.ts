@@ -11,7 +11,7 @@
  *  7. after the due date the rest of the period is released to the freelancer;
  *  8. the vault's events are read back and exported as CSV.
  *
- * For the demo the vault uses 3-minute periods and a 2-minute notice, so the
+ * For the demo the vault uses 4-minute periods and a 2-minute notice, so the
  * whole cycle fits in one run; real vaults use the rule pack's quarters.
  *
  *   node dist/demo/testnet.js --wasm-dir ../contracts/target/wasm32v1-none/release --out ../docs/testnet
@@ -105,7 +105,7 @@ async function main(): Promise<void> {
   const inboxHash = await c.upload(k.keeper, wasm('kyros_inbox'));
   const router = await c.deployRouter(k.keeper, routerHash);
   const terms = termsFromPack(loadRulePack('es'), 'general');
-  const period = { kind: 'Seconds' as const, seconds: 180n };
+  const period = { kind: 'Seconds' as const, seconds: 240n };
   const vault = await c.deployVault(k.keeper, vaultHash, {
     owner: k.freelancer.publicKey(),
     rule: terms.rule,
@@ -119,6 +119,14 @@ async function main(): Promise<void> {
   steps.push({ step: 'Deploy Reserve Vault (Spain pack, general: VAT 21% + income tax 20%)', ok: true, tx: vault.hash, detail: vault.contractId });
   steps.push({ step: 'Deploy Inbox for the vault', ok: true, tx: inbox.hash, detail: inbox.contractId });
   steps.push({ step: 'Deploy Router', ok: true, tx: router.hash, detail: router.contractId });
+
+  // Start the payments early in a period, so they all land in the same one.
+  const nowS = BigInt(Math.floor(Date.now() / 1000));
+  const left = Number(period.seconds - (nowS % period.seconds));
+  if (left < 150) {
+    log(`waiting ${left + 3} s for a fresh period`);
+    await sleep((left + 3) * 1000);
+  }
 
   log('invoice paid through the Router');
   const gross = parseAmount('1210');
@@ -145,35 +153,7 @@ async function main(): Promise<void> {
     detail: swept?.error ?? `freelancer +${formatAmount(afterSweep.freelancer - afterPay.freelancer)}, vault +${formatAmount(afterSweep.vault - afterPay.vault)}`,
   });
 
-  log('the same Router with vaults from other countries');
-  for (const [pack, preset, amount, label] of [
-    ['de', 'standard', '1190', 'Germany: VAT 19% + income tax reserve 30%'],
-    ['us', 'no-state-income-tax', '1000', 'United States: no VAT, federal and self-employment reserve 30%'],
-    ['ae', 'vat-only', '1050', 'United Arab Emirates: VAT 5%, no income tax'],
-  ] as const) {
-    const t = termsFromPack(loadRulePack(pack), preset);
-    const v = await c.deployVault(k.keeper, vaultHash, {
-      owner: k.freelancer.publicKey(),
-      rule: t.rule,
-      taxDestination: k.taxAccount.publicKey(),
-      noticeSecs: 120n,
-      period: t.period,
-      dueOffsetSecs: t.dueOffsetSecs,
-      tokens: [token],
-    });
-    const g = parseAmount(amount);
-    const q = await c.quote(v.contractId, g);
-    const sent = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: v.contractId, token, amount: g, reference: invoiceReference(`INV-${pack.toUpperCase()}-001`) }));
-    const held = await c.balance(token, v.contractId);
-    steps.push({
-      step: `${label}: ${amount} KUSD paid through the same Router`,
-      ok: held === q.reserve,
-      tx: sent.hash,
-      detail: `net ${formatAmount(q.net)}, VAT ${formatAmount(q.vat)}, other reserve ${formatAmount(q.reserve - q.vat)} (vault ${v.contractId})`,
-    });
-  }
-
-  const pid = await c.currentPeriod(vault.contractId);
+  const pid = Number((await vaultEvents(c.server, vault.contractId, Math.max((await c.server.getLatestLedger()).sequence - 200, 1))).find((e) => e.kind === 'received')?.period ?? (await c.currentPeriod(vault.contractId)));
   const state = await c.period(vault.contractId, pid, token);
   log('period', periodLabel(period, pid), state);
 
@@ -202,6 +182,34 @@ async function main(): Promise<void> {
   const rel = await c.send(k.freelancer, c.releaseOp(vault.contractId, pid, token));
   const back = (await c.balance(token, k.freelancer.publicKey())) - before;
   steps.push({ step: 'After the due date the rest of the period is released to the freelancer', ok: back === state.buckets.irpf, tx: rel.hash, detail: `${formatAmount(back)} KUSD back to the freelancer` });
+
+  log('the same Router with vaults from other countries');
+  for (const [pack, preset, amount, label] of [
+    ['de', 'standard', '1190', 'Germany: VAT 19% + income tax reserve 30%'],
+    ['us', 'no-state-income-tax', '1000', 'United States: no VAT, federal and self-employment reserve 30%'],
+    ['ae', 'vat-only', '1050', 'United Arab Emirates: VAT 5%, no income tax'],
+  ] as const) {
+    const t = termsFromPack(loadRulePack(pack), preset);
+    const v = await c.deployVault(k.keeper, vaultHash, {
+      owner: k.freelancer.publicKey(),
+      rule: t.rule,
+      taxDestination: k.taxAccount.publicKey(),
+      noticeSecs: 120n,
+      period: t.period,
+      dueOffsetSecs: t.dueOffsetSecs,
+      tokens: [token],
+    });
+    const g = parseAmount(amount);
+    const q = await c.quote(v.contractId, g);
+    const sent = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: v.contractId, token, amount: g, reference: invoiceReference(`INV-${pack.toUpperCase()}-001`) }));
+    const held = await c.balance(token, v.contractId);
+    steps.push({
+      step: `${label}: ${amount} KUSD paid through the same Router`,
+      ok: held === q.reserve,
+      tx: sent.hash,
+      detail: `net ${formatAmount(q.net)}, VAT ${formatAmount(q.vat)}, other reserve ${formatAmount(q.reserve - q.vat)} (vault ${v.contractId})`,
+    });
+  }
 
   log('reading events');
   const startLedger = (await c.server.getLatestLedger()).sequence - 400;
