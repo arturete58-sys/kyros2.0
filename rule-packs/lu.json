@@ -1,0 +1,75 @@
+{
+  "$schema": "./schema.json",
+  "id": "lu",
+  "country": "LU",
+  "name": "Luxembourg: self-employed and sole traders",
+  "version": "2026.1",
+  "currency": "EUR",
+  "period": "Year",
+  "dueOffsetDays": 365,
+  "dueNote": "VAT returns are monthly, quarterly or annual depending on turnover; income-tax advances are quarterly. The annual return can be filed until the end of the following year, so the rest of a year's reserve is released one year after it ends.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "VAT 17% + income tax reserve 30%",
+      "vatBps": 1700,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "intermediate-vat",
+      "label": "VAT 14% + income tax reserve 30%",
+      "vatBps": 1400,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "VAT 8% + income tax reserve 30%",
+      "vatBps": 800,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "franchise",
+      "label": "VAT franchise for small businesses: no VAT + income tax reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Rates: 17% standard, 14% intermediate, 8% reduced, 3% super-reduced. Income tax is progressive and social contributions apply; 30% is a suggested reserve.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "European Commission: VAT rates in EU member states",
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+    },
+    {
+      "title": "Administration de l'enregistrement, des domaines et de la TVA (AED)",
+      "url": "https://aed.public.lu"
+    }
+  ]
+}

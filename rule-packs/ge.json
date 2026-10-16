@@ -1,0 +1,47 @@
+{
+  "$schema": "./schema.json",
+  "id": "ge",
+  "country": "GE",
+  "name": "Georgia: individual entrepreneurs with small business status",
+  "version": "2026.1",
+  "currency": "GEL",
+  "period": "Month",
+  "dueOffsetDays": 15,
+  "dueNote": "Small business status holders declare and pay 1% of turnover monthly, by the 15th of the following month.",
+  "presets": [
+    {
+      "id": "small-business",
+      "label": "Small business status: 1% of turnover, no VAT",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "turnover_tax",
+          "bps": 100,
+          "label": "Turnover tax 1%"
+        }
+      ]
+    },
+    {
+      "id": "small-business-vat",
+      "label": "Small business status registered for VAT: VAT 18% + 1% of turnover",
+      "vatBps": 1800,
+      "buckets": [
+        {
+          "name": "turnover_tax",
+          "bps": 100,
+          "label": "Turnover tax 1%"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "The 1% regime applies up to the annual turnover limit of the status (GEL 500,000); above it the general regime applies. VAT registration is required above GEL 100,000 of turnover.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Revenue Service of Georgia",
+      "url": "https://www.rs.ge"
+    }
+  ]
+}

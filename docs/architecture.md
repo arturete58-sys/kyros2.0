@@ -61,7 +61,7 @@ stateDiagram-v2
   Releasable --> [*]: release() returns what is left to the owner
 ```
 
-Periods come from the rule pack: calendar months, quarters or years in UTC (quarters for Spain), or a fixed number of seconds (used by the testnet demo). The due date is the end of the period plus the pack's offset.
+Periods come from the rule pack: calendar months, quarters or years in UTC (quarters for Spain, years where income tax is annual), or a fixed number of seconds (used by the testnet demo). The due date is the end of the period plus the pack's offset.
 
 ## Changes with notice
 

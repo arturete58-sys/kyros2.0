@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Account, Keypair, Networks, scValToNative, nativeToScVal, TransactionBuilder, BASE_FEE, Contract, xdr } from '@stellar/stellar-sdk';
 import { split, validateRule, RuleError, formatAmount, parseAmount } from '../split.js';
 import { periodOf, periodStart, periodEnd, periodLabel, dueDate, civilFromDays, daysFromCivil, type PeriodKind } from '../periods.js';
-import { loadRulePack, termsFromPack } from '../rulepacks.js';
+import { listRulePacks, loadRulePack, termsFromPack } from '../rulepacks.js';
 import { ruleToScVal, periodKindToScVal, splitFromScVal } from '../scval.js';
 import { sep7TxUri } from '../sep7.js';
 import { toCsv } from '../events.js';
@@ -78,6 +78,28 @@ test('the Spain rule pack loads and gives valid vault terms', () => {
   assert.equal(t.dueOffsetSecs, 30n * 86_400n);
   for (const p of pack.presets) termsFromPack(pack, p.id);
   assert.throws(() => termsFromPack(pack, 'nope'));
+});
+
+test('every bundled rule pack is valid, and presets can override the calendar', () => {
+  const ids = listRulePacks();
+  for (const id of ['ad', 'ae', 'ch', 'de', 'ee', 'es', 'fr', 'gb', 'ge', 'hk', 'ie', 'it', 'lu', 'nl', 'pt', 'sg', 'us']) assert.ok(ids.includes(id), id);
+  for (const id of ids) {
+    const pack = loadRulePack(id);
+    assert.equal(pack.id, id);
+    assert.ok(pack.sources && pack.sources.length > 0, `${id} cites sources`);
+    for (const p of pack.presets) {
+      const t = termsFromPack(pack, p.id);
+      const s = split(t.rule, parseAmount('1000'));
+      assert.equal(s.net + s.reserve, s.gross, `${id}/${p.id}`);
+    }
+  }
+  const ae = loadRulePack('ae');
+  assert.deepEqual(termsFromPack(ae, 'vat-only').period, { kind: 'Quarter' });
+  assert.deepEqual(termsFromPack(ae, 'vat-and-corporate-tax').period, { kind: 'Year' });
+  assert.equal(termsFromPack(ae, 'vat-and-corporate-tax').dueOffsetSecs, 273n * 86_400n);
+  // Germany, VAT 19% + 30%: 1,190 gross -> 190 VAT, 300 income tax, 700 net.
+  const de = split(termsFromPack(loadRulePack('de'), 'standard').rule, parseAmount('1190'));
+  assert.deepEqual([de.vat, de.parts[0], de.net].map((x) => formatAmount(x)), ['190', '300', '700']);
 });
 
 test('contract types encode as Soroban expects (sorted struct keys, enum vectors)', () => {

@@ -1,0 +1,35 @@
+{
+  "$schema": "./schema.json",
+  "id": "hk",
+  "country": "HK",
+  "name": "Hong Kong: unincorporated businesses",
+  "version": "2026.1",
+  "currency": "HKD",
+  "period": "Year",
+  "dueOffsetDays": 365,
+  "dueNote": "There is no VAT or GST. Profits tax is assessed yearly with provisional tax; the rest of a year's reserve is released one year after it ends.",
+  "presets": [
+    {
+      "id": "profits-tax",
+      "label": "No VAT + profits tax reserve 15% (two-tier: 7.5% then 15%)",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "profits_tax",
+          "bps": 1500,
+          "label": "Profits tax (unincorporated: 7.5% on the first HK$2 million, 15% above)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Only profits sourced in Hong Kong are taxed.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Inland Revenue Department",
+      "url": "https://www.ird.gov.hk"
+    }
+  ]
+}

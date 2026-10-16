@@ -1,0 +1,85 @@
+{
+  "$schema": "./schema.json",
+  "id": "fr",
+  "country": "FR",
+  "name": "France: micro-entrepreneurs (auto-entrepreneurs)",
+  "version": "2026.1",
+  "currency": "EUR",
+  "period": "Quarter",
+  "dueOffsetDays": 31,
+  "dueNote": "Micro-entrepreneurs declaring quarterly pay URSSAF contributions (and the optional versement libératoire) by the end of the month after each quarter.",
+  "presets": [
+    {
+      "id": "micro-bnc",
+      "label": "Liberal profession (BNC, non-regulated), VAT franchise: URSSAF 25.8%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "urssaf",
+          "bps": 2580,
+          "label": "URSSAF contributions incl. CFP"
+        }
+      ]
+    },
+    {
+      "id": "micro-bnc-vl",
+      "label": "BNC with versement libératoire: URSSAF 25.8% + income tax 2.2%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "urssaf",
+          "bps": 2580,
+          "label": "URSSAF contributions incl. CFP"
+        },
+        {
+          "name": "impot",
+          "bps": 220,
+          "label": "Versement libératoire"
+        }
+      ]
+    },
+    {
+      "id": "micro-bic-services",
+      "label": "Services (BIC), VAT franchise: URSSAF 21.5%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "urssaf",
+          "bps": 2150,
+          "label": "URSSAF contributions incl. CFP"
+        }
+      ]
+    },
+    {
+      "id": "micro-bnc-vat",
+      "label": "BNC above the VAT franchise: VAT 20% + URSSAF 25.8%",
+      "vatBps": 2000,
+      "buckets": [
+        {
+          "name": "urssaf",
+          "bps": 2580,
+          "label": "URSSAF contributions incl. CFP"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "2026 URSSAF rates on turnover: 25.6% + 0.2% CFP for non-regulated liberal professions (BNC), 21.2% + up to 0.3% CFP for BIC services. The versement libératoire is optional and depends on household income.",
+    "Under the VAT franchise no VAT is charged; above it the standard rate is 20% (reduced 10%, 5.5%, 2.1%).",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "URSSAF: auto-entrepreneur",
+      "url": "https://www.autoentrepreneur.urssaf.fr"
+    },
+    {
+      "title": "SalaireClair: charges auto-entrepreneur 2026",
+      "url": "https://salaireclair.fr/blog/charges-auto-entrepreneur-2026"
+    },
+    {
+      "title": "European Commission: VAT rates in EU member states",
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+    }
+  ]
+}

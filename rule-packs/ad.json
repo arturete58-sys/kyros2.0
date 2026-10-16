@@ -1,0 +1,47 @@
+{
+  "$schema": "./schema.json",
+  "id": "ad",
+  "country": "AD",
+  "name": "Andorra: self-employed",
+  "version": "2026.1",
+  "currency": "EUR",
+  "period": "Year",
+  "dueOffsetDays": 212,
+  "dueNote": "IGI returns are quarterly or half-yearly. Personal income tax (IRPF) is settled yearly; the rest of a year's reserve is released after 31 July.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "IGI 4.5% + IRPF reserve 10%",
+      "vatBps": 450,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1000,
+          "label": "IRPF (0% to 10%)"
+        }
+      ]
+    },
+    {
+      "id": "not-igi-registered",
+      "label": "No IGI charged + IRPF reserve 10%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1000,
+          "label": "IRPF (0% to 10%)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "General IGI rate 4.5%; IRPF ranges from 0% to 10%. Self-employed social security (CASS) is not included.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Departament de Tributs i de Fronteres",
+      "url": "https://www.impostos.ad"
+    }
+  ]
+}

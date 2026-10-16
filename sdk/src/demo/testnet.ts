@@ -4,6 +4,7 @@
  *  1. fresh accounts (friendbot) and a test stablecoin (KUSD, 7 decimals) with its Stellar Asset Contract;
  *  2. upload and deploy the Router, a Reserve Vault (Spain rule pack, `general` preset) and the user's Inbox;
  *  3. a client pays a 1,210 KUSD invoice through the Router: 800 to the freelancer, 410 reserved;
+ *     the same Router then pays vaults built from the German, US and UAE rule packs;
  *  4. a client sends 121 KUSD to the inbox with a plain SEP-41 transfer; the keeper sweeps it;
  *  5. the freelancer pays the VAT bucket to the tax destination before the due date;
  *  6. an early release is refused (NotDue), and a new destination cannot apply before its notice;
@@ -143,6 +144,34 @@ async function main(): Promise<void> {
     tx: swept?.hash,
     detail: swept?.error ?? `freelancer +${formatAmount(afterSweep.freelancer - afterPay.freelancer)}, vault +${formatAmount(afterSweep.vault - afterPay.vault)}`,
   });
+
+  log('the same Router with vaults from other countries');
+  for (const [pack, preset, amount, label] of [
+    ['de', 'standard', '1190', 'Germany: VAT 19% + income tax reserve 30%'],
+    ['us', 'no-state-income-tax', '1000', 'United States: no VAT, federal and self-employment reserve 30%'],
+    ['ae', 'vat-only', '1050', 'United Arab Emirates: VAT 5%, no income tax'],
+  ] as const) {
+    const t = termsFromPack(loadRulePack(pack), preset);
+    const v = await c.deployVault(k.keeper, vaultHash, {
+      owner: k.freelancer.publicKey(),
+      rule: t.rule,
+      taxDestination: k.taxAccount.publicKey(),
+      noticeSecs: 120n,
+      period: t.period,
+      dueOffsetSecs: t.dueOffsetSecs,
+      tokens: [token],
+    });
+    const g = parseAmount(amount);
+    const q = await c.quote(v.contractId, g);
+    const sent = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: v.contractId, token, amount: g, reference: invoiceReference(`INV-${pack.toUpperCase()}-001`) }));
+    const held = await c.balance(token, v.contractId);
+    steps.push({
+      step: `${label}: ${amount} KUSD paid through the same Router`,
+      ok: held === q.reserve,
+      tx: sent.hash,
+      detail: `net ${formatAmount(q.net)}, VAT ${formatAmount(q.vat)}, other reserve ${formatAmount(q.reserve - q.vat)} (vault ${v.contractId})`,
+    });
+  }
 
   const pid = await c.currentPeriod(vault.contractId);
   const state = await c.period(vault.contractId, pid, token);

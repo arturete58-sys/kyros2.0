@@ -1,0 +1,47 @@
+{
+  "$schema": "./schema.json",
+  "id": "sg",
+  "country": "SG",
+  "name": "Singapore: sole proprietors",
+  "version": "2026.1",
+  "currency": "SGD",
+  "period": "Year",
+  "dueOffsetDays": 365,
+  "dueNote": "GST returns are quarterly, due one month after the quarter. Income tax is assessed yearly after the return (due in April); the rest of a year's reserve is released one year after it ends.",
+  "presets": [
+    {
+      "id": "gst",
+      "label": "GST 9% + income tax reserve 15%",
+      "vatBps": 900,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1500,
+          "label": "Income tax (progressive, up to 24%; suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "not-gst-registered",
+      "label": "Below the GST registration threshold: income tax reserve 15%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1500,
+          "label": "Income tax (progressive, up to 24%; suggested reserve)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "GST is 9%. Personal income tax is progressive from 0% to 24% after reliefs; 15% is a suggested reserve.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "IRAS",
+      "url": "https://www.iras.gov.sg"
+    }
+  ]
+}

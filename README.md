@@ -43,7 +43,7 @@ Every behaviour that matters is enforced by a contract:
 | [`contracts/router`](contracts/router) | Router: shared, stateless entry point for integrated payers |
 | [`contracts/inbox`](contracts/inbox) | Inbox: one per user, a payment address that needs no integration |
 | [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, SEP-7 links, event reader and CSV export, keeper |
-| [`rule-packs`](rule-packs) | Rule-pack JSON schema and the Spain pack |
+| [`rule-packs`](rule-packs) | Rule packs for 17 jurisdictions (EU, Switzerland, UK, US, UAE, Singapore, Hong Kong, Georgia, Andorra) and their JSON schema |
 | [`test-vectors`](test-vectors) | Split and calendar cases checked by both the Rust and the SDK tests |
 | [`docs`](docs) | Architecture, Stellar integration, rule packs, latest testnet run |
 
@@ -80,8 +80,8 @@ import { KyrosClient, loadRulePack, termsFromPack, invoiceReference, sep7TxUri, 
 
 const kyros = new KyrosClient({ rpcUrl: 'https://soroban-testnet.stellar.org', networkPassphrase: 'Test SDF Network ; September 2015' });
 
-// A vault with the Spain rule pack: VAT 21% + income-tax prepayment 20%, quarterly.
-const terms = termsFromPack(loadRulePack('es'), 'general');
+// A vault from a rule pack: here Germany, VAT 19% + income tax reserve 30%.
+const terms = termsFromPack(loadRulePack('de'), 'standard');
 const vault = await kyros.deployVault(deployer, vaultWasmHash, {
   owner, taxDestination, noticeSecs: 7n * 86_400n, tokens: [USDC], ...terms,
 });
@@ -111,7 +111,7 @@ Soroban contracts and authorization · Stellar Asset Contracts (USDC, EURC) thro
 
 Early, open-source and on testnet. The contracts have not been audited yet; do not use them with real funds before an audit.
 
-Rule packs are information, not tax advice: they suggest percentages and dates, the user confirms them, and the contract enforces what the user chose.
+Rule packs cover Spain, Germany, France, the Netherlands, Luxembourg, Italy, Portugal, Ireland, Estonia, Switzerland, the United Kingdom, the United States, the UAE, Singapore, Hong Kong, Georgia and Andorra ([docs/rule-packs.md](docs/rule-packs.md)). They are information, not tax advice: they suggest percentages and dates, the user confirms them, and the contract enforces what the user chose.
 
 ## Team
 

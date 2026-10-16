@@ -1,0 +1,75 @@
+{
+  "$schema": "./schema.json",
+  "id": "ie",
+  "country": "IE",
+  "name": "Ireland: sole traders",
+  "version": "2026.1",
+  "currency": "EUR",
+  "period": "Year",
+  "dueOffsetDays": 304,
+  "dueNote": "VAT returns are usually bi-monthly, due on the 23rd of the following month. Preliminary tax and the balance for a year are due on 31 October of the following year; the rest of a year's reserve is released then.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "VAT 23% + income tax, USC and PRSI reserve 35%",
+      "vatBps": 2300,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3500,
+          "label": "Income tax, USC and PRSI (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "VAT 13.5% + reserve 35%",
+      "vatBps": 1350,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3500,
+          "label": "Income tax, USC and PRSI (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "second-reduced-vat",
+      "label": "VAT 9% + reserve 35%",
+      "vatBps": 900,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3500,
+          "label": "Income tax, USC and PRSI (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT registration threshold: reserve 35%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3500,
+          "label": "Income tax, USC and PRSI (suggested reserve)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Rates: 23% standard, 13.5% reduced, 9% second reduced (since 1 July 2026 also restaurant and catering food and hairdressing).",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Revenue",
+      "url": "https://www.revenue.ie"
+    },
+    {
+      "title": "Sage: VAT rates in Ireland 2026",
+      "url": "https://www.sage.com/en-ie/blog/vat-rates-in-ireland/"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "./schema.json",
+  "id": "pt",
+  "country": "PT",
+  "name": "Portugal: self-employed (trabalhadores independentes)",
+  "version": "2026.1",
+  "currency": "EUR",
+  "period": "Year",
+  "dueOffsetDays": 181,
+  "dueNote": "VAT returns are quarterly or monthly; the annual IRS return is filed from April to June. The rest of a year's reserve is released after 30 June.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "IVA 23% (mainland) + income tax and social security reserve 30%",
+      "vatBps": 2300,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "intermediate-vat",
+      "label": "IVA 13% + reserve 30%",
+      "vatBps": 1300,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "IVA 6% + reserve 30%",
+      "vatBps": 600,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "vat-exempt",
+      "label": "VAT exemption for small businesses (art. 53 CIVA): reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Mainland rates: 23%, 13%, 6% (Madeira and the Azores are lower). IRS is progressive, and social security applies to self-employed income; 30% is a suggested reserve.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "European Commission: VAT rates in EU member states",
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+    },
+    {
+      "title": "Portal das Finanças",
+      "url": "https://www.portaldasfinancas.gov.pt"
+    }
+  ]
+}

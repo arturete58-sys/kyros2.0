@@ -1,0 +1,63 @@
+{
+  "$schema": "./schema.json",
+  "id": "ee",
+  "country": "EE",
+  "name": "Estonia: sole proprietors (FIE)",
+  "version": "2026.1",
+  "currency": "EUR",
+  "period": "Year",
+  "dueOffsetDays": 274,
+  "dueNote": "VAT returns are monthly, due on the 20th of the following month. FIE income and social tax are paid in quarterly advances and settled after the annual return; the rest of a year's reserve is released after 1 October of the following year.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "VAT 24% + income and social tax reserve 40%",
+      "vatBps": 2400,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 4000,
+          "label": "Income tax 22% and social tax 33% (FIE)"
+        }
+      ]
+    },
+    {
+      "id": "accommodation-vat",
+      "label": "Accommodation VAT 13% + reserve 40%",
+      "vatBps": 1300,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 4000,
+          "label": "Income tax 22% and social tax 33% (FIE)"
+        }
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT registration threshold: reserve 40%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 4000,
+          "label": "Income tax 22% and social tax 33% (FIE)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "2026: VAT 24% standard (13% accommodation, 9% books, medicines and press); income tax 22%; FIE social tax 33% of business income. Companies (OÜ) pay no tax on retained profits and are not covered by this pack.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Estonian Tax and Customs Board (EMTA)",
+      "url": "https://www.emta.ee"
+    },
+    {
+      "title": "Palgakulu: Estonian tax rates 2026",
+      "url": "https://www.palgakulu.ee/en/maksumaarad-ja-toetused/"
+    }
+  ]
+}

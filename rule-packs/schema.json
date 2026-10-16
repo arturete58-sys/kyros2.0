@@ -4,43 +4,143 @@
   "title": "Kyros rule pack",
   "description": "Per-country tax rules that suggest a vault's split rule and fiscal calendar. The vault contract enforces percentages and dates; it does not compute taxes.",
   "type": "object",
-  "required": ["id", "country", "name", "version", "period", "dueOffsetDays", "presets"],
+  "required": [
+    "id",
+    "country",
+    "name",
+    "version",
+    "currency",
+    "period",
+    "dueOffsetDays",
+    "presets"
+  ],
   "properties": {
-    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-    "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
-    "name": { "type": "string" },
-    "version": { "type": "string" },
-    "currencyNote": { "type": "string" },
-    "period": { "enum": ["Month", "Quarter", "Year"] },
-    "dueOffsetDays": { "type": "integer", "minimum": 0, "maximum": 400 },
-    "dueNote": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "period": {
+      "enum": [
+        "Month",
+        "Quarter",
+        "Year"
+      ]
+    },
+    "dueOffsetDays": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 800,
+      "description": "Days after a period ends until its reserve can be released. Use the latest deadline among the taxes reserved (often the annual income-tax return); each tax can still be paid from the vault whenever it is due."
+    },
+    "dueNote": {
+      "type": "string"
+    },
     "presets": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "label", "vatBps", "buckets"],
+        "required": [
+          "id",
+          "label",
+          "vatBps",
+          "buckets"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "label": { "type": "string" },
-          "vatBps": { "type": "integer", "minimum": 0, "maximum": 10000 },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "vatBps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
           "buckets": {
             "type": "array",
             "maxItems": 8,
             "items": {
               "type": "object",
-              "required": ["name", "bps"],
+              "required": [
+                "name",
+                "bps"
+              ],
               "properties": {
-                "name": { "type": "string", "pattern": "^[a-z0-9_]{1,32}$", "not": { "const": "vat" } },
-                "bps": { "type": "integer", "minimum": 0, "maximum": 10000 },
-                "label": { "type": "string" }
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]{1,32}$",
+                  "not": {
+                    "const": "vat"
+                  }
+                },
+                "bps": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "label": {
+                  "type": "string"
+                }
               }
             }
+          },
+          "period": {
+            "enum": [
+              "Month",
+              "Quarter",
+              "Year"
+            ],
+            "description": "Overrides the pack's period for this preset"
+          },
+          "dueOffsetDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 800,
+            "description": "Overrides the pack's due offset for this preset"
           }
         }
       }
     },
-    "notes": { "type": "array", "items": { "type": "string" } },
-    "sources": { "type": "array", "items": { "type": "object", "required": ["title", "url"], "properties": { "title": { "type": "string" }, "url": { "type": "string" } } } }
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "title",
+          "url"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    }
   }
 }

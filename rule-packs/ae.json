@@ -1,0 +1,43 @@
+{
+  "$schema": "./schema.json",
+  "id": "ae",
+  "country": "AE",
+  "name": "United Arab Emirates: freelancers and small companies",
+  "version": "2026.1",
+  "currency": "AED",
+  "period": "Quarter",
+  "dueOffsetDays": 28,
+  "dueNote": "VAT returns are quarterly, due on the 28th day after the period. Corporate tax returns and payment are due nine months after the financial year.",
+  "presets": [
+    {
+      "id": "vat-only",
+      "label": "VAT 5%, no personal income tax",
+      "vatBps": 500,
+      "buckets": []
+    },
+    {
+      "id": "vat-and-corporate-tax",
+      "label": "VAT 5% + corporate tax 9% (taxable profit above AED 375,000)",
+      "vatBps": 500,
+      "buckets": [
+        {
+          "name": "corporate_tax",
+          "bps": 900,
+          "label": "Corporate tax 9% (reserved on the whole base, a ceiling)"
+        }
+      ],
+      "period": "Year",
+      "dueOffsetDays": 273
+    }
+  ],
+  "notes": [
+    "There is no personal income tax. Corporate tax is 0% on taxable income up to AED 375,000 and 9% above.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Federal Tax Authority",
+      "url": "https://tax.gov.ae"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "./schema.json",
+  "id": "gb",
+  "country": "GB",
+  "name": "United Kingdom: sole traders",
+  "version": "2026.1",
+  "currency": "GBP",
+  "period": "Year",
+  "dueOffsetDays": 396,
+  "dueNote": "VAT returns are quarterly, due one month and seven days after the period. Self Assessment payments on account fall on 31 January and 31 July, and the balancing payment on 31 January after the tax year (6 April to 5 April). The rest of a calendar year's reserve is released on 31 January two years later, after the last balancing payment it can include.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "VAT 20% + income tax and Class 4 NIC reserve 30%",
+      "vatBps": 2000,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and Class 4 National Insurance (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "VAT 5% + reserve 30%",
+      "vatBps": 500,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and Class 4 National Insurance (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT registration threshold: reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and Class 4 National Insurance (suggested reserve)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Income tax is progressive (20%, 40%, 45%) after the personal allowance; 30% is a suggested reserve.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "GOV.UK: VAT rates",
+      "url": "https://www.gov.uk/vat-rates"
+    },
+    {
+      "title": "GOV.UK: Self Assessment payments on account",
+      "url": "https://www.gov.uk/understand-self-assessment-bill/payments-on-account"
+    }
+  ]
+}

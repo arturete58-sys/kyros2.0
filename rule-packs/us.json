@@ -1,0 +1,64 @@
+{
+  "$schema": "./schema.json",
+  "id": "us",
+  "country": "US",
+  "name": "United States: self-employed (federal)",
+  "version": "2026.1",
+  "currency": "USD",
+  "period": "Year",
+  "dueOffsetDays": 105,
+  "dueNote": "Federal estimated tax is paid in four instalments (15 April, 15 June, 15 September, 15 January); pay them from the vault as they fall due. The rest of a year's reserve is released after 15 April, the deadline of the annual return.",
+  "presets": [
+    {
+      "id": "no-state-income-tax",
+      "label": "Federal income tax + self-employment tax, state without income tax: reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Federal income tax and self-employment tax 15.3% (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "with-state-income-tax",
+      "label": "Federal + state income tax + self-employment tax: reserve 35%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3500,
+          "label": "Federal and state income tax, self-employment tax (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "with-sales-tax-example",
+      "label": "Example: 8% sales tax collected + federal reserve 30%",
+      "vatBps": 800,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Federal income tax and self-employment tax 15.3% (suggested reserve)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "There is no federal VAT. Sales tax is set by states and localities and does not apply to most services; set the rate your state requires, if any.",
+    "Self-employment tax is 15.3% (Social Security and Medicare) on 92.35% of net earnings; Alaska, Florida, Nevada, New Hampshire, South Dakota, Tennessee, Texas, Washington and Wyoming have no broad state income tax on wages and self-employment earnings.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "IRS: estimated taxes",
+      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes"
+    },
+    {
+      "title": "IRS: self-employment tax",
+      "url": "https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax-social-security-and-medicare-taxes"
+    }
+  ]
+}

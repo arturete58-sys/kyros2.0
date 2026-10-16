@@ -1,0 +1,76 @@
+{
+  "$schema": "./schema.json",
+  "id": "ch",
+  "country": "CH",
+  "name": "Switzerland: self-employed",
+  "version": "2026.1",
+  "currency": "CHF",
+  "period": "Year",
+  "dueOffsetDays": 120,
+  "dueNote": "VAT (MWST/TVA) returns are quarterly, due 60 days after the quarter. Income tax is assessed yearly by the canton; the rest of a year's reserve is released after 30 April.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "VAT 8.1% + income tax and AHV reserve 25%",
+      "vatBps": 810,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
+        }
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "VAT 2.6% + reserve 25%",
+      "vatBps": 260,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
+        }
+      ]
+    },
+    {
+      "id": "accommodation-vat",
+      "label": "Accommodation VAT 3.8% + reserve 25%",
+      "vatBps": 380,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
+        }
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT registration threshold: reserve 25%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "2026 rates: 8.1% standard, 2.6% reduced, 3.8% accommodation. Parliament approved 8.5% and 4.0% from 1 January 2028, subject to a popular vote expected on 29 November 2026.",
+    "Income tax varies widely by canton (Zug and Schwyz are among the lowest).",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Federal Tax Administration (ESTV)",
+      "url": "https://www.estv.admin.ch"
+    },
+    {
+      "title": "Bill Alps: Swiss VAT rising to 8.5% in 2028",
+      "url": "https://bill-alps.ch/en/blog/swiss-vat-increase-8-5-percent-2028/"
+    }
+  ]
+}

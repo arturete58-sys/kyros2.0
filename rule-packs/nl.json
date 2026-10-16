@@ -1,0 +1,63 @@
+{
+  "$schema": "./schema.json",
+  "id": "nl",
+  "country": "NL",
+  "name": "Netherlands: freelancers (zzp) and sole traders",
+  "version": "2026.1",
+  "currency": "EUR",
+  "period": "Year",
+  "dueOffsetDays": 120,
+  "dueNote": "VAT returns are usually quarterly, due by the end of the month after the quarter; provisional income-tax assessments are paid in monthly instalments. The rest of a year's reserve is released after 1 May, the deadline of the annual return.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "BTW 21% + income tax reserve 30%",
+      "vatBps": 2100,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "BTW 9% + income tax reserve 30%",
+      "vatBps": 900,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    },
+    {
+      "id": "kor",
+      "label": "Small-business scheme (KOR): no VAT + income tax reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and social contributions (suggested reserve)"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Income tax (box 1) is progressive, reduced by entrepreneur deductions; 30% of the base is a suggested reserve.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "European Commission: VAT rates in EU member states",
+      "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en"
+    },
+    {
+      "title": "Belastingdienst",
+      "url": "https://www.belastingdienst.nl"
+    }
+  ]
+}
