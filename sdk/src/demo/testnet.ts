@@ -485,6 +485,7 @@ async function main(): Promise<void> {
   writeFileSync(join(outDir, 'latest.json'), JSON.stringify(result, null, 2) + '\n');
   writeFileSync(join(outDir, 'latest.csv'), csv);
   writeFileSync(join(outDir, 'README.md'), report(result));
+  for (const st of steps) if (!st.ok) log(`step failed: ${st.step} -- ${st.detail}`);
   log(result.allOk ? 'all steps passed' : 'some steps failed');
   if (!result.allOk) process.exitCode = 1;
 }
