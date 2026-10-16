@@ -1,0 +1,91 @@
+{
+  "network": "testnet",
+  "startedAt": "2026-10-16T11:28:48.225Z",
+  "finishedAt": "2026-10-16T11:33:23.730Z",
+  "token": "CAFDTNHQHJLEQOMDZPCTMVBZQYKLJWUERIPL423MJTNY5O3327YG5ADH",
+  "contracts": {
+    "router": "CCSTYBJWZAOKWC43FOJZ65GA5FSM37JKHJOECYAB3ZQOP6Y4VHS6NKY2",
+    "vault": "CC77YNDHYKB7OFT2VGVRIZGTNIVAHM5IZVWCXWPMOYLO45ZXTJPGIXSQ",
+    "inbox": "CA6XRYK2JCLJFDHCN3JUQR3A7TNPQV7A25E4ENAZSPQ455NBVV5TPGTK"
+  },
+  "accounts": {
+    "issuer": "GBK4GAXMQ2ESME4B32Z7Y6LRVOJV2F2KAYKV6DLOWTKY5PIZC55DXBSP",
+    "freelancer": "GBQTUTLDGKSBF6FCVYP6TXRY322JRCG6YU7AKK63EP33VZX6SWTT6Q4C",
+    "client": "GCORX66EDKZXYNXQE63FMQQJB2BP3TXC5UBHNFPCZYY2XLEEDXOTCUIH",
+    "taxAccount": "GA4AGZOLWALPNAKDVAUFILA5UT7JVXOT77K4YDEIMIHONPQ6C7KRHZ6T",
+    "keeper": "GDQ7Y4COXXGHEKQNTPKI2KJTKRQ6HH57DAWL32ZEHVBFBMOYB7J5WBMN",
+    "newDestination": "GDB4RVKBAGJ3MXUPZ3EQOLFOPSKRMPWXFEXC2DWGKPXEE3WIBCH23FG4"
+  },
+  "steps": [
+    {
+      "step": "Deploy Reserve Vault (Spain pack, general: VAT 21% + income tax 20%)",
+      "ok": true,
+      "tx": "9d3a17ad0de7f0d789d0a770043f2f6409712b0e4b244d17ec9eed0883a0559f",
+      "detail": "CC77YNDHYKB7OFT2VGVRIZGTNIVAHM5IZVWCXWPMOYLO45ZXTJPGIXSQ"
+    },
+    {
+      "step": "Deploy Inbox for the vault",
+      "ok": true,
+      "tx": "c900a116872dc12233ca75c8683913e7b9f074b589694491e6a5183e533961f1",
+      "detail": "CA6XRYK2JCLJFDHCN3JUQR3A7TNPQV7A25E4ENAZSPQ455NBVV5TPGTK"
+    },
+    {
+      "step": "Deploy Router",
+      "ok": true,
+      "tx": "7babb17b6888ecb1cb3ba1b88c707427a0e546dede8a3903c21b26a59c185cfc",
+      "detail": "CCSTYBJWZAOKWC43FOJZ65GA5FSM37JKHJOECYAB3ZQOP6Y4VHS6NKY2"
+    },
+    {
+      "step": "Client pays invoice INV-2027-001 (1,210 KUSD) through the Router",
+      "ok": true,
+      "tx": "4040559196c0aeeb12342bb9de2ba0d70988571215d8a867c15bef6f25843d85",
+      "detail": "freelancer +800, vault +410 (VAT 210, income tax 200)"
+    },
+    {
+      "step": "Client sends 121 KUSD to the inbox with a plain SEP-41 transfer",
+      "ok": true,
+      "tx": "08e72a9a739434f43dba083d718ed5286df737ad19933f87245c28e7c4c85a0c",
+      "detail": "CA6XRYK2JCLJFDHCN3JUQR3A7TNPQV7A25E4ENAZSPQ455NBVV5TPGTK"
+    },
+    {
+      "step": "Keeper sweeps the inbox (permissionless)",
+      "ok": true,
+      "tx": "7cbb3afbf472355320cb37e09cb4121bc83d5ba6b1a7d92deca5514f6eb61c4c",
+      "detail": "freelancer +80, vault +41"
+    },
+    {
+      "step": "Freelancer pays the VAT bucket to the tax destination (before the due date)",
+      "ok": true,
+      "tx": "9695ad316b7c144981fea81f99524fa924637d1fdcb66f35b45d6d92f012a1bf",
+      "detail": "231 KUSD to the tax account"
+    },
+    {
+      "step": "Release before the due date is refused",
+      "ok": true,
+      "detail": "refused by the contract: simulation failed: HostError: Error(Contract, #4)"
+    },
+    {
+      "step": "Freelancer proposes a new tax destination (2-minute notice in this demo)",
+      "ok": true,
+      "tx": "276f1254efddd73e4cd29521502c49a861899ec83b17d60b03cee4d1c11aeb29",
+      "detail": "GDB4RVKBAGJ3MXUPZ3EQOLFOPSKRMPWXFEXC2DWGKPXEE3WIBCH23FG4"
+    },
+    {
+      "step": "Applying it before the notice has passed is refused",
+      "ok": true,
+      "detail": "refused by the contract: simulation failed: HostError: Error(Contract, #8)"
+    },
+    {
+      "step": "After the due date the rest of the period is released to the freelancer",
+      "ok": true,
+      "tx": "5d284c4e892aa34a6be4779b75171a5b55d5d76c41abfd20e6910f0c9297ece0",
+      "detail": "220 KUSD back to the freelancer"
+    },
+    {
+      "step": "Vault history read back from contract events and exported as CSV",
+      "ok": true,
+      "detail": "5 events"
+    }
+  ],
+  "allOk": true
+}
