@@ -411,10 +411,15 @@ fn now(e: &Env) -> u64 {
     e.ledger().timestamp()
 }
 
+/// Extends this vault's instance only. The wasm code is shared by every vault
+/// and its rent is paid once for all (anyone can extend it), not by each
+/// vault on every write.
 fn bump_instance(e: &Env) {
-    e.storage()
-        .instance()
-        .extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);
+    e.deployer().extend_ttl_for_contract_instance(
+        e.current_contract_address(),
+        INSTANCE_TTL / 2,
+        INSTANCE_TTL,
+    );
 }
 
 fn stored_config(e: &Env) -> Config {

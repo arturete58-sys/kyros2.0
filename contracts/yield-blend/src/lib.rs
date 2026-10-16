@@ -107,7 +107,12 @@ impl BlendYield {
                 },
             ],
         );
-        e.storage().instance().extend_ttl(17_280 * 90, 17_280 * 180);
+        // The instance only: the shared wasm's rent is paid once for all, not per vault.
+        e.deployer().extend_ttl_for_contract_instance(
+            e.current_contract_address(),
+            17_280 * 90,
+            17_280 * 180,
+        );
         Ok(())
     }
 

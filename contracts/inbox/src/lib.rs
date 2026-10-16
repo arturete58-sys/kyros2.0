@@ -108,9 +108,12 @@ pub struct Inbox;
 impl Inbox {
     pub fn __constructor(e: Env, vault: Address) {
         e.storage().instance().set(&Key::Vault, &vault);
-        e.storage()
-            .instance()
-            .extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);
+        // The instance only: the shared wasm's rent is paid once for all, not per inbox.
+        e.deployer().extend_ttl_for_contract_instance(
+            e.current_contract_address(),
+            INSTANCE_TTL / 2,
+            INSTANCE_TTL,
+        );
     }
 
     pub fn vault(e: Env) -> Address {
@@ -142,9 +145,12 @@ impl Inbox {
                 ready_at,
             },
         );
-        e.storage()
-            .instance()
-            .extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);
+        // The instance only: the shared wasm's rent is paid once for all, not per inbox.
+        e.deployer().extend_ttl_for_contract_instance(
+            e.current_contract_address(),
+            INSTANCE_TTL / 2,
+            INSTANCE_TTL,
+        );
         MoveProposed {
             vault: new_vault,
             ready_at,
@@ -210,9 +216,12 @@ impl Inbox {
         let done = v.receive(&me, &token, &gross, &reference);
         let n: u32 = e.storage().instance().get(&Key::Swept).unwrap_or(0) + 1;
         e.storage().instance().set(&Key::Swept, &n);
-        e.storage()
-            .instance()
-            .extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);
+        // The instance only: the shared wasm's rent is paid once for all, not per inbox.
+        e.deployer().extend_ttl_for_contract_instance(
+            e.current_contract_address(),
+            INSTANCE_TTL / 2,
+            INSTANCE_TTL,
+        );
         Swept {
             token,
             gross,
