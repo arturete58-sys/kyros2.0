@@ -18,10 +18,28 @@ const out = args.includes('--out') ? args[args.indexOf('--out') + 1] : undefined
 const today = new Date().toISOString().slice(0, 10);
 
 let res, csv;
+const BASE = 'https://sdmx.oecd.org/public/rest/data/OECD.CTP.TPS,DSD_TAX_PIT@DF_PIT_CENT';
+const attempts = [
+  [`${BASE},1.0/all?startPeriod=2024&format=csvfilewithlabels`, 'text/csv'],
+  [`${BASE},1.0/?startPeriod=2024&format=csvfilewithlabels`, 'text/csv'],
+  [`${BASE},1.0/all?startPeriod=2024`, 'application/vnd.sdmx.data+csv;version=2.0.0;labels=both'],
+  [`${BASE},/all?startPeriod=2024&format=csvfilewithlabels`, 'text/csv'],
+  [`${BASE},1.0/all?lastNObservations=1&format=csvfilewithlabels`, 'text/csv'],
+];
+const tried = [];
 try {
-  res = await fetch(URL_, { headers: { accept: 'application/vnd.sdmx.data+csv; charset=utf-8; labels=both' }, signal: AbortSignal.timeout(180_000) });
-  csv = await res.text();
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${csv.slice(0, 400)}`);
+  for (const [u, accept] of attempts) {
+    try {
+      res = await fetch(u, { headers: { accept, 'user-agent': 'kyros-law-watch' }, signal: AbortSignal.timeout(180_000) });
+      csv = await res.text();
+      tried.push(`${u} -> HTTP ${res.status}`);
+      if (res.ok && csv.includes('REF_AREA')) break;
+    } catch (e) {
+      tried.push(`${u} -> ${e.message}`);
+    }
+    res = undefined;
+  }
+  if (!res) throw new Error(`no query worked:\n- ${tried.join('\n- ')}\n\nLast response: ${(csv ?? '').slice(0, 300)}`);
 } catch (e) {
   const msg = `# National income-tax scales against the OECD Tax Database, ${today}\n\nThe OECD data could not be read: ${String(e.message ?? e).slice(0, 600)}\n`;
   console.log(msg);

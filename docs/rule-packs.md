@@ -15,6 +15,17 @@ A rule pack is a JSON file per jurisdiction ([schema](../rule-packs/schema.json)
 | `reviewed` | Date the rates were last checked against the sources |
 | `sources[]` | Where each figure comes from; `official: true` for tax authorities, legislators and other public bodies, `checked` for the date it was last compared |
 
+## First: where does the user pay?
+
+Income tax is due where the user is **tax resident**, not where the client is or where the stablecoins arrive. Every pack has a `residence` section: the day test (183 days in most countries), the other tests (home, family, centre of interests, intention to reside), what residents are taxed on (worldwide, territorial, remittance, or no income tax) and the regimes for newcomers and nomads.
+
+```ts
+residenceGuide(packs, { days: { ID: 250, ES: 60 }, citizenships: ['ES'] });
+// ID is likely your tax residence (250 days, over the 183-day test): use the Indonesia pack.
+```
+
+A Spanish freelancer living in Bali for most of the year is resident in Indonesia (more than 183 days in 12 months, or a stay permit of more than 183 days as intention to reside) and pays Indonesian tax on worldwide income. The E33G remote-worker visa is an immigration status, not a tax exemption. If they keep their home or family in Spain, Spain can claim them too, and the Spain–Indonesia treaty decides. US citizens are taxed by the US wherever they live. When two countries claim the user, the guide says so instead of picking one.
+
 ## The user chooses the reserve
 
 Presets are a starting point. The user picks one of the country's VAT rates and sets the reserve they want, and `checkReserve` tells them whether it is enough for their country, regime, activity and income:
@@ -35,6 +46,31 @@ const rule = customRule(es, { vatRate: 'standard', reserves: [{ name: 'irpf', bp
 - **ok**: the reserve covers the estimate with less than 10 points to spare.
 - **generous**: more than 10 points above; the surplus goes back to the user after the release date anyway.
 - **unknown**: no estimate for that jurisdiction yet (Switzerland, Liechtenstein, Luxembourg and Argentina, where income tax depends on canton, commune, tax class or twice-yearly indexation); the user compares with their adviser's figure.
+
+### Regions with their own income tax
+
+| Country | Regions | What changes |
+| --- | --- | --- |
+| Spain | 15 common-regime communities, Navarra, Bizkaia, Gipuzkoa, Araba, Ceuta, Melilla | The regional half of IRPF (AEAT 2025 scales); Navarra and the Basque Country replace both halves with their foral IRPF; Ceuta and Melilla get the 60% deduction; Canarias uses IGIC presets instead of IVA |
+| United States | 50 states and DC | State brackets for 2026; local taxes as an extra rate |
+| Canada | 13 provinces and territories | Provincial brackets for 2026 (CRA), Ontario surtax, Quebec abatement |
+| United Kingdom | Scotland | Scottish rates 2026-27 |
+| Germany | Church tax by Land | 8% or 9% of income tax; the solidarity surcharge applies everywhere |
+
+Switzerland and Liechtenstein (cantonal and communal multipliers), Italy's regional and municipal surcharges (a default 2.5% is used) and local business taxes (French CFE, Colombian ICA, Brazilian ISS, Puerto Rico's municipal licence) are not modelled per region yet.
+
+### The safety margin
+
+How much margin a reserve needs depends on how exact the figure is and how hard the country comes down on short or late payment. Each pack has an `enforcement` level, with the facts behind it:
+
+| Precision | Strict (Spain, Germany, Italy, Portugal, Brazil, India, Argentina) | Standard | Lenient |
+| --- | --- | --- | --- |
+| exact | 0 | 0 | 0 |
+| presumptive | +1.5 points | +1 | +0.5 |
+| exact on profit | +2 | +1.5 | +1 |
+| estimate | +4 | +3 | +2 |
+
+`checkReserve` returns `recommendedBps` = estimated need + margin, and a `tight` status when the reserve covers the estimate but not the margin. In Spain, for example, a late self-assessment costs a 1% surcharge plus 1% per month (15% plus interest after a year, art. 27 LGT), and a shortfall the AEAT finds costs 50% to 150% (art. 191 LGT); in the US an underpayment costs 7% a year of interest and nothing if last year's tax was prepaid. Anything reserved beyond what is due returns to the user after the release date.
 
 ### How far the check can be trusted
 
@@ -109,7 +145,8 @@ The [law watch](../.github/workflows/law-watch.yml) runs every Monday and opens 
 
 1. **EU packs against the official database.** The European Commission's Taxes in Europe Database (TEDB), through its VAT Retrieval web service.
 2. **EU and UK packs against an independent dataset**, [ibericode/vat-rates](https://github.com/ibericode/vat-rates).
-3. **Every official page the packs cite.** The percentages and amounts on each page are compared with the last snapshot, so a new rate or threshold on a tax authority's page prompts a review in any country.
+3. **National income-tax scales against the OECD Tax Database** (Table I.1, reported by member governments), for every scale marked `"scope": "central"`; the official figures are kept in `rule-packs/watch/oecd-pit.json`.
+4. **Every official page the packs cite.** The percentages and amounts on each page are compared with the last snapshot, so a new rate or threshold on a tax authority's page prompts a review in any country. Pages that refuse plain requests are read with a real browser (headless Chromium), and failing that from the Internet Archive's latest copy; the report says how each page was read.
 
 A change is reviewed by a person before it reaches the registry; nothing changes a rate automatically from a web page.
 
@@ -139,7 +176,7 @@ Each tax can be paid from the vault to the tax-payment destination whenever it i
 | [CY](../rule-packs/cy.json) | Cyprus | EUR | VAT 19% / 9% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 1 official, 1 checked 2026-10-16 |
 | [DE](../rule-packs/de.json) | Germany | EUR | USt 19% / 7% | Year + 300 days | `standard` (estimate), `reduced-vat` (estimate), `small-business` (estimate) | 3 official, 1 checked 2026-10-16 |
 | [EE](../rule-packs/ee.json) | Estonia | EUR | Käibemaks 24% / 13% / 9% | Year + 274 days | `standard` (exact on profit), `accommodation-vat` (exact on profit), `not-vat-registered` (exact on profit) | 1 official, 0 checked 2026-10-16 |
-| [ES](../rule-packs/es.json) | Spain | EUR | IVA 21% / 10% / 7% / 4% / 3% | Quarter + 30 days | `general` (estimate), `reduced-vat` (estimate), `super-reduced-vat` (estimate), `no-vat` (estimate), `vat-only` (exact), `canarias-igic` (estimate), `canarias-igic-reduced` (estimate) | 19 official, 19 checked 2026-10-16 |
+| [ES](../rule-packs/es.json) | Spain | EUR | IVA 21% / 10% / 7% / 4% / 3% | Quarter + 30 days | `general` (estimate), `reduced-vat` (estimate), `super-reduced-vat` (estimate), `no-vat` (estimate), `vat-only` (exact), `canarias-igic` (estimate), `canarias-igic-reduced` (estimate) | 18 official, 20 checked 2026-10-16 |
 | [FR](../rule-packs/fr.json) | France | EUR | TVA 20% / 10% / 5.5% / 2.1% | Quarter + 31 days | `micro-bnc` (exact), `micro-bnc-vl` (exact), `micro-bic-services` (exact), `micro-bnc-vat` (exact) | 2 official, 0 checked 2026-10-16 |
 | [GB](../rule-packs/gb.json) | United Kingdom | GBP | VAT 20% / 5% | Year + 396 days | `standard` (estimate), `reduced-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 2 checked 2026-10-16 |
 | [GE](../rule-packs/ge.json) | Georgia | GEL | VAT 18% | Month + 15 days | `small-business` (exact), `small-business-vat` (exact) | 1 official, 0 checked 2026-10-16 |
