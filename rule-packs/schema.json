@@ -29,6 +29,26 @@
     "version": {
       "type": "string"
     },
+    "reviewed": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date the rates were last checked against the sources"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "vatName": {
+      "type": "string",
+      "description": "Local name of the consumption tax (VAT, GST, IVA, ...)"
+    },
+    "vatRates": {
+      "type": "array",
+      "description": "Consumption-tax rate tables with the date each applies from; the table in force on a date is the latest enacted one starting on or before it",
+      "items": {
+        "$ref": "#/$defs/vatTable"
+      }
+    },
     "period": {
       "enum": [
         "Month",
@@ -110,9 +130,31 @@
             "minimum": 0,
             "maximum": 800,
             "description": "Overrides the pack's due offset for this preset"
+          },
+          "vatRate": {
+            "type": "string",
+            "description": "Name of the rate in vatRates this preset charges; the rule follows the table's dates"
+          },
+          "covers": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "incomeTax",
+                "social"
+              ]
+            },
+            "uniqueItems": true,
+            "description": "What the buckets reserve for, used by the reserve check (default: income tax)"
+          },
+          "estimate": {
+            "$ref": "#/$defs/estimate",
+            "description": "Overrides the pack's estimate for this preset"
           }
         }
       }
+    },
+    "estimate": {
+      "$ref": "#/$defs/estimate"
     },
     "notes": {
       "type": "array",
@@ -137,10 +179,154 @@
           }
         }
       }
+    }
+  },
+  "$defs": {
+    "bps": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
     },
-    "currency": {
-      "type": "string",
-      "pattern": "^[A-Z]{3}$"
+    "vatTable": {
+      "type": "object",
+      "required": [
+        "from",
+        "rates"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "rates": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/bps"
+          }
+        },
+        "proposed": {
+          "type": "boolean",
+          "description": "Announced or proposed, not yet law"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "bracket": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "$ref": "#/$defs/bps"
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[upTo, bps]; null = no upper limit"
+    },
+    "estimate": {
+      "type": "object",
+      "required": [
+        "year",
+        "items"
+      ],
+      "description": "Simplified annual tax estimate for the reserve check",
+      "properties": {
+        "year": {
+          "type": "integer"
+        },
+        "taxableShareBps": {
+          "$ref": "#/$defs/bps",
+          "description": "Presumptive regimes: taxable profit as a share of revenue"
+        },
+        "socialDeductible": {
+          "type": "boolean",
+          "description": "Social contributions are deducted from the taxable profit before income tax"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "brackets"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "incomeTax",
+                  "social"
+                ]
+              },
+              "basis": {
+                "enum": [
+                  "taxable",
+                  "revenue"
+                ]
+              },
+              "mode": {
+                "enum": [
+                  "marginal",
+                  "flat"
+                ]
+              },
+              "brackets": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/bracket"
+                }
+              },
+              "credit": {
+                "type": "number",
+                "minimum": 0
+              },
+              "surchargeBps": {
+                "$ref": "#/$defs/bps"
+              },
+              "min": {
+                "type": "number",
+                "minimum": 0
+              },
+              "max": {
+                "type": "number",
+                "minimum": 0
+              },
+              "minRevenue": {
+                "type": "number",
+                "minimum": 0
+              },
+              "zeroUpTo": {
+                "type": "number",
+                "minimum": 0
+              },
+              "reliefBps": {
+                "$ref": "#/$defs/bps",
+                "description": "Share of the basis relieved before the brackets apply (e.g. a profit exemption)"
+              }
+            }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

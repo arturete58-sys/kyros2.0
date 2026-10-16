@@ -3,8 +3,19 @@
   "id": "gb",
   "country": "GB",
   "name": "United Kingdom: sole traders",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "GBP",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2011-01-04",
+      "rates": {
+        "standard": 2000,
+        "reduced": 500
+      }
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 396,
   "dueNote": "VAT returns are quarterly, due one month and seven days after the period. Self Assessment payments on account fall on 31 January and 31 July, and the balancing payment on 31 January after the tax year (6 April to 5 April). The rest of a calendar year's reserve is released on 31 January two years later, after the last balancing payment it can include.",
@@ -13,24 +24,34 @@
       "id": "standard",
       "label": "VAT 20% + income tax and Class 4 NIC reserve 30%",
       "vatBps": 2000,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and Class 4 National Insurance (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "reduced-vat",
       "label": "VAT 5% + reserve 30%",
       "vatBps": 500,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and Class 4 National Insurance (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -43,9 +64,67 @@
           "bps": 3000,
           "label": "Income tax and Class 4 National Insurance (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            12570,
+            0
+          ],
+          [
+            50270,
+            2000
+          ],
+          [
+            100000,
+            4000
+          ],
+          [
+            125140,
+            6000
+          ],
+          [
+            null,
+            4500
+          ]
+        ],
+        "label": "Income tax, England, Wales and Northern Ireland (the personal allowance tapers away from GBP 100,000)"
+      },
+      {
+        "name": "class4_nic",
+        "kind": "social",
+        "brackets": [
+          [
+            12570,
+            0
+          ],
+          [
+            50270,
+            600
+          ],
+          [
+            null,
+            200
+          ]
+        ],
+        "label": "Class 4 National Insurance"
+      }
+    ],
+    "notes": [
+      "Scotland has its own income tax bands."
+    ]
+  },
   "notes": [
     "Income tax is progressive (20%, 40%, 45%) after the personal allowance; 30% is a suggested reserve.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

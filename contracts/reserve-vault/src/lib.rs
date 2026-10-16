@@ -400,11 +400,19 @@ impl ReserveVault {
     /// Proposes a new rule; it applies after `notice_secs`. A new proposal
     /// replaces a pending one and restarts the notice.
     pub fn propose_rule(e: Env, rule: Rule) -> Result<u64, VaultError> {
+        Self::propose_rule_at(e, rule, 0)
+    }
+
+    /// Proposes a new rule that takes effect at `effective_at` (UNIX seconds),
+    /// or after `notice_secs` if that is later. Used to follow a scheduled VAT
+    /// change: the owner signs ahead and the vault switches on the day the new
+    /// rate applies, never before the notice has run. 0 means as soon as possible.
+    pub fn propose_rule_at(e: Env, rule: Rule, effective_at: u64) -> Result<u64, VaultError> {
         let c = active(&e);
         c.owner.require_auth();
         check_rule(&e, &rule)?;
         Self::fold(&e);
-        let ready_at = now(&e) + c.notice_secs;
+        let ready_at = (now(&e) + c.notice_secs).max(effective_at);
         e.storage().instance().set(&Key::PendingRule, &PendingRule { rule: rule.clone(), ready_at });
         bump_instance(&e);
         RuleProposed { rule, ready_at }.publish(&e);

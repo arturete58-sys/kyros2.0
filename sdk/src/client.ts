@@ -167,6 +167,11 @@ export class KyrosClient {
     return new Contract(vault).call('propose_rule', ruleToScVal(rule));
   }
 
+  /** A rule that takes effect at `effectiveAt` (UNIX seconds), or after the notice if later; see `vatUpdatePlan`. */
+  proposeRuleAtOp(vault: string, rule: Rule, effectiveAt: bigint): xdr.Operation {
+    return new Contract(vault).call('propose_rule_at', ruleToScVal(rule), u64(effectiveAt));
+  }
+
   proposeDestinationOp(vault: string, destination: string): xdr.Operation {
     return new Contract(vault).call('propose_destination', addr(destination));
   }

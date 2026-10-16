@@ -1,0 +1,170 @@
+{
+  "$schema": "./schema.json",
+  "id": "id",
+  "country": "ID",
+  "name": "Indonesia: individual entrepreneurs (UMKM)",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "IDR",
+  "vatName": "PPN",
+  "vatRates": [
+    {
+      "from": "2025-01-01",
+      "rates": {
+        "standard": 1100,
+        "luxury": 1200
+      },
+      "note": "12% nominal rate; supplies other than luxury goods use an 11/12 tax base, an effective 11%"
+    },
+    {
+      "from": "2022-04-01",
+      "rates": {
+        "standard": 1100
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 90,
+  "dueNote": "The UMKM final tax is paid monthly, by the 15th of the following month; annual returns are due on 31 March.",
+  "presets": [
+    {
+      "id": "umkm-final",
+      "label": "UMKM final tax 0.5% of turnover (individuals up to IDR 4.8 billion, first IDR 500 million exempt)",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "pph_final",
+          "bps": 50,
+          "label": "UMKM final income tax"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "pph_final",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                500000000,
+                0
+              ],
+              [
+                null,
+                50
+              ]
+            ],
+            "label": "Final income tax 0.5% of turnover",
+            "basis": "revenue"
+          }
+        ]
+      }
+    },
+    {
+      "id": "pkp-umkm",
+      "label": "VAT-registered (PKP): PPN 11% effective + UMKM final tax 0.5%",
+      "vatBps": 1100,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "pph_final",
+          "bps": 50,
+          "label": "UMKM final income tax"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "pph_final",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                500000000,
+                0
+              ],
+              [
+                null,
+                50
+              ]
+            ],
+            "label": "Final income tax 0.5% of turnover",
+            "basis": "revenue"
+          }
+        ]
+      }
+    },
+    {
+      "id": "regular",
+      "label": "PPN 11% effective + income tax reserve 25%",
+      "vatBps": 1100,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "pph",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            54000000,
+            0
+          ],
+          [
+            114000000,
+            500
+          ],
+          [
+            304000000,
+            1500
+          ],
+          [
+            554000000,
+            2500
+          ],
+          [
+            5054000000,
+            3000
+          ],
+          [
+            null,
+            3500
+          ]
+        ],
+        "label": "Income tax after the IDR 54 million allowance (single)"
+      }
+    ]
+  },
+  "notes": [
+    "The 0.5% final tax for individuals was made permanent in 2026 (PP 20/2026).",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "IDN Financials: UMKM 0.5% final tax made permanent",
+      "url": "https://www.idnfinancials.com/id/news/64373/pemerintah-tegaskan-pajak-umkm-tidak-naik-pph-0-5-permanen"
+    },
+    {
+      "title": "Direktorat Jenderal Pajak",
+      "url": "https://www.pajak.go.id"
+    }
+  ]
+}

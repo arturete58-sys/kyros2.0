@@ -3,8 +3,19 @@
   "id": "ad",
   "country": "AD",
   "name": "Andorra: self-employed",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "IGI",
+  "vatRates": [
+    {
+      "from": "2014-01-01",
+      "rates": {
+        "standard": 450,
+        "reduced": 100
+      }
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 212,
   "dueNote": "IGI returns are quarterly or half-yearly. Personal income tax (IRPF) is settled yearly; the rest of a year's reserve is released after 31 July.",
@@ -13,12 +24,16 @@
       "id": "standard",
       "label": "IGI 4.5% + IRPF reserve 10%",
       "vatBps": 450,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 1000,
           "label": "IRPF (0% to 10%)"
         }
+      ],
+      "covers": [
+        "incomeTax"
       ]
     },
     {
@@ -31,9 +46,39 @@
           "bps": 1000,
           "label": "IRPF (0% to 10%)"
         }
+      ],
+      "covers": [
+        "incomeTax"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "irpf",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            24000,
+            0
+          ],
+          [
+            40000,
+            500
+          ],
+          [
+            null,
+            1000
+          ]
+        ],
+        "label": "IRPF"
+      }
+    ],
+    "notes": [
+      "CASS contributions of the self-employed are a monthly amount: enter them as fixed contributions."
+    ]
+  },
   "notes": [
     "General IGI rate 4.5%; IRPF ranges from 0% to 10%. Self-employed social security (CASS) is not included.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

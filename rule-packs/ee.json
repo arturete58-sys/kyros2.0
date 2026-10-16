@@ -3,8 +3,36 @@
   "id": "ee",
   "country": "EE",
   "name": "Estonia: sole proprietors (FIE)",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "Käibemaks",
+  "vatRates": [
+    {
+      "from": "2025-07-01",
+      "rates": {
+        "standard": 2400,
+        "reduced": 1300,
+        "press": 900
+      }
+    },
+    {
+      "from": "2025-01-01",
+      "rates": {
+        "standard": 2200,
+        "reduced": 1300,
+        "press": 900
+      }
+    },
+    {
+      "from": "2024-01-01",
+      "rates": {
+        "standard": 2200,
+        "reduced": 900,
+        "press": 500
+      }
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 274,
   "dueNote": "VAT returns are monthly, due on the 20th of the following month. FIE income and social tax are paid in quarterly advances and settled after the annual return; the rest of a year's reserve is released after 1 October of the following year.",
@@ -13,24 +41,34 @@
       "id": "standard",
       "label": "VAT 24% + income and social tax reserve 40%",
       "vatBps": 2400,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 4000,
           "label": "Income tax 22% and social tax 33% (FIE)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "accommodation-vat",
       "label": "Accommodation VAT 13% + reserve 40%",
       "vatBps": 1300,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 4000,
           "label": "Income tax 22% and social tax 33% (FIE)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -43,9 +81,50 @@
           "bps": 4000,
           "label": "Income tax 22% and social tax 33% (FIE)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "tulumaks",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            8400,
+            0
+          ],
+          [
+            null,
+            2200
+          ]
+        ],
+        "label": "Income tax 22%, basic exemption EUR 700 a month"
+      },
+      {
+        "name": "sotsiaalmaks",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            2481
+          ]
+        ],
+        "label": "Social tax of a sole proprietor (FIE): 33% of profit after the social tax itself",
+        "min": 3509,
+        "max": 52628
+      }
+    ],
+    "notes": [
+      "The social tax is deducted from business income before income tax."
+    ]
+  },
   "notes": [
     "2026: VAT 24% standard (13% accommodation, 9% books, medicines and press); income tax 22%; FIE social tax 33% of business income. Companies (OÜ) pay no tax on retained profits and are not covered by this pack.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
@@ -58,6 +137,10 @@
     {
       "title": "Palgakulu: Estonian tax rates 2026",
       "url": "https://www.palgakulu.ee/en/maksumaarad-ja-toetused/"
+    },
+    {
+      "title": "1Office: Estonia tax changes 2026",
+      "url": "https://1office.co/blog/estonia-tax-changes-2026/"
     }
   ]
 }

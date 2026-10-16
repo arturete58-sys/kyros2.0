@@ -3,8 +3,21 @@
   "id": "ie",
   "country": "IE",
   "name": "Ireland: sole traders",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2021-03-01",
+      "rates": {
+        "standard": 2300,
+        "reduced": 1350,
+        "second_reduced": 900,
+        "livestock": 480
+      }
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 304,
   "dueNote": "VAT returns are usually bi-monthly, due on the 23rd of the following month. Preliminary tax and the balance for a year are due on 31 October of the following year; the rest of a year's reserve is released then.",
@@ -13,36 +26,51 @@
       "id": "standard",
       "label": "VAT 23% + income tax, USC and PRSI reserve 35%",
       "vatBps": 2300,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3500,
           "label": "Income tax, USC and PRSI (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "reduced-vat",
       "label": "VAT 13.5% + reserve 35%",
       "vatBps": 1350,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3500,
           "label": "Income tax, USC and PRSI (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "second-reduced-vat",
       "label": "VAT 9% + reserve 35%",
       "vatBps": 900,
+      "vatRate": "second_reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3500,
           "label": "Income tax, USC and PRSI (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -55,9 +83,68 @@
           "bps": 3500,
           "label": "Income tax, USC and PRSI (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            44000,
+            2000
+          ],
+          [
+            null,
+            4000
+          ]
+        ],
+        "label": "Income tax, single person; personal and earned-income credits EUR 4,000",
+        "credit": 4000
+      },
+      {
+        "name": "usc",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            12012,
+            50
+          ],
+          [
+            28700,
+            200
+          ],
+          [
+            70044,
+            300
+          ],
+          [
+            null,
+            800
+          ]
+        ],
+        "label": "Universal Social Charge"
+      },
+      {
+        "name": "prsi",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            435
+          ]
+        ],
+        "label": "PRSI Class S"
+      }
+    ]
+  },
   "notes": [
     "Rates: 23% standard, 13.5% reduced, 9% second reduced (since 1 July 2026 also restaurant and catering food and hairdressing).",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

@@ -1,0 +1,158 @@
+{
+  "$schema": "./schema.json",
+  "id": "vn",
+  "country": "VN",
+  "name": "Vietnam: business households and small companies",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "VND",
+  "vatName": "VAT (GTGT)",
+  "vatRates": [
+    {
+      "from": "2025-01-01",
+      "rates": {
+        "standard": 1000,
+        "temporary_reduced": 800,
+        "reduced": 500
+      },
+      "note": "The 8% rate applies to eligible goods and services until 31 December 2026; IT, telecoms, finance, banking, securities and real estate are excluded"
+    },
+    {
+      "from": "2027-01-01",
+      "rates": {
+        "standard": 1000,
+        "reduced": 500
+      },
+      "note": "The temporary 8% rate ends after 31 December 2026 unless extended again"
+    }
+  ],
+  "period": "Quarter",
+  "dueOffsetDays": 30,
+  "dueNote": "Business households above the exemption threshold declare and pay quarterly, by the last day of the month after the quarter, with an annual settlement.",
+  "presets": [
+    {
+      "id": "household-services",
+      "label": "Business household, services: VAT 5% + personal income tax 2% of revenue",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "gtgt",
+          "bps": 500,
+          "label": "VAT on revenue (household method)"
+        },
+        {
+          "name": "tncn",
+          "bps": 200,
+          "label": "Personal income tax on revenue"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "gtgt",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                500000000,
+                0
+              ],
+              [
+                null,
+                500
+              ]
+            ],
+            "label": "VAT on revenue, 5% for services",
+            "basis": "revenue",
+            "mode": "flat"
+          },
+          {
+            "name": "tncn",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                500000000,
+                0
+              ],
+              [
+                null,
+                200
+              ]
+            ],
+            "label": "Personal income tax on revenue, 2% for services",
+            "basis": "revenue",
+            "mode": "flat"
+          }
+        ],
+        "notes": [
+          "Households with revenue up to VND 500 million a year owe neither tax (2026 threshold); above it the rates apply to the whole revenue."
+        ]
+      }
+    },
+    {
+      "id": "company-vat",
+      "label": "Company: VAT 10% + corporate income tax reserve 20%",
+      "vatBps": 1000,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "cit",
+          "bps": 2000,
+          "label": "Corporate income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "company-vat-8",
+      "label": "Company, eligible goods and services: temporary VAT 8% (until 31 Dec 2026) + corporate income tax reserve 20%",
+      "vatBps": 800,
+      "vatRate": "temporary_reduced",
+      "buckets": [
+        {
+          "name": "cit",
+          "bps": 2000,
+          "label": "Corporate income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "cit",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            null,
+            2000
+          ]
+        ],
+        "label": "Corporate income tax 20% (15% or 17% for small companies by revenue)"
+      }
+    ]
+  },
+  "notes": [
+    "When the temporary 8% rate ends, the reserve check reports the vault's rule as out of date and the app proposes the 10% rule with notice.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "DFDL: extension of the reduced 8% VAT rate to 31 December 2026",
+      "url": "https://www.dfdl.com/insights/legal-and-tax-updates/vietnam-extension-of-the-reduced-8-vat-rate-to-31-december-2026/"
+    },
+    {
+      "title": "Viet An Law: calculating business household tax in 2026",
+      "url": "https://vietanlaw.com/calculating-business-household-tax-in-vietnam-2026/"
+    }
+  ]
+}

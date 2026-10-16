@@ -9,7 +9,9 @@
  *  5. the freelancer pays the VAT bucket to the tax destination before the due date;
  *  6. an early release is refused (NotDue), and a new destination cannot apply before its notice;
  *  7. after the due date the rest of the period is released to the freelancer;
- *  8. the vault's events are read back and exported as CSV.
+ *  8. a scheduled VAT change (Thailand, 7% to 10%) is signed ahead with propose_rule_at:
+ *     the vault keeps 7% until the change time and charges 10% from then on;
+ *  9. the vault's events are read back and exported as CSV.
  *
  * For the demo the vault uses 4-minute periods and a 2-minute notice, so the
  * whole cycle fits in one run; real vaults use the rule pack's quarters.
@@ -23,7 +25,7 @@ import { invoiceReference, KyrosClient, KyrosError } from '../client.js';
 import { vaultEvents, toCsv } from '../events.js';
 import { Keeper } from '../keeper.js';
 import { periodLabel } from '../periods.js';
-import { loadRulePack, termsFromPack } from '../rulepacks.js';
+import { loadRulePack, termsFromPack, vatUpdatePlan } from '../rulepacks.js';
 import { formatAmount, parseAmount } from '../split.js';
 
 const args = process.argv.slice(2);
@@ -172,6 +174,31 @@ async function main(): Promise<void> {
   const notYet = await expectRefusal(() => c.send(k.keeper, c.applyPendingOp(vault.contractId)), 'ChangeNotReady');
   steps.push({ step: 'Applying it before the notice has passed is refused', ok: true, detail: `refused by the contract: ${notYet}` });
 
+  log('scheduled VAT change: Thailand 7% -> 10%, signed ahead');
+  const th = loadRulePack('th');
+  const thTerms = termsFromPack(th, 'vat-registered', '2026-10-16');
+  const thVault = await c.deployVault(k.keeper, vaultHash, {
+    owner: k.freelancer.publicKey(),
+    rule: thTerms.rule,
+    taxDestination: k.taxAccount.publicKey(),
+    noticeSecs: 120n,
+    period: thTerms.period,
+    dueOffsetSecs: thTerms.dueOffsetSecs,
+    tokens: [token],
+  });
+  // The plan for the real change (1 October 2027); the demo compresses its date to a few minutes from now.
+  const plan = vatUpdatePlan(th, 'vat-registered', thTerms.rule, 120n, '2026-10-16');
+  if (plan.action !== 'schedule' || !plan.rule) throw new Error(`unexpected plan: ${plan.action}`);
+  const effectiveAt = BigInt(Math.floor(Date.now() / 1000)) + 150n;
+  const scheduled = await c.send(k.freelancer, c.proposeRuleAtOp(thVault.contractId, plan.rule, effectiveAt));
+  const thBefore = await c.quote(thVault.contractId, parseAmount('1070'));
+  steps.push({
+    step: 'Thailand vault: the owner signs the scheduled VAT change (7% to 10%) ahead of its date with propose_rule_at',
+    ok: thBefore.vat === parseAmount('70'),
+    tx: scheduled.hash,
+    detail: `${plan.message} Demo date: ${new Date(Number(effectiveAt) * 1000).toISOString()}; before it, 1,070 still splits as VAT ${formatAmount(thBefore.vat)} (vault ${thVault.contractId})`,
+  });
+
   const due = await c.dueDate(vault.contractId, pid);
   const waitMs = Number(due) * 1000 - Date.now() + 15_000;
   log(`waiting ${Math.ceil(waitMs / 1000)} s for the due date`);
@@ -210,6 +237,22 @@ async function main(): Promise<void> {
       detail: `net ${formatAmount(q.net)}, VAT ${formatAmount(q.vat)}, other reserve ${formatAmount(q.reserve - q.vat)} (vault ${v.contractId})`,
     });
   }
+
+  const thWait = Number(effectiveAt) * 1000 - Date.now() + 10_000;
+  if (thWait > 0) {
+    log(`waiting ${Math.ceil(thWait / 1000)} s for the scheduled VAT change`);
+    await sleep(thWait);
+  }
+  const thGross = parseAmount('1100');
+  const thQuote = await c.quote(thVault.contractId, thGross);
+  const thHeld = await c.balance(token, thVault.contractId);
+  const thPaid = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: thVault.contractId, token, amount: thGross, reference: invoiceReference('INV-TH-001') }));
+  steps.push({
+    step: 'After the change time the same vault charges 10% VAT on its own, with no new signature',
+    ok: thQuote.vat === parseAmount('100') && (await c.balance(token, thVault.contractId)) - thHeld === thQuote.reserve,
+    tx: thPaid.hash,
+    detail: `1,100 KUSD: net ${formatAmount(thQuote.net)}, VAT ${formatAmount(thQuote.vat)}, income tax reserve ${formatAmount(thQuote.reserve - thQuote.vat)}`,
+  });
 
   log('reading events');
   const startLedger = (await c.server.getLatestLedger()).sequence - 400;

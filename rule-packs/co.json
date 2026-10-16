@@ -1,0 +1,125 @@
+{
+  "$schema": "./schema.json",
+  "id": "co",
+  "country": "CO",
+  "name": "Colombia: trabajadores independientes",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "COP",
+  "vatName": "IVA",
+  "vatRates": [
+    {
+      "from": "2017-01-01",
+      "rates": {
+        "standard": 1900,
+        "reduced": 500
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 293,
+  "dueNote": "IVA returns are bimonthly or four-monthly. The income tax return is filed between August and October depending on the taxpayer's ID; the rest of a year's reserve is released after 20 October.",
+  "presets": [
+    {
+      "id": "responsable-iva",
+      "label": "Responsable de IVA: IVA 19% + income tax and social security reserve 25%",
+      "vatBps": 1900,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax and social security (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "no-responsable-iva",
+      "label": "No responsable de IVA + income tax and social security reserve 25%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax and social security (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "renta",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            57087660,
+            0
+          ],
+          [
+            89035800,
+            1900
+          ],
+          [
+            214733400,
+            2800
+          ],
+          [
+            454082580,
+            3300
+          ],
+          [
+            993534780,
+            3500
+          ],
+          [
+            1623594000,
+            3700
+          ],
+          [
+            null,
+            3900
+          ]
+        ],
+        "label": "Income tax, article 241 table (UVT 2026: COP 52,374)"
+      },
+      {
+        "name": "seguridad_social",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1140
+          ]
+        ],
+        "label": "Health 12.5% and pension 16% on 40% of income",
+        "basis": "revenue"
+      }
+    ],
+    "notes": [
+      "The 25% exempt labour income is not applied, so the estimate is on the high side."
+    ]
+  },
+  "notes": [
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "INCP: DIAN sets the 2026 UVT at COP 52,374",
+      "url": "https://incp.org.co/publicaciones/infoincp-publicaciones/impuestos/2025/12/dian-fijo-en-52-374-en-valor-de-la-uvt-para-el-ano-gravable-2026/"
+    },
+    {
+      "title": "DIAN",
+      "url": "https://www.dian.gov.co"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "./schema.json",
+  "id": "bs",
+  "country": "BS",
+  "name": "The Bahamas: businesses registered for VAT",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "BSD",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2022-01-01",
+      "rates": {
+        "standard": 1000
+      }
+    },
+    {
+      "from": "2018-07-01",
+      "rates": {
+        "standard": 1200
+      }
+    },
+    {
+      "from": "2015-01-01",
+      "rates": {
+        "standard": 750
+      }
+    }
+  ],
+  "period": "Quarter",
+  "dueOffsetDays": 21,
+  "dueNote": "VAT returns are due 21 days after each period: quarterly below BSD 5 million of turnover, monthly above.",
+  "presets": [
+    {
+      "id": "vat-only",
+      "label": "VAT 10%, no income tax",
+      "vatBps": 1000,
+      "vatRate": "standard",
+      "buckets": []
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": []
+  },
+  "notes": [
+    "There is no personal income tax, corporate income tax or capital gains tax. VAT registration is required above BSD 100,000 of taxable supplies. Digital assets are regulated under the DARE Act.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Deloitte: Bahamas tax highlights 2026",
+      "url": "https://www.deloitte.com/content/dam/assets-shared/docs/services/tax/2026/dttl-tax-bahamashighlights-2026.pdf"
+    },
+    {
+      "title": "Kintsugi: Bahamas VAT guide 2026",
+      "url": "https://trykintsugi.com/sales-tax-guides/latam/bahamas"
+    }
+  ]
+}

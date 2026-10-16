@@ -1,0 +1,225 @@
+{
+  "$schema": "./schema.json",
+  "id": "ph",
+  "country": "PH",
+  "name": "Philippines: self-employed and professionals",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "PHP",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2006-02-01",
+      "rates": {
+        "standard": 1200
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 105,
+  "dueNote": "Quarterly returns are due on 15 May, 15 August and 15 November; the annual return and balance on 15 April.",
+  "presets": [
+    {
+      "id": "eight-percent",
+      "label": "8% income tax on gross receipts above PHP 250,000 (non-VAT, receipts up to PHP 3 million)",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 800,
+          "label": "8% income tax"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "income_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                250000,
+                0
+              ],
+              [
+                null,
+                800
+              ]
+            ],
+            "label": "8% income tax on gross receipts",
+            "basis": "revenue"
+          },
+          {
+            "name": "sss",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                1500
+              ]
+            ],
+            "label": "SSS for the self-employed, 15% up to the maximum salary credit",
+            "max": 63000
+          }
+        ]
+      }
+    },
+    {
+      "id": "graduated-non-vat",
+      "label": "Graduated income tax + 3% percentage tax (non-VAT): reserve 28%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "percentage_tax",
+          "bps": 300,
+          "label": "Percentage tax 3%"
+        },
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "income_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                250000,
+                0
+              ],
+              [
+                400000,
+                1500
+              ],
+              [
+                800000,
+                2000
+              ],
+              [
+                2000000,
+                2500
+              ],
+              [
+                8000000,
+                3000
+              ],
+              [
+                null,
+                3500
+              ]
+            ],
+            "label": "Graduated income tax"
+          },
+          {
+            "name": "percentage_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                300
+              ]
+            ],
+            "label": "Percentage tax",
+            "basis": "revenue"
+          },
+          {
+            "name": "sss",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                1500
+              ]
+            ],
+            "label": "SSS for the self-employed, 15% up to the maximum salary credit",
+            "max": 63000
+          }
+        ]
+      }
+    },
+    {
+      "id": "vat-registered",
+      "label": "VAT 12% + income tax reserve 25%",
+      "vatBps": 1200,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            250000,
+            0
+          ],
+          [
+            400000,
+            1500
+          ],
+          [
+            800000,
+            2000
+          ],
+          [
+            2000000,
+            2500
+          ],
+          [
+            8000000,
+            3000
+          ],
+          [
+            null,
+            3500
+          ]
+        ],
+        "label": "Graduated income tax"
+      },
+      {
+        "name": "sss",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1500
+          ]
+        ],
+        "label": "SSS for the self-employed, 15% up to the maximum salary credit",
+        "max": 63000
+      }
+    ]
+  },
+  "notes": [
+    "VAT registration is required above PHP 3 million of gross sales.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Bureau of Internal Revenue",
+      "url": "https://www.bir.gov.ph"
+    }
+  ]
+}

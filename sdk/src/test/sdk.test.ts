@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { Account, Keypair, Networks, scValToNative, nativeToScVal, TransactionBuilder, BASE_FEE, Contract, xdr } from '@stellar/stellar-sdk';
 import { split, validateRule, RuleError, formatAmount, parseAmount } from '../split.js';
 import { periodOf, periodStart, periodEnd, periodLabel, dueDate, civilFromDays, daysFromCivil, type PeriodKind } from '../periods.js';
-import { listRulePacks, loadRulePack, termsFromPack } from '../rulepacks.js';
+import { listRulePacks, loadRulePack, termsFromPack, vatRatesOn, presetVatBps, checkRuleVat, customRule, vatChanges, vatUpdatePlan } from '../rulepacks.js';
+import { checkReserve, estimateTaxes } from '../estimate.js';
 import { ruleToScVal, periodKindToScVal, splitFromScVal } from '../scval.js';
 import { sep7TxUri } from '../sep7.js';
 import { toCsv } from '../events.js';
@@ -82,13 +83,19 @@ test('the Spain rule pack loads and gives valid vault terms', () => {
 
 test('every bundled rule pack is valid, and presets can override the calendar', () => {
   const ids = listRulePacks();
-  for (const id of ['ad', 'ae', 'ch', 'de', 'ee', 'es', 'fr', 'gb', 'ge', 'hk', 'ie', 'it', 'lu', 'nl', 'pt', 'sg', 'us']) assert.ok(ids.includes(id), id);
+  const expected = ['ad', 'ae', 'ar', 'au', 'br', 'bs', 'ca', 'ch', 'co', 'cy', 'de', 'ee', 'es', 'fr', 'gb', 'ge', 'hk', 'id', 'ie', 'in', 'it', 'jp', 'ke', 'kr',
+    'lu', 'mt', 'mx', 'ng', 'nl', 'pa', 'ph', 'pk', 'pr', 'pt', 'sg', 'sv', 'th', 'tr', 'ua', 'us', 'vn', 'za'];
+  assert.deepEqual(ids, expected);
   for (const id of ids) {
     const pack = loadRulePack(id);
     assert.equal(pack.id, id);
+    assert.equal(pack.country, id.toUpperCase());
     assert.ok(pack.sources && pack.sources.length > 0, `${id} cites sources`);
+    assert.ok(pack.reviewed, `${id} has a review date`);
     for (const p of pack.presets) {
-      const t = termsFromPack(pack, p.id);
+      // The rate written in each preset is the one in force when the pack was reviewed.
+      assert.equal(presetVatBps(pack, p.id, pack.reviewed!), p.vatBps, `${id}/${p.id} VAT`);
+      const t = termsFromPack(pack, p.id, pack.reviewed!);
       const s = split(t.rule, parseAmount('1000'));
       assert.equal(s.net + s.reserve, s.gross, `${id}/${p.id}`);
     }
@@ -148,4 +155,103 @@ test('invoice references are 32-byte hashes, never the invoice itself', () => {
   const r = invoiceReference('INV-2027-001');
   assert.equal(r.length, 32);
   assert.notDeepEqual(invoiceReference('INV-2027-002'), r);
+});
+
+test('VAT tables follow their dates; a vault learns when its rate changes', () => {
+  const ee = loadRulePack('ee');
+  assert.equal(vatRatesOn(ee, '2025-06-30').standard, 2200);
+  assert.equal(vatRatesOn(ee, '2025-07-01').standard, 2400);
+  assert.equal(termsFromPack(ee, 'standard', '2025-03-01').rule.vatBps, 2200);
+
+  // Vietnam's temporary 8% ends after 2026: the rule is current now and flagged for 2027.
+  const vn = loadRulePack('vn');
+  assert.equal(presetVatBps(vn, 'company-vat-8', '2026-12-31'), 800);
+  assert.throws(() => presetVatBps(vn, 'company-vat-8', '2027-01-01'));
+  const now = checkRuleVat(vn, 'company-vat-8', 800, '2026-10-16');
+  assert.equal(now.upToDate, true);
+  assert.deepEqual(now.next, { from: '2027-01-01', bps: undefined, proposed: false });
+  assert.equal(checkRuleVat(vn, 'company-vat-8', 800, '2027-01-02').upToDate, false);
+
+  // Switzerland: 8.5% from 2028 is only proposed, so it is reported but never applied.
+  const ch = loadRulePack('ch');
+  assert.deepEqual(checkRuleVat(ch, 'standard', 810, '2026-10-16').next, { from: '2028-01-01', bps: 850, proposed: true });
+  assert.equal(presetVatBps(ch, 'standard', '2028-06-01'), 810);
+  assert.equal(vatChanges(ch, '2026-10-16').length, 1);
+
+  // Thailand: back to the statutory 10% on 1 October 2027 unless extended.
+  const th = loadRulePack('th');
+  assert.equal(presetVatBps(th, 'vat-registered', '2027-09-30'), 700);
+  assert.equal(presetVatBps(th, 'vat-registered', '2027-10-01'), 1000);
+  assert.equal(checkRuleVat(th, 'vat-registered', 900, '2026-10-16').upToDate, false);
+
+  // What the app asks the owner to sign so the vault follows the table.
+  const thRule = { vatBps: 700, buckets: [{ name: 'pit', bps: 1800 }] };
+  const plan = vatUpdatePlan(th, 'vat-registered', thRule, 7 * 86_400, '2026-10-16');
+  assert.equal(plan.action, 'schedule');
+  assert.deepEqual(plan.rule, { vatBps: 1000, buckets: [{ name: 'pit', bps: 1800 }] });
+  assert.equal(plan.effectiveAt, BigInt(Date.UTC(2027, 9, 1) / 1000));
+  assert.equal(plan.signBy!.toISOString(), '2027-09-24T00:00:00.000Z');
+  assert.equal(vatUpdatePlan(th, 'vat-registered', thRule, 0, '2027-10-02').action, 'update');
+  assert.equal(vatUpdatePlan(ch, 'standard', { vatBps: 810, buckets: [] }, 0, '2026-10-16').action, 'review');
+  assert.equal(vatUpdatePlan(vn, 'company-vat-8', { vatBps: 800, buckets: [] }, 0, '2026-10-16').action, 'review');
+  assert.equal(vatUpdatePlan(ee, 'standard', { vatBps: 2400, buckets: [] }, 0, '2026-10-16').action, 'none');
+
+  // A rule the user composes: a country rate plus their own reserve.
+  assert.deepEqual(customRule(loadRulePack('es'), { vatRate: 'reduced', reserves: [{ name: 'irpf', bps: 1500 }] }, '2026-10-16'),
+    { vatBps: 1000, buckets: [{ name: 'irpf', bps: 1500 }] });
+  assert.throws(() => customRule(loadRulePack('es'), { vatRate: 'nope', reserves: [] }));
+});
+
+test('reserve check: short, ok, generous, and exact regimes', () => {
+  // Spain, EUR 80,000 a year with EUR 8,000 of expenses: RETA (capped at EUR 7,100) is deducted first,
+  // then annual IRPF on EUR 64,900 is EUR 19,052, about 23.8% of revenue: more than the 20% prepayment.
+  const es = loadRulePack('es');
+  const a = checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000 });
+  assert.equal(Math.round(a.incomeTax!), 19_052);
+  assert.equal(a.status, 'short');
+  assert.equal(a.requiredBps, 2382);
+  assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, reserveBps: 3000 }).status, 'ok');
+  assert.equal(checkReserve(es, 'general', { revenue: 12_000, expenses: 1_200 }).status, 'generous');
+
+  // Italy, forfettario: 78% x (15% + 26.07%) = 32.03% of revenue; the preset reserves 33%.
+  const it = checkReserve(loadRulePack('it'), 'forfettario', { revenue: 50_000 });
+  assert.equal(it.requiredBps, 3204);
+  assert.equal(it.status, 'ok');
+
+  // Mexico, RESICO: one rate on all income by band.
+  const mx = estimateTaxes(loadRulePack('mx').presets.find((p) => p.id === 'resico')!.estimate!, { revenue: 800_000 });
+  assert.equal(mx.incomeTax, 12_000);
+
+  // Ukraine, group 3: 6% of income is exact; the fixed ESV only counts if the reserve should cover it.
+  const ua = loadRulePack('ua');
+  assert.equal(checkReserve(ua, 'fop-group-3', { revenue: 1_000_000 }).requiredBps, 600);
+  assert.equal(checkReserve(ua, 'fop-group-3', { revenue: 1_000_000, covers: ['incomeTax', 'social'] }).status, 'short');
+
+  // India, presumptive: 50% of INR 20 lakh is taxable; under the INR 12 lakh rebate nothing is due.
+  assert.equal(checkReserve(loadRulePack('in'), 'presumptive-gst', { revenue: 2_000_000 }).owed, 0);
+
+  // The Bahamas: no income tax. Switzerland: no estimate, so the check says it cannot tell.
+  assert.equal(checkReserve(loadRulePack('bs'), 'vat-only', { revenue: 100_000 }).requiredBps, 0);
+  assert.equal(checkReserve(loadRulePack('ch'), 'standard', { revenue: 100_000 }).status, 'unknown');
+
+  // Extra regional tax and fixed contributions entered by the user.
+  const us = checkReserve(loadRulePack('us'), 'no-state-income-tax', { revenue: 100_000, activity: 'software' });
+  const usState = checkReserve(loadRulePack('us'), 'no-state-income-tax', { revenue: 100_000, activity: 'software', extraIncomeTaxBps: 500 });
+  assert.ok(usState.requiredBps! > us.requiredBps!);
+  assert.equal(us.expenses, 10_000);
+});
+
+test('every pack with an estimate gives a sensible answer across incomes', () => {
+  for (const id of listRulePacks()) {
+    const pack = loadRulePack(id);
+    for (const p of pack.presets) {
+      for (const revenue of [0, 10_000, 100_000, 1_000_000, 100_000_000]) {
+        const c = checkReserve(pack, p.id, { revenue });
+        if (c.status === 'unknown') continue;
+        // Fixed minimum contributions can exceed a very small revenue; at high revenue no estimate passes 100%.
+        assert.ok(Number.isFinite(c.requiredBps!) && c.requiredBps! >= 0, `${id}/${p.id} at ${revenue}: ${c.requiredBps}`);
+        if (revenue === 100_000_000) assert.ok(c.requiredBps! <= 10_000, `${id}/${p.id} at ${revenue}: ${c.requiredBps}`);
+      }
+    }
+  }
 });

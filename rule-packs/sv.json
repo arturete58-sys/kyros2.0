@@ -1,0 +1,97 @@
+{
+  "$schema": "./schema.json",
+  "id": "sv",
+  "country": "SV",
+  "name": "El Salvador: personas naturales con negocio",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "USD",
+  "vatName": "IVA",
+  "vatRates": [
+    {
+      "from": "2026-01-01",
+      "rates": {
+        "standard": 1300
+      },
+      "note": "Rate in force on 1 January 2026"
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 120,
+  "dueNote": "IVA and the 1.75% monthly payment on account are due monthly. The annual income tax return is due on 30 April.",
+  "presets": [
+    {
+      "id": "iva",
+      "label": "IVA 13% + income tax reserve 20%",
+      "vatBps": 1300,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "exportacion",
+      "label": "Exported services (IVA 0%) + income tax reserve 20%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "isr",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            6600,
+            0
+          ],
+          [
+            9142.86,
+            2832
+          ],
+          [
+            22857.14,
+            2000
+          ],
+          [
+            null,
+            3000
+          ]
+        ],
+        "label": "Income tax after the 2025 reform (exempt up to USD 6,600 a year; the second band is approximated)"
+      }
+    ]
+  },
+  "notes": [
+    "The US dollar is the currency; bitcoin is legal tender, with acceptance voluntary since 2025.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Diario El Mundo: the reform that raised the exempt amount",
+      "url": "https://diario.elmundo.sv/politica/esto-dice-la-reforma-que-amplio-el-monto-exento-del-impuesto-sobre-la-renta"
+    },
+    {
+      "title": "Ministerio de Hacienda",
+      "url": "https://www.mh.gob.sv"
+    }
+  ]
+}

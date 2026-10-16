@@ -1,0 +1,232 @@
+{
+  "$schema": "./schema.json",
+  "id": "in",
+  "country": "IN",
+  "name": "India: freelancers, professionals and sole proprietors",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "INR",
+  "vatName": "GST",
+  "vatRates": [
+    {
+      "from": "2025-09-22",
+      "rates": {
+        "standard": 1800,
+        "merit": 500,
+        "demerit": 4000
+      },
+      "note": "GST 2.0: two main slabs, 5% and 18%"
+    },
+    {
+      "from": "2017-07-01",
+      "rates": {
+        "standard": 1800,
+        "low": 1200,
+        "merit": 500,
+        "high": 2800
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 212,
+  "dueNote": "GST returns and payment are monthly, by the 20th; advance tax falls due on 15 June, 15 September, 15 December and 15 March; pay them from the vault. The financial year runs April to March and returns are due on 31 July, so a calendar year's reserve is released on 31 July of the next year, after the return for April to December.",
+  "presets": [
+    {
+      "id": "presumptive-gst",
+      "label": "Presumptive taxation for professionals (section 44ADA) + GST 18% + income tax reserve 10%",
+      "vatBps": 1800,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "taxableShareBps": 5000,
+        "items": [
+          {
+            "name": "income_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                400000,
+                0
+              ],
+              [
+                800000,
+                500
+              ],
+              [
+                1200000,
+                1000
+              ],
+              [
+                1600000,
+                1500
+              ],
+              [
+                2000000,
+                2000
+              ],
+              [
+                2400000,
+                2500
+              ],
+              [
+                null,
+                3000
+              ]
+            ],
+            "label": "Income tax, new regime (FY 2026-27); full rebate up to INR 12 lakh; 4% cess",
+            "zeroUpTo": 1200000,
+            "surchargeBps": 400
+          }
+        ],
+        "notes": [
+          "Under section 44ADA, 50% of receipts is taxable profit (receipts up to INR 75 lakh with mostly digital receipts)."
+        ]
+      }
+    },
+    {
+      "id": "presumptive-export",
+      "label": "Exports of services under LUT (zero-rated GST) + presumptive income tax reserve 10%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "taxableShareBps": 5000,
+        "items": [
+          {
+            "name": "income_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                400000,
+                0
+              ],
+              [
+                800000,
+                500
+              ],
+              [
+                1200000,
+                1000
+              ],
+              [
+                1600000,
+                1500
+              ],
+              [
+                2000000,
+                2000
+              ],
+              [
+                2400000,
+                2500
+              ],
+              [
+                null,
+                3000
+              ]
+            ],
+            "label": "Income tax, new regime (FY 2026-27); full rebate up to INR 12 lakh; 4% cess",
+            "zeroUpTo": 1200000,
+            "surchargeBps": 400
+          }
+        ]
+      }
+    },
+    {
+      "id": "regular-gst",
+      "label": "Regular accounts + GST 18% + income tax reserve 25%",
+      "vatBps": 1800,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            400000,
+            0
+          ],
+          [
+            800000,
+            500
+          ],
+          [
+            1200000,
+            1000
+          ],
+          [
+            1600000,
+            1500
+          ],
+          [
+            2000000,
+            2000
+          ],
+          [
+            2400000,
+            2500
+          ],
+          [
+            null,
+            3000
+          ]
+        ],
+        "label": "Income tax, new regime (FY 2026-27); full rebate up to INR 12 lakh; 4% cess",
+        "zeroUpTo": 1200000,
+        "surchargeBps": 400
+      }
+    ]
+  },
+  "notes": [
+    "GST registration is required above INR 20 lakh of turnover for services (INR 10 lakh in special-category states). Exports of services under a Letter of Undertaking are zero-rated.",
+    "Gains on virtual digital assets are taxed separately at 30%, with 1% TDS on transfers; Kyros reserves apply to business income.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "ClearTax: GST rates after GST 2.0",
+      "url": "https://cleartax.in/s/gst-rates"
+    },
+    {
+      "title": "BankBazaar: income tax slabs FY 2026-27",
+      "url": "https://cobrand.bankbazaar.com/tax/income-tax-slabs.html"
+    },
+    {
+      "title": "Income Tax Department",
+      "url": "https://www.incometax.gov.in"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "./schema.json",
+  "id": "pa",
+  "country": "PA",
+  "name": "Panama: independent professionals",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "USD",
+  "vatName": "ITBMS",
+  "vatRates": [
+    {
+      "from": "2010-07-01",
+      "rates": {
+        "standard": 700
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 75,
+  "dueNote": "ITBMS returns are monthly. The annual income tax return of individuals is due on 15 March.",
+  "presets": [
+    {
+      "id": "itbms",
+      "label": "ITBMS 7% + income tax reserve 15%",
+      "vatBps": 700,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1500,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "itbms-foreign-source",
+      "label": "ITBMS 7%, foreign-source income only (not taxed in Panama)",
+      "vatBps": 700,
+      "vatRate": "standard",
+      "buckets": [],
+      "covers": []
+    },
+    {
+      "id": "no-itbms",
+      "label": "No ITBMS charged + income tax reserve 15%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 1500,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "isr",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            11000,
+            0
+          ],
+          [
+            50000,
+            1500
+          ],
+          [
+            null,
+            2500
+          ]
+        ],
+        "label": "Income tax, individuals"
+      }
+    ]
+  },
+  "notes": [
+    "Panama taxes on a territorial basis: income from foreign sources is not taxed. Taxes are paid in US dollars (the balboa is at par).",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Dirección General de Ingresos",
+      "url": "https://dgi.mef.gob.pa"
+    }
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "$schema": "./schema.json",
+  "id": "mx",
+  "country": "MX",
+  "name": "México: personas físicas (RESICO and actividad empresarial)",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "MXN",
+  "vatName": "IVA",
+  "vatRates": [
+    {
+      "from": "2019-01-01",
+      "rates": {
+        "standard": 1600,
+        "border": 800
+      },
+      "note": "8% in the northern and southern border regions under the border stimulus decree"
+    },
+    {
+      "from": "2014-01-01",
+      "rates": {
+        "standard": 1600
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 120,
+  "dueNote": "IVA and ISR are paid monthly, by the 17th of the following month; the annual return is due on 30 April.",
+  "presets": [
+    {
+      "id": "resico",
+      "label": "RESICO: IVA 16% + ISR up to 2.5% of income",
+      "vatBps": 1600,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "isr",
+          "bps": 250,
+          "label": "ISR RESICO"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "isr_resico",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                300000,
+                100
+              ],
+              [
+                600000,
+                110
+              ],
+              [
+                1000000,
+                150
+              ],
+              [
+                2500000,
+                200
+              ],
+              [
+                3500000,
+                250
+              ]
+            ],
+            "label": "ISR RESICO: one rate on all income by annual band",
+            "basis": "revenue",
+            "mode": "flat"
+          }
+        ]
+      }
+    },
+    {
+      "id": "resico-frontera",
+      "label": "RESICO, border region: IVA 8% + ISR up to 2.5%",
+      "vatBps": 800,
+      "vatRate": "border",
+      "buckets": [
+        {
+          "name": "isr",
+          "bps": 250,
+          "label": "ISR RESICO"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "isr_resico",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                300000,
+                100
+              ],
+              [
+                600000,
+                110
+              ],
+              [
+                1000000,
+                150
+              ],
+              [
+                2500000,
+                200
+              ],
+              [
+                3500000,
+                250
+              ]
+            ],
+            "label": "ISR RESICO: one rate on all income by annual band",
+            "basis": "revenue",
+            "mode": "flat"
+          }
+        ]
+      }
+    },
+    {
+      "id": "resico-exportacion",
+      "label": "RESICO, exported services (IVA 0%) + ISR up to 2.5%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "isr",
+          "bps": 250,
+          "label": "ISR RESICO"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "isr_resico",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                300000,
+                100
+              ],
+              [
+                600000,
+                110
+              ],
+              [
+                1000000,
+                150
+              ],
+              [
+                2500000,
+                200
+              ],
+              [
+                3500000,
+                250
+              ]
+            ],
+            "label": "ISR RESICO: one rate on all income by annual band",
+            "basis": "revenue",
+            "mode": "flat"
+          }
+        ]
+      }
+    },
+    {
+      "id": "actividad-empresarial",
+      "label": "Actividad empresarial y profesional: IVA 16% + ISR reserve 30%",
+      "vatBps": 1600,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "isr",
+          "bps": 3000,
+          "label": "ISR (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "isr",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            8952.49,
+            192
+          ],
+          [
+            75984.55,
+            640
+          ],
+          [
+            133536.07,
+            1088
+          ],
+          [
+            155229.8,
+            1600
+          ],
+          [
+            185852.57,
+            1792
+          ],
+          [
+            374837.88,
+            2136
+          ],
+          [
+            590795.99,
+            2352
+          ],
+          [
+            1127926.84,
+            3000
+          ],
+          [
+            1503902.46,
+            3200
+          ],
+          [
+            4511707.37,
+            3400
+          ],
+          [
+            null,
+            3500
+          ]
+        ],
+        "label": "ISR, annual table (article 152)"
+      }
+    ]
+  },
+  "notes": [
+    "RESICO applies to individuals with income up to MXN 3.5 million a year. Companies that pay an individual withhold part of the IVA and ISR; amounts withheld at source are then not owed again.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "SAT",
+      "url": "https://www.sat.gob.mx"
+    },
+    {
+      "title": "Alegra: RESICO for individuals",
+      "url": "https://blog.alegra.com/mexico/resico-personas-fisicas/"
+    }
+  ]
+}

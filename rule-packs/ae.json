@@ -3,8 +3,18 @@
   "id": "ae",
   "country": "AE",
   "name": "United Arab Emirates: freelancers and small companies",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "AED",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2018-01-01",
+      "rates": {
+        "standard": 500
+      }
+    }
+  ],
   "period": "Quarter",
   "dueOffsetDays": 28,
   "dueNote": "VAT returns are quarterly, due on the 28th day after the period. Corporate tax returns and payment are due nine months after the financial year.",
@@ -13,12 +23,14 @@
       "id": "vat-only",
       "label": "VAT 5%, no personal income tax",
       "vatBps": 500,
+      "vatRate": "standard",
       "buckets": []
     },
     {
       "id": "vat-and-corporate-tax",
       "label": "VAT 5% + corporate tax 9% (taxable profit above AED 375,000)",
       "vatBps": 500,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "corporate_tax",
@@ -26,10 +38,34 @@
           "label": "Corporate tax 9% (reserved on the whole base, a ceiling)"
         }
       ],
+      "covers": [
+        "incomeTax"
+      ],
       "period": "Year",
       "dueOffsetDays": 273
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "corporate_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            375000,
+            0
+          ],
+          [
+            null,
+            900
+          ]
+        ],
+        "label": "Corporate tax 9% on taxable profit above AED 375,000 (natural persons with business turnover above AED 1 million)",
+        "minRevenue": 1000000
+      }
+    ]
+  },
   "notes": [
     "There is no personal income tax. Corporate tax is 0% on taxable income up to AED 375,000 and 9% above.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

@@ -4,7 +4,7 @@ Three Soroban contracts hold every rule that touches money. Everything off-chain
 
 | Contract | Instances | Admin | Functions |
 | --- | --- | --- | --- |
-| Reserve Vault | one per user | none; the user is owner | `receive`, `quote`, `pay_tax`, `release`, `propose_rule`, `propose_destination`, `cancel`, `apply_pending`, reads |
+| Reserve Vault | one per user | none; the user is owner | `receive`, `quote`, `pay_tax`, `release`, `propose_rule`, `propose_rule_at`, `propose_destination`, `cancel`, `apply_pending`, reads |
 | Router | one, shared | none, no storage | `pay`, `quote` |
 | Inbox | one per user | none; tied to the user's vault | `sweep`, `return_unaccepted` |
 
@@ -65,7 +65,7 @@ Periods come from the rule pack: calendar months, quarters or years in UTC (quar
 
 ## Changes with notice
 
-`propose_rule` and `propose_destination` record a change that takes effect after the vault's notice period; until then the old rule and destination apply, and the owner can `cancel`. Both the proposal and the change emit events, so the user, an accountant or the app sees a change coming. A stolen key therefore cannot redirect the reserve at once.
+`propose_rule` and `propose_destination` record a change that takes effect after the vault's notice period; `propose_rule_at(rule, effective_at)` sets a later date, used to follow a scheduled VAT change: the owner signs ahead and the vault switches on the day the new rate applies, never before the notice has run; until then the old rule and destination apply, and the owner can `cancel`. Both the proposal and the change emit events, so the user, an accountant or the app sees a change coming. A stolen key therefore cannot redirect the reserve at once.
 
 ## Storage
 

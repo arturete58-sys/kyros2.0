@@ -141,6 +141,26 @@ fn a_new_rule_applies_only_after_notice_and_must_be_valid() {
 }
 
 #[test]
+fn a_scheduled_rule_switches_on_its_date_and_never_before_the_notice() {
+    let w = world();
+    // VAT goes from 21% to 22% thirty days from now; the owner signs today.
+    let date = FEB_10_2027 + 30 * 86_400;
+    let higher = Rule { vat_bps: 2200, buckets: vec![&w.e, Bucket { name: symbol_short!("irpf"), bps: 2000 }] };
+    assert_eq!(w.v.propose_rule_at(&higher, &date), date);
+    // The notice has run but the date has not come: the old rate still applies.
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert_eq!(w.v.quote(&(1_210 * UNIT)).vat, 210 * UNIT);
+    w.e.ledger().set_timestamp(date - 1);
+    assert_eq!(w.v.quote(&(1_210 * UNIT)).vat, 210 * UNIT);
+    // From the date on, every payment uses the new rate.
+    w.e.ledger().set_timestamp(date);
+    assert_eq!(w.v.quote(&(1_220 * UNIT)).vat, 220 * UNIT);
+    // A date sooner than the notice is pushed back to the end of the notice.
+    let lower = Rule { vat_bps: 2100, buckets: vec![&w.e, Bucket { name: symbol_short!("irpf"), bps: 2000 }] };
+    assert_eq!(w.v.propose_rule_at(&lower, &(date + 1)), date + NOTICE);
+}
+
+#[test]
 fn only_accepted_tokens_and_positive_amounts() {
     let w = world();
     let other = w.e.register_stellar_asset_contract_v2(Address::generate(&w.e)).address();

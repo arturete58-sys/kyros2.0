@@ -1,0 +1,104 @@
+{
+  "$schema": "./schema.json",
+  "id": "ng",
+  "country": "NG",
+  "name": "Nigeria: freelancers and small businesses",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "NGN",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2020-02-01",
+      "rates": {
+        "standard": 750
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 90,
+  "dueNote": "VAT returns are monthly, by the 21st. Annual income tax returns are due on 31 March; the rest of a year's reserve is released then.",
+  "presets": [
+    {
+      "id": "freelancer",
+      "label": "Below the VAT threshold: income tax reserve 20%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "vat-registered",
+      "label": "VAT 7.5% + income tax reserve 20%",
+      "vatBps": 750,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "pit",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            800000,
+            0
+          ],
+          [
+            3000000,
+            1500
+          ],
+          [
+            12000000,
+            1800
+          ],
+          [
+            25000000,
+            2100
+          ],
+          [
+            50000000,
+            2300
+          ],
+          [
+            null,
+            2500
+          ]
+        ],
+        "label": "Personal income tax, Nigeria Tax Act 2025 (from 2026)"
+      }
+    ]
+  },
+  "notes": [
+    "The Nigeria Tax Act 2025 applies from 1 January 2026; gains on digital assets are taxable.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "PwC Worldwide Tax Summaries: Nigeria, individual",
+      "url": "https://taxsummaries.pwc.com/nigeria/individual"
+    },
+    {
+      "title": "PaySpace: Nigeria tax reform 2026",
+      "url": "https://payspace.com/blog/nigeria-tax-reform-2026"
+    }
+  ]
+}

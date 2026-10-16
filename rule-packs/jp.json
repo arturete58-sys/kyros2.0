@@ -1,0 +1,168 @@
+{
+  "$schema": "./schema.json",
+  "id": "jp",
+  "country": "JP",
+  "name": "Japan: sole proprietors (kojin jigyo)",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "JPY",
+  "vatName": "Consumption tax",
+  "vatRates": [
+    {
+      "from": "2019-10-01",
+      "rates": {
+        "standard": 1000,
+        "reduced": 800
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 90,
+  "dueNote": "The final income tax return is due on 15 March and consumption tax for individuals on 31 March; the rest of a year's reserve is released then.",
+  "presets": [
+    {
+      "id": "taxable",
+      "label": "Consumption tax 10% + income tax, resident tax and health insurance reserve 30%",
+      "vatBps": 1000,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax, resident tax and insurance (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "exempt",
+      "label": "Tax-exempt business (taxable sales under JPY 10 million) + reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax, resident tax and insurance (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            1230000,
+            0
+          ],
+          [
+            3180000,
+            500
+          ],
+          [
+            4530000,
+            1000
+          ],
+          [
+            8180000,
+            2000
+          ],
+          [
+            10230000,
+            2300
+          ],
+          [
+            19230000,
+            3300
+          ],
+          [
+            41230000,
+            4000
+          ],
+          [
+            null,
+            4500
+          ]
+        ],
+        "label": "National income tax after the blue-return and basic deductions, with the 2.1% reconstruction surtax",
+        "surchargeBps": 210
+      },
+      {
+        "name": "resident_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            1230000,
+            0
+          ],
+          [
+            null,
+            1000
+          ]
+        ],
+        "label": "Resident tax 10%"
+      },
+      {
+        "name": "enterprise_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            2900000,
+            0
+          ],
+          [
+            null,
+            500
+          ]
+        ],
+        "label": "Individual enterprise tax 5% (most service businesses)"
+      },
+      {
+        "name": "nhi",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1000
+          ]
+        ],
+        "label": "National Health Insurance (about 10%, varies by municipality)",
+        "max": 1090000
+      },
+      {
+        "name": "pension",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            0
+          ]
+        ],
+        "label": "National Pension (fixed monthly premium)",
+        "basis": "revenue",
+        "min": 215000
+      }
+    ]
+  },
+  "notes": [
+    "Since the invoice system started in October 2023, many clients ask exempt businesses to register for consumption tax.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "National Tax Agency",
+      "url": "https://www.nta.go.jp/english/"
+    }
+  ]
+}

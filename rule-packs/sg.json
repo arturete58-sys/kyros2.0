@@ -3,8 +3,30 @@
   "id": "sg",
   "country": "SG",
   "name": "Singapore: sole proprietors",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "SGD",
+  "vatName": "GST",
+  "vatRates": [
+    {
+      "from": "2024-01-01",
+      "rates": {
+        "standard": 900
+      }
+    },
+    {
+      "from": "2023-01-01",
+      "rates": {
+        "standard": 800
+      }
+    },
+    {
+      "from": "2007-07-01",
+      "rates": {
+        "standard": 700
+      }
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 365,
   "dueNote": "GST returns are quarterly, due one month after the quarter. Income tax is assessed yearly after the return (due in April); the rest of a year's reserve is released one year after it ends.",
@@ -13,12 +35,17 @@
       "id": "gst",
       "label": "GST 9% + income tax reserve 15%",
       "vatBps": 900,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 1500,
           "label": "Income tax (progressive, up to 24%; suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -31,9 +58,90 @@
           "bps": 1500,
           "label": "Income tax (progressive, up to 24%; suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            20000,
+            0
+          ],
+          [
+            30000,
+            200
+          ],
+          [
+            40000,
+            350
+          ],
+          [
+            80000,
+            700
+          ],
+          [
+            120000,
+            1150
+          ],
+          [
+            160000,
+            1500
+          ],
+          [
+            200000,
+            1800
+          ],
+          [
+            240000,
+            1900
+          ],
+          [
+            280000,
+            1950
+          ],
+          [
+            320000,
+            2000
+          ],
+          [
+            500000,
+            2200
+          ],
+          [
+            1000000,
+            2300
+          ],
+          [
+            null,
+            2400
+          ]
+        ],
+        "label": "Resident income tax"
+      },
+      {
+        "name": "medisave",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1050
+          ]
+        ],
+        "label": "MediSave for the self-employed (up to 10.5%)",
+        "max": 8000,
+        "minRevenue": 6000
+      }
+    ]
+  },
   "notes": [
     "GST is 9%. Personal income tax is progressive from 0% to 24% after reliefs; 15% is a suggested reserve.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

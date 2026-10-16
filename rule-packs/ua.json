@@ -1,0 +1,165 @@
+{
+  "$schema": "./schema.json",
+  "id": "ua",
+  "country": "UA",
+  "name": "Ukraine: individual entrepreneurs (FOP)",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "UAH",
+  "vatName": "VAT (ПДВ)",
+  "vatRates": [
+    {
+      "from": "2026-01-01",
+      "rates": {
+        "standard": 2000,
+        "reduced_14": 1400,
+        "reduced_7": 700
+      },
+      "note": "Rates in force on 1 January 2026"
+    }
+  ],
+  "period": "Quarter",
+  "dueOffsetDays": 50,
+  "dueNote": "Group 3 declarations are filed within 40 days after each quarter and the tax is paid within the next 10 days.",
+  "presets": [
+    {
+      "id": "fop-group-3",
+      "label": "Single tax group 3: 5% + military levy 1% of income (no VAT)",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "single_tax",
+          "bps": 500,
+          "label": "Single tax"
+        },
+        {
+          "name": "military_levy",
+          "bps": 100,
+          "label": "Military levy"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "single_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                500
+              ]
+            ],
+            "label": "Single tax",
+            "basis": "revenue"
+          },
+          {
+            "name": "military_levy",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                100
+              ]
+            ],
+            "label": "Military levy",
+            "basis": "revenue"
+          },
+          {
+            "name": "esv",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                0
+              ]
+            ],
+            "label": "Unified social contribution (minimum UAH 1,902.34 a month)",
+            "basis": "revenue",
+            "min": 22828
+          }
+        ]
+      }
+    },
+    {
+      "id": "fop-group-3-vat",
+      "label": "Group 3 VAT payer: VAT 20% + single tax 3% + military levy 1%",
+      "vatBps": 2000,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "single_tax",
+          "bps": 300,
+          "label": "Single tax"
+        },
+        {
+          "name": "military_levy",
+          "bps": 100,
+          "label": "Military levy"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "single_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                300
+              ]
+            ],
+            "label": "Single tax",
+            "basis": "revenue"
+          },
+          {
+            "name": "military_levy",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                100
+              ]
+            ],
+            "label": "Military levy",
+            "basis": "revenue"
+          },
+          {
+            "name": "esv",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                0
+              ]
+            ],
+            "label": "Unified social contribution (minimum UAH 1,902.34 a month)",
+            "basis": "revenue",
+            "min": 22828
+          }
+        ]
+      }
+    }
+  ],
+  "notes": [
+    "Group 3 income limit for 2026: UAH 10.09 million. The unified social contribution (ESV) is a fixed monthly minimum, outside the vault unless the reserve is meant to cover it.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Komersant: FOP taxes in 2026, key figures",
+      "url": "https://komersant.ua/en/fop-i-podatky-u-2026-kliuchovi-tsyfry-iaki-maie-znaty-kozhen-pidpryiemets/"
+    },
+    {
+      "title": "State Tax Service of Ukraine",
+      "url": "https://tax.gov.ua"
+    }
+  ]
+}

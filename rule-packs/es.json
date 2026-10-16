@@ -3,8 +3,20 @@
   "id": "es",
   "country": "ES",
   "name": "Spain: self-employed (autónomos) and small companies",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "IVA",
+  "vatRates": [
+    {
+      "from": "2012-09-01",
+      "rates": {
+        "standard": 2100,
+        "reduced": 1000,
+        "super_reduced": 400
+      }
+    }
+  ],
   "period": "Quarter",
   "dueOffsetDays": 30,
   "dueNote": "Quarterly VAT (modelo 303) and income-tax prepayment (modelo 130) are filed in the first 20 days after each quarter, and until 30 January for the fourth quarter. The vault uses 30 days for every quarter; paying the tax earlier is always allowed.",
@@ -13,36 +25,48 @@
       "id": "general",
       "label": "General VAT 21% + income-tax prepayment 20%",
       "vatBps": 2100,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "irpf",
           "bps": 2000,
           "label": "Income-tax prepayment (modelo 130)"
         }
+      ],
+      "covers": [
+        "incomeTax"
       ]
     },
     {
       "id": "reduced-vat",
       "label": "Reduced VAT 10% + income-tax prepayment 20%",
       "vatBps": 1000,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "irpf",
           "bps": 2000,
           "label": "Income-tax prepayment (modelo 130)"
         }
+      ],
+      "covers": [
+        "incomeTax"
       ]
     },
     {
       "id": "super-reduced-vat",
       "label": "Super-reduced VAT 4% + income-tax prepayment 20%",
       "vatBps": 400,
+      "vatRate": "super_reduced",
       "buckets": [
         {
           "name": "irpf",
           "bps": 2000,
           "label": "Income-tax prepayment (modelo 130)"
         }
+      ],
+      "covers": [
+        "incomeTax"
       ]
     },
     {
@@ -55,15 +79,77 @@
           "bps": 2000,
           "label": "Income-tax prepayment (modelo 130)"
         }
+      ],
+      "covers": [
+        "incomeTax"
       ]
     },
     {
       "id": "vat-only",
       "label": "VAT 21% only (income tax handled elsewhere)",
       "vatBps": 2100,
-      "buckets": []
+      "vatRate": "standard",
+      "buckets": [],
+      "covers": []
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "irpf",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            5550,
+            0
+          ],
+          [
+            12450,
+            1900
+          ],
+          [
+            20200,
+            2400
+          ],
+          [
+            35200,
+            3000
+          ],
+          [
+            60000,
+            3700
+          ],
+          [
+            300000,
+            4500
+          ],
+          [
+            null,
+            4700
+          ]
+        ],
+        "label": "IRPF, state and regional scale combined (general scale; regions vary slightly), personal minimum 5,550"
+      },
+      {
+        "name": "reta",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            3140
+          ]
+        ],
+        "label": "Social security for the self-employed (RETA), about 31.4% of net income",
+        "min": 2400,
+        "max": 7100
+      }
+    ],
+    "notes": [
+      "IRPF is settled in the annual return (June); the quarterly modelo 130 prepays 20% of the quarter's net profit. RETA is paid monthly by direct debit, outside the vault, unless the reserve is meant to cover it."
+    ]
+  },
   "notes": [
     "The income-tax prepayment of modelo 130 is 20% of the quarter's net profit (income minus deductible expenses). Kyros reserves 20% of the taxable base of each payment, which is never less than what is due; the surplus is released after the due date.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

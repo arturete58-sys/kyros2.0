@@ -1,0 +1,130 @@
+{
+  "$schema": "./schema.json",
+  "id": "tr",
+  "country": "TR",
+  "name": "Türkiye: self-employed (serbest meslek) and sole traders",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "TRY",
+  "vatName": "KDV",
+  "vatRates": [
+    {
+      "from": "2023-07-10",
+      "rates": {
+        "standard": 2000,
+        "reduced": 1000,
+        "super_reduced": 100
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 212,
+  "dueNote": "KDV returns are monthly, by the 28th. The annual income tax return is filed in March and the tax is paid in two instalments, in March and July; the rest of a year's reserve is released after 31 July.",
+  "presets": [
+    {
+      "id": "kdv-standard",
+      "label": "KDV 20% + income tax reserve 30%",
+      "vatBps": 2000,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "kdv-reduced",
+      "label": "KDV 10% + income tax reserve 30%",
+      "vatBps": 1000,
+      "vatRate": "reduced",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "export-services",
+      "label": "Exported services (KDV exempt) + income tax reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "gelir_vergisi",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            190000,
+            1500
+          ],
+          [
+            400000,
+            2000
+          ],
+          [
+            1000000,
+            2700
+          ],
+          [
+            5300000,
+            3500
+          ],
+          [
+            null,
+            4000
+          ]
+        ],
+        "label": "Income tax 2026, non-wage income"
+      },
+      {
+        "name": "bag_kur",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            0
+          ]
+        ],
+        "label": "Bağ-Kur minimum (34.75% on the minimum base)",
+        "basis": "revenue",
+        "min": 137700
+      }
+    ]
+  },
+  "notes": [
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "PwC Türkiye: 2026 income tax figures",
+      "url": "https://www.pwc.com.tr/tr/hizmetlerimiz/vergi/bultenler/2026/2026-yili-bazi-gelir-vergisi-rakamlari.html"
+    },
+    {
+      "title": "Gelir İdaresi Başkanlığı",
+      "url": "https://www.gib.gov.tr"
+    }
+  ]
+}

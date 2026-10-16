@@ -42,8 +42,8 @@ Every behaviour that matters is enforced by a contract:
 | [`contracts/reserve-vault`](contracts/reserve-vault) | Reserve Vault: one per user, owner = user, no admin |
 | [`contracts/router`](contracts/router) | Router: shared, stateless entry point for integrated payers |
 | [`contracts/inbox`](contracts/inbox) | Inbox: one per user, a payment address that needs no integration |
-| [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, SEP-7 links, event reader and CSV export, keeper |
-| [`rule-packs`](rule-packs) | Rule packs for 17 jurisdictions (EU, Switzerland, UK, US, UAE, Singapore, Hong Kong, Georgia, Andorra) and their JSON schema |
+| [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check, SEP-7 links, event reader and CSV export, keeper |
+| [`rule-packs`](rule-packs) | Rule packs for 42 jurisdictions: dated VAT tables, presets, fiscal calendars and tax estimates, with their JSON schema |
 | [`test-vectors`](test-vectors) | Split and calendar cases checked by both the Rust and the SDK tests |
 | [`docs`](docs) | Architecture, Stellar integration, rule packs, latest testnet run |
 
@@ -57,6 +57,21 @@ net    = gross - vat - sum(part_i)                    the parts always add up to
 ```
 
 A 1,210 USDC invoice with 21% VAT and a 20% income-tax prepayment: **800 to the user, 210 VAT and 200 income tax to the vault.**
+
+## Any country, the user's own reserve
+
+Each [rule pack](docs/rule-packs.md) carries the country's VAT tables with the dates they apply from, suggested presets and a simplified tax estimate. The user picks a VAT rate and the reserve they want; the SDK tells them whether that reserve is enough for their country, regime, activity and expected income. When a country's VAT changes, the owner signs the new rule once, ahead of time, and the vault switches on the day the new rate applies.
+
+```ts
+import { loadRulePack, checkReserve, vatUpdatePlan } from 'kyros-sdk';
+
+checkReserve(loadRulePack('de'), 'standard', { revenue: 60_000, activity: 'software', reserveBps: 3000 });
+// { status: 'short', requiredBps: 3115, owed: 18687, lines: [health insurance 10260, income tax 8427] }
+
+vatUpdatePlan(loadRulePack('th'), 'vat-registered', { vatBps: 700, buckets: [{ name: 'income_tax', bps: 2000 }] }, 7 * 86_400);
+// { action: 'schedule', rule: { vatBps: 1000, ... }, effectiveAt: 2027-10-01T00:00Z, signBy: 2027-09-24 }
+// -> client.proposeRuleAtOp(vault, plan.rule, plan.effectiveAt), signed by the owner
+```
 
 ## Quick start
 
@@ -111,7 +126,7 @@ Soroban contracts and authorization · Stellar Asset Contracts (USDC, EURC) thro
 
 Early, open-source and on testnet. The contracts have not been audited yet; do not use them with real funds before an audit.
 
-Rule packs cover Spain, Germany, France, the Netherlands, Luxembourg, Italy, Portugal, Ireland, Estonia, Switzerland, the United Kingdom, the United States, the UAE, Singapore, Hong Kong, Georgia and Andorra ([docs/rule-packs.md](docs/rule-packs.md)). They are information, not tax advice: they suggest percentages and dates, the user confirms them, and the contract enforces what the user chose.
+Rule packs cover 42 jurisdictions ([docs/rule-packs.md](docs/rule-packs.md)): crypto hubs (UAE, Switzerland, Singapore, Hong Kong, Malta, Cyprus, Estonia, Portugal, Georgia, Andorra, El Salvador, Panama, Puerto Rico, the Bahamas), the countries with the highest crypto adoption (India, the United States, Pakistan, Vietnam, Brazil, Nigeria, Indonesia, Ukraine, the Philippines, the UK, Japan, Argentina, South Korea, Thailand, Türkiye, Mexico, Colombia, Kenya, South Africa) and the main EU economies, Canada and Australia. A [weekly check](.github/workflows/vat-rates.yml) compares the EU and UK VAT tables with an independent dataset. Rule packs are information, not tax advice: they suggest percentages and dates, the user confirms them, and the contract enforces what the user chose.
 
 ## Team
 

@@ -3,8 +3,27 @@
   "id": "de",
   "country": "DE",
   "name": "Germany: freelancers (Freiberufler) and sole traders",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "USt",
+  "vatRates": [
+    {
+      "from": "2021-01-01",
+      "rates": {
+        "standard": 1900,
+        "reduced": 700
+      }
+    },
+    {
+      "from": "2020-07-01",
+      "rates": {
+        "standard": 1600,
+        "reduced": 500
+      },
+      "note": "Temporary Covid-19 reduction"
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 300,
   "dueNote": "VAT returns (Umsatzsteuer-Voranmeldung) are due on the 10th day after each month or quarter, and income-tax prepayments on 10 March, June, September and December; pay them from the vault as they fall due. The rest of a year's reserve is released about ten months after the year ends, after the annual return and assessment.",
@@ -13,24 +32,34 @@
       "id": "standard",
       "label": "VAT 19% + income tax reserve 30%",
       "vatBps": 1900,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "reduced-vat",
       "label": "Reduced VAT 7% + income tax reserve 30%",
       "vatBps": 700,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -43,9 +72,78 @@
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "einkommensteuer",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            12348,
+            0
+          ],
+          [
+            15074,
+            1650
+          ],
+          [
+            17799,
+            2150
+          ],
+          [
+            30820,
+            2625
+          ],
+          [
+            43839,
+            3075
+          ],
+          [
+            56859,
+            3525
+          ],
+          [
+            69878,
+            3975
+          ],
+          [
+            277825,
+            4200
+          ],
+          [
+            null,
+            4500
+          ]
+        ],
+        "label": "Income tax, 2026 basic table (linear zones approximated in steps)"
+      },
+      {
+        "name": "kranken_pflege",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1900
+          ]
+        ],
+        "label": "Statutory health and long-term care insurance, about 19% of profit (if not privately insured)",
+        "min": 3000,
+        "max": 13250
+      }
+    ],
+    "notes": [
+      "Solidarity surcharge and church tax are not included; pension insurance is voluntary for most freelancers. Health insurance is treated as fully deductible."
+    ]
+  },
   "notes": [
     "Income tax is progressive (up to 45%) plus solidarity surcharge and, if applicable, church tax; 30% of the base is a suggested reserve, not a calculation.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

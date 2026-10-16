@@ -3,7 +3,8 @@
   "id": "us",
   "country": "US",
   "name": "United States: self-employed (federal)",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "USD",
   "period": "Year",
   "dueOffsetDays": 105,
@@ -19,6 +20,10 @@
           "bps": 3000,
           "label": "Federal income tax and self-employment tax 15.3% (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -31,7 +36,81 @@
           "bps": 3500,
           "label": "Federal and state income tax, self-employment tax (suggested reserve)"
         }
-      ]
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "federal_income_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                16100,
+                0
+              ],
+              [
+                28500,
+                1000
+              ],
+              [
+                66500,
+                1200
+              ],
+              [
+                121800,
+                2200
+              ],
+              [
+                217875,
+                2400
+              ],
+              [
+                272325,
+                3200
+              ],
+              [
+                656700,
+                3500
+              ],
+              [
+                null,
+                3700
+              ]
+            ],
+            "label": "Federal income tax 2026, single, after the standard deduction (USD 16,100)"
+          },
+          {
+            "name": "self_employment_tax",
+            "kind": "social",
+            "brackets": [
+              [
+                199783,
+                1413
+              ],
+              [
+                null,
+                268
+              ]
+            ],
+            "label": "Self-employment tax: 15.3% on 92.35% of profit up to the Social Security wage base, then 2.9%"
+          },
+          {
+            "name": "state_income_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                500
+              ]
+            ],
+            "label": "State income tax (typical 5%; enter your state's rate)"
+          }
+        ]
+      }
     },
     {
       "id": "with-sales-tax-example",
@@ -43,9 +122,75 @@
           "bps": 3000,
           "label": "Federal income tax and self-employment tax 15.3% (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "federal_income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            16100,
+            0
+          ],
+          [
+            28500,
+            1000
+          ],
+          [
+            66500,
+            1200
+          ],
+          [
+            121800,
+            2200
+          ],
+          [
+            217875,
+            2400
+          ],
+          [
+            272325,
+            3200
+          ],
+          [
+            656700,
+            3500
+          ],
+          [
+            null,
+            3700
+          ]
+        ],
+        "label": "Federal income tax 2026, single, after the standard deduction (USD 16,100)"
+      },
+      {
+        "name": "self_employment_tax",
+        "kind": "social",
+        "brackets": [
+          [
+            199783,
+            1413
+          ],
+          [
+            null,
+            268
+          ]
+        ],
+        "label": "Self-employment tax: 15.3% on 92.35% of profit up to the Social Security wage base, then 2.9%"
+      }
+    ],
+    "notes": [
+      "The qualified business income deduction and the deduction for half of the self-employment tax are not applied, so the estimate is on the high side. State income tax: add it as an extra rate."
+    ]
+  },
   "notes": [
     "There is no federal VAT. Sales tax is set by states and localities and does not apply to most services; set the rate your state requires, if any.",
     "Self-employment tax is 15.3% (Social Security and Medicare) on 92.35% of net earnings; Alaska, Florida, Nevada, New Hampshire, South Dakota, Tennessee, Texas, Washington and Wyoming have no broad state income tax on wages and self-employment earnings.",
@@ -59,6 +204,10 @@
     {
       "title": "IRS: self-employment tax",
       "url": "https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax-social-security-and-medicare-taxes"
+    },
+    {
+      "title": "2026 federal tax brackets (IRS Rev. Proc. 2025-32)",
+      "url": "https://www.breakeven.tax/brackets/2026"
     }
   ]
 }

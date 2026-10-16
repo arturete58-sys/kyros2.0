@@ -1,0 +1,112 @@
+{
+  "$schema": "./schema.json",
+  "id": "za",
+  "country": "ZA",
+  "name": "South Africa: sole proprietors",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "ZAR",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2018-04-01",
+      "rates": {
+        "standard": 1500
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 273,
+  "dueNote": "VAT returns are bimonthly. The tax year runs March to February; provisional tax is paid in August and February with a top-up by the end of September; a calendar year's reserve is released on 30 September of the next year.",
+  "presets": [
+    {
+      "id": "vat",
+      "label": "VAT 15% + income tax reserve 30%",
+      "vatBps": 1500,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT threshold: income tax reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            237100,
+            1800
+          ],
+          [
+            370500,
+            2600
+          ],
+          [
+            512800,
+            3100
+          ],
+          [
+            673000,
+            3600
+          ],
+          [
+            857900,
+            3900
+          ],
+          [
+            1817000,
+            4100
+          ],
+          [
+            null,
+            4500
+          ]
+        ],
+        "label": "Income tax (2025/26 table) with the primary rebate",
+        "credit": 17235
+      }
+    ],
+    "notes": [
+      "The 2026/27 tables were adjusted for inflation, so the estimate is slightly on the high side."
+    ]
+  },
+  "notes": [
+    "The 2026 Budget raises the compulsory VAT registration threshold from R1 million to R2.3 million once legislated; the VAT rate stays at 15%.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Grant Thornton: 2026 Budget Speech highlights",
+      "url": "https://www.grantthornton.co.za/insights2/2026-budget-speech-highlights/"
+    },
+    {
+      "title": "SARS",
+      "url": "https://www.sars.gov.za"
+    }
+  ]
+}

@@ -3,8 +3,21 @@
   "id": "fr",
   "country": "FR",
   "name": "France: micro-entrepreneurs (auto-entrepreneurs)",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "TVA",
+  "vatRates": [
+    {
+      "from": "2014-01-01",
+      "rates": {
+        "standard": 2000,
+        "intermediate": 1000,
+        "reduced": 550,
+        "super_reduced": 210
+      }
+    }
+  ],
   "period": "Quarter",
   "dueOffsetDays": 31,
   "dueNote": "Micro-entrepreneurs declaring quarterly pay URSSAF contributions (and the optional versement libératoire) by the end of the month after each quarter.",
@@ -19,7 +32,55 @@
           "bps": 2580,
           "label": "URSSAF contributions incl. CFP"
         }
-      ]
+      ],
+      "covers": [
+        "social"
+      ],
+      "estimate": {
+        "year": 2026,
+        "taxableShareBps": 6600,
+        "items": [
+          {
+            "name": "urssaf",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                2580
+              ]
+            ],
+            "label": "URSSAF contributions and CFP on revenue",
+            "basis": "revenue"
+          },
+          {
+            "name": "impot_revenu",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                11600,
+                0
+              ],
+              [
+                29579,
+                1100
+              ],
+              [
+                84577,
+                3000
+              ],
+              [
+                181917,
+                4100
+              ],
+              [
+                null,
+                4500
+              ]
+            ],
+            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance"
+          }
+        ]
+      }
     },
     {
       "id": "micro-bnc-vl",
@@ -36,7 +97,40 @@
           "bps": 220,
           "label": "Versement libératoire"
         }
-      ]
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "urssaf",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                2580
+              ]
+            ],
+            "label": "URSSAF contributions and CFP on revenue",
+            "basis": "revenue"
+          },
+          {
+            "name": "versement_liberatoire",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                220
+              ]
+            ],
+            "label": "Income tax paid with contributions (versement libératoire)",
+            "basis": "revenue"
+          }
+        ]
+      }
     },
     {
       "id": "micro-bic-services",
@@ -48,24 +142,122 @@
           "bps": 2150,
           "label": "URSSAF contributions incl. CFP"
         }
-      ]
+      ],
+      "covers": [
+        "social"
+      ],
+      "estimate": {
+        "year": 2026,
+        "taxableShareBps": 5000,
+        "items": [
+          {
+            "name": "urssaf",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                2150
+              ]
+            ],
+            "label": "URSSAF contributions and CFP on revenue",
+            "basis": "revenue"
+          },
+          {
+            "name": "impot_revenu",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                11600,
+                0
+              ],
+              [
+                29579,
+                1100
+              ],
+              [
+                84577,
+                3000
+              ],
+              [
+                181917,
+                4100
+              ],
+              [
+                null,
+                4500
+              ]
+            ],
+            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance"
+          }
+        ]
+      }
     },
     {
       "id": "micro-bnc-vat",
       "label": "BNC above the VAT franchise: VAT 20% + URSSAF 25.8%",
       "vatBps": 2000,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "urssaf",
           "bps": 2580,
           "label": "URSSAF contributions incl. CFP"
         }
-      ]
+      ],
+      "covers": [
+        "social"
+      ],
+      "estimate": {
+        "year": 2026,
+        "taxableShareBps": 6600,
+        "items": [
+          {
+            "name": "urssaf",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                2580
+              ]
+            ],
+            "label": "URSSAF contributions and CFP on revenue",
+            "basis": "revenue"
+          },
+          {
+            "name": "impot_revenu",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                11600,
+                0
+              ],
+              [
+                29579,
+                1100
+              ],
+              [
+                84577,
+                3000
+              ],
+              [
+                181917,
+                4100
+              ],
+              [
+                null,
+                4500
+              ]
+            ],
+            "label": "Income tax, progressive scale for one person, on revenue after the flat allowance"
+          }
+        ]
+      }
     }
   ],
   "notes": [
     "2026 URSSAF rates on turnover: 25.6% + 0.2% CFP for non-regulated liberal professions (BNC), 21.2% + up to 0.3% CFP for BIC services. The versement libératoire is optional and depends on household income.",
     "Under the VAT franchise no VAT is charged; above it the standard rate is 20% (reduced 10%, 5.5%, 2.1%).",
+    "The micro presets reserve the URSSAF contributions; income tax under the progressive scale is due separately unless the versement libératoire is chosen. The reserve check shows both.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [

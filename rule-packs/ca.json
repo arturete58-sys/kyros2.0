@@ -1,0 +1,210 @@
+{
+  "$schema": "./schema.json",
+  "id": "ca",
+  "country": "CA",
+  "name": "Canada: self-employed individuals",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "CAD",
+  "vatName": "GST/HST",
+  "vatRates": [
+    {
+      "from": "2025-04-01",
+      "rates": {
+        "gst": 500,
+        "hst_13": 1300,
+        "hst_14": 1400,
+        "hst_15": 1500,
+        "gst_qst": 1498
+      },
+      "note": "Nova Scotia HST 14% from 1 April 2025. Quebec: GST 5% + QST 9.975% = 14.975%, shown as 14.98%"
+    },
+    {
+      "from": "2016-10-01",
+      "rates": {
+        "gst": 500,
+        "hst_13": 1300,
+        "hst_15": 1500,
+        "gst_qst": 1498
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 120,
+  "dueNote": "GST/HST returns are annual, quarterly or monthly. Self-employed individuals pay quarterly instalments and the balance by 30 April (return by 15 June); the rest of a year's reserve is released after 30 April.",
+  "presets": [
+    {
+      "id": "gst",
+      "label": "GST 5% (Alberta, British Columbia, Manitoba, Saskatchewan, territories) + reserve 30%",
+      "vatBps": 500,
+      "vatRate": "gst",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and CPP (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "hst-13",
+      "label": "HST 13% (Ontario) + reserve 30%",
+      "vatBps": 1300,
+      "vatRate": "hst_13",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and CPP (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "hst-14",
+      "label": "HST 14% (Nova Scotia) + reserve 30%",
+      "vatBps": 1400,
+      "vatRate": "hst_14",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and CPP (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "hst-15",
+      "label": "HST 15% (New Brunswick, Newfoundland and Labrador, Prince Edward Island) + reserve 30%",
+      "vatBps": 1500,
+      "vatRate": "hst_15",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and CPP (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "gst-qst",
+      "label": "GST + QST 14.98% (Quebec) + reserve 30%",
+      "vatBps": 1498,
+      "vatRate": "gst_qst",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and CPP (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "small-supplier",
+      "label": "Small supplier (under CAD 30,000, no GST/HST) + reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and CPP (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "federal_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            58523,
+            1400
+          ],
+          [
+            117045,
+            2050
+          ],
+          [
+            181440,
+            2600
+          ],
+          [
+            258482,
+            2900
+          ],
+          [
+            null,
+            3300
+          ]
+        ],
+        "label": "Federal income tax 2026, basic personal amount credit",
+        "credit": 2303
+      },
+      {
+        "name": "cpp",
+        "kind": "social",
+        "brackets": [
+          [
+            3500,
+            0
+          ],
+          [
+            74600,
+            1190
+          ],
+          [
+            85000,
+            800
+          ],
+          [
+            null,
+            0
+          ]
+        ],
+        "label": "CPP and CPP2 for the self-employed"
+      }
+    ],
+    "notes": [
+      "Provincial income tax is not included: add your province's rate as an extra rate (for example about 5% to 11% in Ontario)."
+    ]
+  },
+  "notes": [
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Harvest Portfolios: CRA federal tax brackets for 2026",
+      "url": "https://harvestportfolios.com/cra-announces-federal-tax-bracket-thresholds-for-2026/"
+    },
+    {
+      "title": "Canada Revenue Agency",
+      "url": "https://www.canada.ca/en/revenue-agency.html"
+    }
+  ]
+}

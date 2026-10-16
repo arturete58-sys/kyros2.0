@@ -1,0 +1,127 @@
+{
+  "$schema": "./schema.json",
+  "id": "kr",
+  "country": "KR",
+  "name": "South Korea: freelancers and sole proprietors",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "KRW",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2026-01-01",
+      "rates": {
+        "standard": 1000
+      },
+      "note": "Rate in force on 1 January 2026"
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 151,
+  "dueNote": "VAT for individuals is filed twice a year (25 January and 25 July); the comprehensive income tax return is due on 31 May.",
+  "presets": [
+    {
+      "id": "general",
+      "label": "General taxpayer: VAT 10% + income tax reserve 25%",
+      "vatBps": 1000,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax and local income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "vat-exempt-freelancer",
+      "label": "VAT-exempt personal services (freelancers) + income tax reserve 25%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax and local income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            1500000,
+            0
+          ],
+          [
+            15500000,
+            600
+          ],
+          [
+            51500000,
+            1500
+          ],
+          [
+            89500000,
+            2400
+          ],
+          [
+            151500000,
+            3500
+          ],
+          [
+            301500000,
+            3800
+          ],
+          [
+            501500000,
+            4000
+          ],
+          [
+            1001500000,
+            4200
+          ],
+          [
+            null,
+            4500
+          ]
+        ],
+        "label": "Comprehensive income tax after the basic deduction, with local income tax (10% of the tax)",
+        "surchargeBps": 1000
+      },
+      {
+        "name": "nhi_pension",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1669
+          ]
+        ],
+        "label": "National Health Insurance and National Pension (approximate)",
+        "max": 15000000
+      }
+    ]
+  },
+  "notes": [
+    "Clients usually withhold 3.3% on freelancer fees paid in won; stablecoin payments have no withholding, so the reserve does that job.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "National Tax Service",
+      "url": "https://www.nts.go.kr"
+    }
+  ]
+}

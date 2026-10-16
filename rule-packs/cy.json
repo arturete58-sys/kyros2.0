@@ -1,0 +1,133 @@
+{
+  "$schema": "./schema.json",
+  "id": "cy",
+  "country": "CY",
+  "name": "Cyprus: self-employed",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "EUR",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2014-01-13",
+      "rates": {
+        "standard": 1900,
+        "reduced": 900,
+        "reduced_5": 500
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 396,
+  "dueNote": "VAT returns are quarterly. From tax year 2026, individuals who prepare accounts file and pay by 31 January of the second following year; the rest of a year's reserve is released then.",
+  "presets": [
+    {
+      "id": "standard",
+      "label": "VAT 19% + income tax and social insurance reserve 25%",
+      "vatBps": 1900,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax, social insurance and GeSY (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "reduced-vat",
+      "label": "VAT 9% + reserve 25%",
+      "vatBps": 900,
+      "vatRate": "reduced",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax, social insurance and GeSY (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT threshold + reserve 25%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2500,
+          "label": "Income tax, social insurance and GeSY (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            22000,
+            0
+          ],
+          [
+            32000,
+            2000
+          ],
+          [
+            42000,
+            2500
+          ],
+          [
+            72000,
+            3000
+          ],
+          [
+            null,
+            3500
+          ]
+        ],
+        "label": "Income tax 2026 (after the 2026 reform)"
+      },
+      {
+        "name": "social_gesy",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            2060
+          ]
+        ],
+        "label": "Social insurance 16.6% and GeSY 4% for the self-employed (approximate)",
+        "max": 13700
+      }
+    ]
+  },
+  "notes": [
+    "Since 2026, gains on crypto-assets are taxed at a flat 8%; Kyros reserves apply to business income.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "IBCCS: Cyprus tax reform 2026",
+      "url": "https://ibccs.tax/blog/cyprus-tax-reform-2026/"
+    },
+    {
+      "title": "Ministry of Finance, Tax Department",
+      "url": "https://www.mof.gov.cy"
+    }
+  ]
+}

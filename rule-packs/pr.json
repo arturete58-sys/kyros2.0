@@ -1,0 +1,151 @@
+{
+  "$schema": "./schema.json",
+  "id": "pr",
+  "country": "PR",
+  "name": "Puerto Rico: Act 60 export services and local businesses",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "USD",
+  "vatName": "IVU",
+  "vatRates": [
+    {
+      "from": "2015-10-01",
+      "rates": {
+        "standard": 1150,
+        "b2b_services": 400
+      },
+      "note": "11.5% (10.5% state + 1% municipal); 4% on business-to-business and designated professional services"
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 105,
+  "dueNote": "IVU returns are monthly, by the 20th. The annual income tax return is due on 15 April.",
+  "presets": [
+    {
+      "id": "act-60-export-services",
+      "label": "Act 60 export services decree: 4% income tax (no IVU on services to clients outside Puerto Rico)",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 400,
+          "label": "Income tax under the decree"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "income_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                400
+              ]
+            ],
+            "label": "Income tax on eligible export services income under the decree"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ivu",
+      "label": "IVU 11.5% + income tax and self-employment tax reserve 30%",
+      "vatBps": 1150,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and self-employment tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    },
+    {
+      "id": "b2b-services",
+      "label": "IVU 4% (business and professional services) + reserve 30%",
+      "vatBps": 400,
+      "vatRate": "b2b_services",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax and self-employment tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            9000,
+            0
+          ],
+          [
+            25000,
+            700
+          ],
+          [
+            41500,
+            1400
+          ],
+          [
+            61500,
+            2500
+          ],
+          [
+            null,
+            3300
+          ]
+        ],
+        "label": "Puerto Rico income tax, individuals"
+      },
+      {
+        "name": "self_employment_tax",
+        "kind": "social",
+        "brackets": [
+          [
+            199783,
+            1413
+          ],
+          [
+            null,
+            268
+          ]
+        ],
+        "label": "US self-employment tax (owed by Puerto Rico residents)"
+      }
+    ]
+  },
+  "notes": [
+    "Act 38-2026 amended the resident investor programme: applications filed by 31 December 2026 keep the earlier terms. Export services decrees keep the 4% rate on eligible income.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Taxes for Expats: Puerto Rico tax incentives under Act 60, 2026 guide",
+      "url": "https://www.taxesforexpats.com/country-guides/pr/puerto-rico-tax-incentives.html"
+    },
+    {
+      "title": "Departamento de Hacienda",
+      "url": "https://hacienda.pr.gov"
+    }
+  ]
+}

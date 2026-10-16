@@ -3,8 +3,38 @@
   "id": "ch",
   "country": "CH",
   "name": "Switzerland: self-employed",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "CHF",
+  "vatName": "MWST / TVA / IVA",
+  "vatRates": [
+    {
+      "from": "2024-01-01",
+      "rates": {
+        "standard": 810,
+        "reduced": 260,
+        "accommodation": 380
+      }
+    },
+    {
+      "from": "2018-01-01",
+      "rates": {
+        "standard": 770,
+        "reduced": 250,
+        "accommodation": 370
+      }
+    },
+    {
+      "from": "2028-01-01",
+      "proposed": true,
+      "rates": {
+        "standard": 850,
+        "reduced": 260,
+        "accommodation": 400
+      },
+      "note": "Approved by Parliament on 19 June 2026 to finance the 13th AHV pension; subject to a popular vote expected on 29 November 2026"
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 120,
   "dueNote": "VAT (MWST/TVA) returns are quarterly, due 60 days after the quarter. Income tax is assessed yearly by the canton; the rest of a year's reserve is released after 30 April.",
@@ -13,36 +43,51 @@
       "id": "standard",
       "label": "VAT 8.1% + income tax and AHV reserve 25%",
       "vatBps": 810,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 2500,
           "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "reduced-vat",
       "label": "VAT 2.6% + reserve 25%",
       "vatBps": 260,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 2500,
           "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "accommodation-vat",
       "label": "Accommodation VAT 3.8% + reserve 25%",
       "vatBps": 380,
+      "vatRate": "accommodation",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 2500,
           "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -55,12 +100,17 @@
           "bps": 2500,
           "label": "Income tax (federal, cantonal, communal) and AHV/IV/EO"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
   "notes": [
     "2026 rates: 8.1% standard, 2.6% reduced, 3.8% accommodation. Parliament approved 8.5% and 4.0% from 1 January 2028, subject to a popular vote expected on 29 November 2026.",
     "Income tax varies widely by canton (Zug and Schwyz are among the lowest).",
+    "No reserve estimate: federal, cantonal and communal income taxes differ by canton and commune. Compare the reserve with your adviser's figure.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [

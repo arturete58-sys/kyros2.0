@@ -1,0 +1,111 @@
+{
+  "$schema": "./schema.json",
+  "id": "au",
+  "country": "AU",
+  "name": "Australia: sole traders",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "AUD",
+  "vatName": "GST",
+  "vatRates": [
+    {
+      "from": "2000-07-01",
+      "rates": {
+        "standard": 1000
+      }
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 304,
+  "dueNote": "BAS (GST and PAYG instalments) is lodged quarterly. The financial year runs July to June and self-lodged returns are due on 31 October; a calendar year's reserve is released on 31 October of the next year.",
+  "presets": [
+    {
+      "id": "gst",
+      "label": "GST 10% + income tax reserve 30%",
+      "vatBps": 1000,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "not-gst-registered",
+      "label": "Below the GST threshold (AUD 75,000): income tax reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            18200,
+            0
+          ],
+          [
+            45000,
+            1500
+          ],
+          [
+            135000,
+            3000
+          ],
+          [
+            190000,
+            3700
+          ],
+          [
+            null,
+            4500
+          ]
+        ],
+        "label": "Resident income tax 2026-27"
+      },
+      {
+        "name": "medicare",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            null,
+            200
+          ]
+        ],
+        "label": "Medicare levy"
+      }
+    ]
+  },
+  "notes": [
+    "The second bracket falls from 16% to 15% on 1 July 2026 and to 14% on 1 July 2027.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "CountryTaxCalc: Australian tax rates 2026-27",
+      "url": "https://www.countrytaxcalc.com/tax-guides/australia/tax-rates-2026-27/"
+    },
+    {
+      "title": "Australian Taxation Office",
+      "url": "https://www.ato.gov.au"
+    }
+  ]
+}

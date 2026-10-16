@@ -1,0 +1,154 @@
+{
+  "$schema": "./schema.json",
+  "id": "pk",
+  "country": "PK",
+  "name": "Pakistan: freelancers and IT exporters",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "PKR",
+  "vatName": "Sales tax",
+  "vatRates": [
+    {
+      "from": "2023-02-14",
+      "rates": {
+        "standard": 1800
+      },
+      "note": "Federal sales tax on goods; services are taxed by the provinces (Punjab and Islamabad 16%, Sindh 15%)"
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 273,
+  "dueNote": "The tax year runs July to June and returns are due on 30 September; a calendar year's reserve is released on 30 September of the next year. Final tax on export proceeds is withheld or paid as the proceeds arrive.",
+  "presets": [
+    {
+      "id": "it-export-pseb",
+      "label": "IT services exported, PSEB-registered: final tax 0.25% of export proceeds",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "final_tax",
+          "bps": 25,
+          "label": "Final tax on export proceeds"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "final_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                25
+              ]
+            ],
+            "label": "Final tax on export proceeds",
+            "basis": "revenue"
+          }
+        ]
+      }
+    },
+    {
+      "id": "it-export",
+      "label": "IT services exported, not PSEB-registered: final tax 1% of export proceeds",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "final_tax",
+          "bps": 100,
+          "label": "Final tax on export proceeds"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "final_tax",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                100
+              ]
+            ],
+            "label": "Final tax on export proceeds",
+            "basis": "revenue"
+          }
+        ]
+      }
+    },
+    {
+      "id": "local-services",
+      "label": "Services in Pakistan: provincial sales tax 16% (Punjab, Islamabad) + income tax reserve 30%",
+      "vatBps": 1600,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 3000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "income_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            600000,
+            0
+          ],
+          [
+            1200000,
+            1500
+          ],
+          [
+            1600000,
+            2000
+          ],
+          [
+            3200000,
+            3000
+          ],
+          [
+            5600000,
+            4000
+          ],
+          [
+            null,
+            4500
+          ]
+        ],
+        "label": "Income tax, individuals with business income"
+      }
+    ]
+  },
+  "notes": [
+    "The reduced final-tax rates apply to export proceeds received through banking channels; check with FBR whether stablecoin receipts qualify before relying on them.",
+    "Provincial sales tax on services differs by province: Sindh 15%, Punjab and Islamabad 16%.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Federal Board of Revenue",
+      "url": "https://www.fbr.gov.pk"
+    },
+    {
+      "title": "Nukta: freelancers' tax rate in the 2026-27 budget",
+      "url": "https://nukta.com/pafla-retain-tax-freelancers-budget"
+    }
+  ]
+}

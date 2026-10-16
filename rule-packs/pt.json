@@ -3,8 +3,20 @@
   "id": "pt",
   "country": "PT",
   "name": "Portugal: self-employed (trabalhadores independentes)",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "IVA",
+  "vatRates": [
+    {
+      "from": "2011-01-01",
+      "rates": {
+        "standard": 2300,
+        "intermediate": 1300,
+        "reduced": 600
+      }
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 181,
   "dueNote": "VAT returns are quarterly or monthly; the annual IRS return is filed from April to June. The rest of a year's reserve is released after 30 June.",
@@ -13,36 +25,51 @@
       "id": "standard",
       "label": "IVA 23% (mainland) + income tax and social security reserve 30%",
       "vatBps": 2300,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "intermediate-vat",
       "label": "IVA 13% + reserve 30%",
       "vatBps": 1300,
+      "vatRate": "intermediate",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "reduced-vat",
       "label": "IVA 6% + reserve 30%",
       "vatBps": 600,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -55,9 +82,77 @@
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "taxableShareBps": 7500,
+    "items": [
+      {
+        "name": "irs",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            8342,
+            1250
+          ],
+          [
+            12587,
+            1600
+          ],
+          [
+            17838,
+            2150
+          ],
+          [
+            23089,
+            2440
+          ],
+          [
+            29397,
+            3140
+          ],
+          [
+            43090,
+            3490
+          ],
+          [
+            46566,
+            4310
+          ],
+          [
+            86634,
+            4460
+          ],
+          [
+            null,
+            4800
+          ]
+        ],
+        "label": "IRS (mainland), simplified regime: 75% of service revenue is taxable"
+      },
+      {
+        "name": "seguranca_social",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1498
+          ]
+        ],
+        "label": "Social security 21.4% on 70% of revenue",
+        "basis": "revenue"
+      }
+    ],
+    "notes": [
+      "Bracket limits are rounded; the specific deduction and IRS Jovem are not applied."
+    ]
+  },
   "notes": [
     "Mainland rates: 23%, 13%, 6% (Madeira and the Azores are lower). IRS is progressive, and social security applies to self-employed income; 30% is a suggested reserve.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

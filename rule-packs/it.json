@@ -3,49 +3,182 @@
   "id": "it",
   "country": "IT",
   "name": "Italy: freelancers (partita IVA)",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "IVA",
+  "vatRates": [
+    {
+      "from": "2013-10-01",
+      "rates": {
+        "standard": 2200,
+        "reduced": 1000,
+        "reduced_5": 500,
+        "super_reduced": 400
+      }
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 181,
   "dueNote": "Income tax balances and first advances are due by 30 June, second advances by 30 November. The rest of a year's reserve is released after 30 June of the following year.",
   "presets": [
     {
       "id": "forfettario",
-      "label": "Flat-rate regime (forfettario, 15%), no VAT: tax and INPS reserve 32%",
+      "label": "Flat-rate regime (forfettario, 15%), no VAT: tax and INPS reserve 33%",
       "vatBps": 0,
       "buckets": [
         {
           "name": "imposta_inps",
-          "bps": 3200,
-          "label": "Substitute tax 15% and INPS on 78% of turnover"
+          "bps": 3300,
+          "label": "Substitute tax 15% and INPS 26.07% on 78% of revenue (32.03%)"
         }
-      ]
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ],
+      "estimate": {
+        "year": 2026,
+        "taxableShareBps": 7800,
+        "items": [
+          {
+            "name": "imposta_sostitutiva",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                1500
+              ]
+            ],
+            "label": "Substitute tax"
+          },
+          {
+            "name": "inps",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                2607
+              ]
+            ],
+            "label": "INPS gestione separata"
+          }
+        ],
+        "notes": [
+          "Profitability coefficient 78% (professional services); other activities use 40% to 86%."
+        ]
+      }
     },
     {
       "id": "forfettario-startup",
-      "label": "Flat-rate regime for start-ups (5%), no VAT: reserve 24%",
+      "label": "Flat-rate regime for start-ups (5%), no VAT: reserve 25%",
       "vatBps": 0,
       "buckets": [
         {
           "name": "imposta_inps",
-          "bps": 2400,
-          "label": "Substitute tax 5% and INPS on 78% of turnover"
+          "bps": 2500,
+          "label": "Substitute tax 5% and INPS 26.07% on 78% of revenue (24.23%)"
         }
-      ]
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ],
+      "estimate": {
+        "year": 2026,
+        "taxableShareBps": 7800,
+        "items": [
+          {
+            "name": "imposta_sostitutiva",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                null,
+                500
+              ]
+            ],
+            "label": "Substitute tax, first five years"
+          },
+          {
+            "name": "inps",
+            "kind": "social",
+            "brackets": [
+              [
+                null,
+                2607
+              ]
+            ],
+            "label": "INPS gestione separata"
+          }
+        ]
+      }
     },
     {
       "id": "ordinario",
       "label": "Ordinary regime: IVA 22% + income tax and INPS reserve 35%",
       "vatBps": 2200,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3500,
           "label": "IRPEF and INPS (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "irpef",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            28000,
+            2300
+          ],
+          [
+            50000,
+            3300
+          ],
+          [
+            null,
+            4300
+          ]
+        ],
+        "label": "IRPEF 2026"
+      },
+      {
+        "name": "addizionali",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            null,
+            250
+          ]
+        ],
+        "label": "Regional and municipal surcharges (typical)"
+      },
+      {
+        "name": "inps",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            2607
+          ]
+        ],
+        "label": "INPS gestione separata",
+        "max": 31900
+      }
+    ]
+  },
   "notes": [
     "Under the forfettario regime tax applies to a coefficient of turnover (78% for most professionals); the reserves above assume that coefficient and INPS gestione separata. IVA rates: 22%, 10%, 5%, 4%.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

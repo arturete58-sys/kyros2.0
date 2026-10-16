@@ -3,7 +3,8 @@
   "id": "hk",
   "country": "HK",
   "name": "Hong Kong: unincorporated businesses",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "HKD",
   "period": "Year",
   "dueOffsetDays": 365,
@@ -19,9 +20,46 @@
           "bps": 1500,
           "label": "Profits tax (unincorporated: 7.5% on the first HK$2 million, 15% above)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "profits_tax",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            2000000,
+            750
+          ],
+          [
+            null,
+            1500
+          ]
+        ],
+        "label": "Profits tax, unincorporated business (two-tier)"
+      },
+      {
+        "name": "mpf",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            500
+          ]
+        ],
+        "label": "MPF for the self-employed: 5%, from HKD 85,200 of income",
+        "max": 18000,
+        "minRevenue": 85200
+      }
+    ]
+  },
   "notes": [
     "Only profits sourced in Hong Kong are taxed.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."

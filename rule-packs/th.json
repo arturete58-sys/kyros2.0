@@ -1,0 +1,119 @@
+{
+  "$schema": "./schema.json",
+  "id": "th",
+  "country": "TH",
+  "name": "Thailand: freelancers and sole proprietors",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "THB",
+  "vatName": "VAT",
+  "vatRates": [
+    {
+      "from": "2025-10-01",
+      "rates": {
+        "standard": 700
+      },
+      "note": "Reduced from the statutory 10% by royal decree until 30 September 2027"
+    },
+    {
+      "from": "2027-10-01",
+      "rates": {
+        "standard": 1000
+      },
+      "note": "The statutory 10% applies unless the reduction is extended again (it has been extended every year since 1999)"
+    }
+  ],
+  "period": "Year",
+  "dueOffsetDays": 98,
+  "dueNote": "VAT returns are monthly. The annual personal income tax return is due on 31 March (8 April online), with a half-year return in September.",
+  "presets": [
+    {
+      "id": "vat-registered",
+      "label": "VAT 7% + income tax reserve 20%",
+      "vatBps": 700,
+      "vatRate": "standard",
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    },
+    {
+      "id": "not-vat-registered",
+      "label": "Below the VAT threshold (THB 1.8 million): income tax reserve 20%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "income_tax",
+          "bps": 2000,
+          "label": "Income tax (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ]
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "items": [
+      {
+        "name": "pit",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            210000,
+            0
+          ],
+          [
+            360000,
+            500
+          ],
+          [
+            560000,
+            1000
+          ],
+          [
+            810000,
+            1500
+          ],
+          [
+            1060000,
+            2000
+          ],
+          [
+            2060000,
+            2500
+          ],
+          [
+            5060000,
+            3000
+          ],
+          [
+            null,
+            3500
+          ]
+        ],
+        "label": "Personal income tax after the THB 60,000 personal allowance"
+      }
+    ]
+  },
+  "notes": [
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "HLB Thailand: 7% VAT extended to 30 September 2027",
+      "url": "https://www.hlbthai.com/cabinet-approves-1-year-extension-of-7-vat-rate-until-30-september-2027/"
+    },
+    {
+      "title": "Revenue Department",
+      "url": "https://www.rd.go.th"
+    }
+  ]
+}

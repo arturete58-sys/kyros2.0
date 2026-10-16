@@ -1,0 +1,192 @@
+{
+  "$schema": "./schema.json",
+  "id": "br",
+  "country": "BR",
+  "name": "Brazil: Simples Nacional and self-employed individuals",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
+  "currency": "BRL",
+  "vatName": "ISS / CBS / IBS",
+  "period": "Month",
+  "dueOffsetDays": 20,
+  "dueNote": "The Simples Nacional DAS is due on the 20th of the following month. Self-employed individuals pay the carnê-leão monthly and settle the annual return by the end of May.",
+  "presets": [
+    {
+      "id": "simples-anexo-iii",
+      "label": "Simples Nacional, Annex III services: DAS from 6% of revenue",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "das",
+          "bps": 600,
+          "label": "Simples Nacional (DAS), first revenue band"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "das",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                180000,
+                600
+              ],
+              [
+                360000,
+                1120
+              ],
+              [
+                720000,
+                1350
+              ],
+              [
+                1800000,
+                1600
+              ],
+              [
+                3600000,
+                2100
+              ],
+              [
+                4800000,
+                3300
+              ]
+            ],
+            "label": "DAS, Annex III, effective rate by revenue in the last 12 months",
+            "basis": "revenue"
+          }
+        ],
+        "notes": [
+          "The DAS effective rate rises with revenue; the reserve check shows when 6% is no longer enough."
+        ]
+      }
+    },
+    {
+      "id": "simples-anexo-v",
+      "label": "Simples Nacional, Annex V services: DAS from 15.5% of revenue",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "das",
+          "bps": 1550,
+          "label": "Simples Nacional (DAS), first revenue band"
+        }
+      ],
+      "covers": [
+        "incomeTax"
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "das",
+            "kind": "incomeTax",
+            "brackets": [
+              [
+                180000,
+                1550
+              ],
+              [
+                360000,
+                1800
+              ],
+              [
+                720000,
+                1950
+              ],
+              [
+                1800000,
+                2050
+              ],
+              [
+                3600000,
+                2300
+              ],
+              [
+                4800000,
+                3050
+              ]
+            ],
+            "label": "DAS, Annex V, effective rate by revenue in the last 12 months",
+            "basis": "revenue"
+          }
+        ]
+      }
+    },
+    {
+      "id": "pessoa-fisica",
+      "label": "Self-employed individual (carnê-leão): income tax and INSS reserve 30%",
+      "vatBps": 0,
+      "buckets": [
+        {
+          "name": "irpf_inss",
+          "bps": 3000,
+          "label": "IRPF and INSS (suggested reserve)"
+        }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
+      ],
+      "period": "Year",
+      "dueOffsetDays": 151
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "irpf",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            60000,
+            0
+          ],
+          [
+            88200,
+            4734
+          ],
+          [
+            null,
+            2750
+          ]
+        ],
+        "label": "IRPF 2026: exempt up to BRL 5,000 a month, phased reduction up to BRL 7,350, then the table"
+      },
+      {
+        "name": "inss",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            2000
+          ]
+        ],
+        "label": "INSS for individual contributors, 20% up to the ceiling",
+        "max": 20400
+      }
+    ]
+  },
+  "notes": [
+    "The consumption-tax reform (CBS and IBS) starts collecting in 2027; in 2026 the new taxes appear on invoices for testing. This pack will add their rates when they apply.",
+    "MEI micro-entrepreneurs pay a fixed monthly DAS: enter it as a fixed contribution.",
+    "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
+  ],
+  "sources": [
+    {
+      "title": "Jettax: IRPF 2026 table",
+      "url": "https://www.jettax.com.br/blog/nova-tabela-do-ir-2026-veja-faixas-e-aliquotas/"
+    },
+    {
+      "title": "Receita Federal",
+      "url": "https://www.gov.br/receitafederal"
+    }
+  ]
+}

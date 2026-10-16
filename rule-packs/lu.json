@@ -3,8 +3,31 @@
   "id": "lu",
   "country": "LU",
   "name": "Luxembourg: self-employed and sole traders",
-  "version": "2026.1",
+  "version": "2026.2",
+  "reviewed": "2026-10-16",
   "currency": "EUR",
+  "vatName": "TVA",
+  "vatRates": [
+    {
+      "from": "2024-01-01",
+      "rates": {
+        "standard": 1700,
+        "intermediate": 1400,
+        "reduced": 800,
+        "super_reduced": 300
+      }
+    },
+    {
+      "from": "2023-01-01",
+      "rates": {
+        "standard": 1600,
+        "intermediate": 1300,
+        "reduced": 700,
+        "super_reduced": 300
+      },
+      "note": "Temporary 2023 reduction"
+    }
+  ],
   "period": "Year",
   "dueOffsetDays": 365,
   "dueNote": "VAT returns are monthly, quarterly or annual depending on turnover; income-tax advances are quarterly. The annual return can be filed until the end of the following year, so the rest of a year's reserve is released one year after it ends.",
@@ -13,36 +36,51 @@
       "id": "standard",
       "label": "VAT 17% + income tax reserve 30%",
       "vatBps": 1700,
+      "vatRate": "standard",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "intermediate-vat",
       "label": "VAT 14% + income tax reserve 30%",
       "vatBps": 1400,
+      "vatRate": "intermediate",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
       "id": "reduced-vat",
       "label": "VAT 8% + income tax reserve 30%",
       "vatBps": 800,
+      "vatRate": "reduced",
       "buckets": [
         {
           "name": "income_tax",
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     },
     {
@@ -55,11 +93,16 @@
           "bps": 3000,
           "label": "Income tax and social contributions (suggested reserve)"
         }
+      ],
+      "covers": [
+        "incomeTax",
+        "social"
       ]
     }
   ],
   "notes": [
     "Rates: 17% standard, 14% intermediate, 8% reduced, 3% super-reduced. Income tax is progressive and social contributions apply; 30% is a suggested reserve.",
+    "No reserve estimate yet: Luxembourg's income tax has 23 brackets by tax class. Compare the reserve with your adviser's figure.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
