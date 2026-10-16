@@ -132,7 +132,6 @@
   "notes": [
     "2026 rates: 8.1% standard, 2.6% reduced, 3.8% accommodation. Parliament approved 8.5% and 4.0% from 1 January 2028, subject to a popular vote expected on 29 November 2026.",
     "Income tax varies widely by canton (Zug and Schwyz are among the lowest).",
-    "No reserve estimate: federal, cantonal and communal income taxes differ by canton and commune. Compare the reserve with your adviser's figure.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -150,6 +149,1814 @@
       "url": "https://www.estv.admin.ch/estv/en/home/mehrwertsteuer/mwst-steuersaetze.html",
       "checked": "2026-10-16",
       "official": true
+    },
+    {
+      "title": "ESTV tax calculator: federal, cantonal and communal income tax 2026 (official)",
+      "url": "https://swisstaxcalculator.estv.admin.ch/",
+      "official": true,
+      "checked": "2026-10-16"
+    }
+  ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "ahv_iv_eo",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1000
+          ]
+        ],
+        "min": 530,
+        "label": "AHV/IV/EO for the self-employed: about 10% of income (lower on a sliding scale below about CHF 60,000), minimum CHF 530"
+      },
+      {
+        "name": "federal_tax",
+        "kind": "incomeTax",
+        "scope": "central",
+        "brackets": [
+          [
+            15000,
+            0
+          ],
+          [
+            25000,
+            75
+          ],
+          [
+            35000,
+            79
+          ],
+          [
+            50000,
+            165
+          ],
+          [
+            65000,
+            279
+          ],
+          [
+            80000,
+            372
+          ],
+          [
+            100000,
+            653
+          ],
+          [
+            125000,
+            802
+          ],
+          [
+            150000,
+            955
+          ],
+          [
+            200000,
+            1165
+          ],
+          [
+            750000,
+            1320
+          ],
+          [
+            null,
+            1180
+          ]
+        ],
+        "label": "Direct federal tax 2026, single (ESTV calculator)"
+      },
+      {
+        "name": "canton",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            15000,
+            271
+          ],
+          [
+            25000,
+            821
+          ],
+          [
+            35000,
+            1081
+          ],
+          [
+            50000,
+            1345
+          ],
+          [
+            65000,
+            1586
+          ],
+          [
+            80000,
+            1764
+          ],
+          [
+            100000,
+            1926
+          ],
+          [
+            125000,
+            2051
+          ],
+          [
+            150000,
+            2190
+          ],
+          [
+            200000,
+            2365
+          ],
+          [
+            250000,
+            2568
+          ],
+          [
+            300000,
+            2711
+          ],
+          [
+            null,
+            2782
+          ]
+        ],
+        "label": "Cantonal and communal income tax 2026: choose your canton (default: Zürich)"
+      }
+    ],
+    "notes": [
+      "Choose your canton: the estimate uses its capital. Other communes apply their own multiplier, often lower outside the capital. Church tax (for members) and the deductions that lead from profit to taxable income (pillar 3a, insurance premiums) are not included."
+    ]
+  },
+  "regions": [
+    {
+      "id": "ZH",
+      "name": " (ZH)",
+      "items": [
+        {
+          "name": "canton_zh",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              271
+            ],
+            [
+              25000,
+              821
+            ],
+            [
+              35000,
+              1081
+            ],
+            [
+              50000,
+              1345
+            ],
+            [
+              65000,
+              1586
+            ],
+            [
+              80000,
+              1764
+            ],
+            [
+              100000,
+              1926
+            ],
+            [
+              125000,
+              2051
+            ],
+            [
+              150000,
+              2190
+            ],
+            [
+              200000,
+              2365
+            ],
+            [
+              250000,
+              2568
+            ],
+            [
+              300000,
+              2711
+            ],
+            [
+              null,
+              2782
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "BE",
+      "name": " (BE)",
+      "items": [
+        {
+          "name": "canton_be",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              1392
+            ],
+            [
+              25000,
+              1839
+            ],
+            [
+              35000,
+              1907
+            ],
+            [
+              50000,
+              2009
+            ],
+            [
+              65000,
+              2102
+            ],
+            [
+              80000,
+              2257
+            ],
+            [
+              100000,
+              2443
+            ],
+            [
+              125000,
+              2560
+            ],
+            [
+              150000,
+              2623
+            ],
+            [
+              200000,
+              2714
+            ],
+            [
+              250000,
+              2802
+            ],
+            [
+              300000,
+              2844
+            ],
+            [
+              400000,
+              2881
+            ],
+            [
+              500000,
+              2903
+            ],
+            [
+              null,
+              2935
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "LU",
+      "name": " (LU)",
+      "items": [
+        {
+          "name": "canton_lu",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              76
+            ],
+            [
+              25000,
+              1072
+            ],
+            [
+              35000,
+              1448
+            ],
+            [
+              50000,
+              1451
+            ],
+            [
+              65000,
+              1449
+            ],
+            [
+              80000,
+              1451
+            ],
+            [
+              100000,
+              1450
+            ],
+            [
+              125000,
+              1493
+            ],
+            [
+              150000,
+              1522
+            ],
+            [
+              200000,
+              1592
+            ],
+            [
+              null,
+              1682
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "UR",
+      "name": " (UR)",
+      "items": [
+        {
+          "name": "canton_ur",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              1385
+            ],
+            [
+              25000,
+              1384
+            ],
+            [
+              50000,
+              1385
+            ],
+            [
+              65000,
+              1384
+            ],
+            [
+              100000,
+              1385
+            ],
+            [
+              125000,
+              1384
+            ],
+            [
+              150000,
+              1385
+            ],
+            [
+              200000,
+              1384
+            ],
+            [
+              250000,
+              1385
+            ],
+            [
+              300000,
+              1384
+            ],
+            [
+              750000,
+              1385
+            ],
+            [
+              null,
+              1384
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "SZ",
+      "name": " (SZ)",
+      "items": [
+        {
+          "name": "canton_sz",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              442
+            ],
+            [
+              25000,
+              798
+            ],
+            [
+              35000,
+              889
+            ],
+            [
+              50000,
+              971
+            ],
+            [
+              65000,
+              1050
+            ],
+            [
+              80000,
+              1111
+            ],
+            [
+              125000,
+              1112
+            ],
+            [
+              200000,
+              1111
+            ],
+            [
+              250000,
+              1112
+            ],
+            [
+              300000,
+              1356
+            ],
+            [
+              400000,
+              1409
+            ],
+            [
+              500000,
+              1262
+            ],
+            [
+              null,
+              1189
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "OW",
+      "name": " (OW)",
+      "items": [
+        {
+          "name": "canton_ow",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              35000,
+              1280
+            ],
+            [
+              50000,
+              1279
+            ],
+            [
+              65000,
+              1280
+            ],
+            [
+              80000,
+              1279
+            ],
+            [
+              null,
+              1280
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "NW",
+      "name": " (NW)",
+      "items": [
+        {
+          "name": "canton_nw",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              67
+            ],
+            [
+              25000,
+              876
+            ],
+            [
+              35000,
+              1301
+            ],
+            [
+              50000,
+              1337
+            ],
+            [
+              80000,
+              1383
+            ],
+            [
+              100000,
+              1427
+            ],
+            [
+              125000,
+              1446
+            ],
+            [
+              150000,
+              1477
+            ],
+            [
+              200000,
+              1349
+            ],
+            [
+              null,
+              1268
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "GL",
+      "name": " (GL)",
+      "items": [
+        {
+          "name": "canton_gl",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              302
+            ],
+            [
+              25000,
+              1126
+            ],
+            [
+              35000,
+              1427
+            ],
+            [
+              50000,
+              1569
+            ],
+            [
+              65000,
+              1785
+            ],
+            [
+              100000,
+              1811
+            ],
+            [
+              125000,
+              1916
+            ],
+            [
+              150000,
+              1931
+            ],
+            [
+              200000,
+              2095
+            ],
+            [
+              250000,
+              2112
+            ],
+            [
+              300000,
+              2265
+            ],
+            [
+              400000,
+              2293
+            ],
+            [
+              500000,
+              2332
+            ],
+            [
+              null,
+              2052
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "ZG",
+      "name": " (ZG)",
+      "items": [
+        {
+          "name": "canton_zg",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              315
+            ],
+            [
+              25000,
+              479
+            ],
+            [
+              35000,
+              574
+            ],
+            [
+              50000,
+              715
+            ],
+            [
+              65000,
+              761
+            ],
+            [
+              80000,
+              914
+            ],
+            [
+              100000,
+              1108
+            ],
+            [
+              125000,
+              1274
+            ],
+            [
+              150000,
+              1170
+            ],
+            [
+              null,
+              1040
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "FR",
+      "name": " (FR)",
+      "items": [
+        {
+          "name": "canton_fr",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              621
+            ],
+            [
+              25000,
+              1389
+            ],
+            [
+              35000,
+              1746
+            ],
+            [
+              50000,
+              2071
+            ],
+            [
+              65000,
+              2219
+            ],
+            [
+              80000,
+              2451
+            ],
+            [
+              100000,
+              2407
+            ],
+            [
+              125000,
+              2610
+            ],
+            [
+              150000,
+              2840
+            ],
+            [
+              200000,
+              2905
+            ],
+            [
+              250000,
+              2451
+            ],
+            [
+              null,
+              2376
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "SO",
+      "name": " (SO)",
+      "items": [
+        {
+          "name": "canton_so",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              169
+            ],
+            [
+              25000,
+              1248
+            ],
+            [
+              35000,
+              1993
+            ],
+            [
+              50000,
+              2122
+            ],
+            [
+              65000,
+              2228
+            ],
+            [
+              100000,
+              2268
+            ],
+            [
+              125000,
+              2474
+            ],
+            [
+              300000,
+              2484
+            ],
+            [
+              400000,
+              2311
+            ],
+            [
+              null,
+              2268
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "BS",
+      "name": " (BS)",
+      "items": [
+        {
+          "name": "canton_bs",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              200000,
+              2100
+            ],
+            [
+              250000,
+              2569
+            ],
+            [
+              300000,
+              2725
+            ],
+            [
+              400000,
+              2809
+            ],
+            [
+              null,
+              2825
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "BL",
+      "name": " (BL)",
+      "items": [
+        {
+          "name": "canton_bl",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              0
+            ],
+            [
+              25000,
+              1011
+            ],
+            [
+              35000,
+              1601
+            ],
+            [
+              50000,
+              2099
+            ],
+            [
+              65000,
+              2373
+            ],
+            [
+              80000,
+              2539
+            ],
+            [
+              100000,
+              2692
+            ],
+            [
+              125000,
+              2834
+            ],
+            [
+              150000,
+              2882
+            ],
+            [
+              200000,
+              2923
+            ],
+            [
+              250000,
+              2967
+            ],
+            [
+              300000,
+              3002
+            ],
+            [
+              400000,
+              3043
+            ],
+            [
+              500000,
+              3086
+            ],
+            [
+              750000,
+              3142
+            ],
+            [
+              null,
+              3201
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "SH",
+      "name": " (SH)",
+      "items": [
+        {
+          "name": "canton_sh",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              325
+            ],
+            [
+              25000,
+              865
+            ],
+            [
+              35000,
+              1057
+            ],
+            [
+              50000,
+              1318
+            ],
+            [
+              65000,
+              1517
+            ],
+            [
+              80000,
+              1701
+            ],
+            [
+              125000,
+              1749
+            ],
+            [
+              150000,
+              1807
+            ],
+            [
+              200000,
+              1908
+            ],
+            [
+              250000,
+              1641
+            ],
+            [
+              null,
+              1574
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "AR",
+      "name": " (AR)",
+      "items": [
+        {
+          "name": "canton_ar",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              385
+            ],
+            [
+              25000,
+              1317
+            ],
+            [
+              35000,
+              1563
+            ],
+            [
+              50000,
+              1709
+            ],
+            [
+              65000,
+              1882
+            ],
+            [
+              80000,
+              1953
+            ],
+            [
+              100000,
+              2040
+            ],
+            [
+              125000,
+              2072
+            ],
+            [
+              250000,
+              2146
+            ],
+            [
+              300000,
+              1972
+            ],
+            [
+              null,
+              1924
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "AI",
+      "name": " (AI)",
+      "items": [
+        {
+          "name": "canton_ai",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              304
+            ],
+            [
+              25000,
+              912
+            ],
+            [
+              35000,
+              1170
+            ],
+            [
+              50000,
+              1267
+            ],
+            [
+              65000,
+              1292
+            ],
+            [
+              80000,
+              1323
+            ],
+            [
+              125000,
+              1368
+            ],
+            [
+              150000,
+              1338
+            ],
+            [
+              200000,
+              1292
+            ],
+            [
+              null,
+              1216
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "SG",
+      "name": " (SG)",
+      "items": [
+        {
+          "name": "canton_sg",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              221
+            ],
+            [
+              25000,
+              1419
+            ],
+            [
+              35000,
+              1516
+            ],
+            [
+              50000,
+              1944
+            ],
+            [
+              65000,
+              2035
+            ],
+            [
+              80000,
+              2235
+            ],
+            [
+              100000,
+              2240
+            ],
+            [
+              250000,
+              2284
+            ],
+            [
+              300000,
+              2129
+            ],
+            [
+              750000,
+              2066
+            ],
+            [
+              null,
+              2065
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "GR",
+      "name": " (GR)",
+      "items": [
+        {
+          "name": "canton_gr",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              0
+            ],
+            [
+              25000,
+              814
+            ],
+            [
+              35000,
+              1475
+            ],
+            [
+              50000,
+              1735
+            ],
+            [
+              65000,
+              1854
+            ],
+            [
+              80000,
+              1905
+            ],
+            [
+              100000,
+              1919
+            ],
+            [
+              125000,
+              1982
+            ],
+            [
+              200000,
+              2016
+            ],
+            [
+              250000,
+              2027
+            ],
+            [
+              300000,
+              2034
+            ],
+            [
+              400000,
+              2047
+            ],
+            [
+              500000,
+              2075
+            ],
+            [
+              750000,
+              2088
+            ],
+            [
+              null,
+              1993
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "AG",
+      "name": " (AG)",
+      "items": [
+        {
+          "name": "canton_ag",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              273
+            ],
+            [
+              25000,
+              861
+            ],
+            [
+              35000,
+              1219
+            ],
+            [
+              50000,
+              1503
+            ],
+            [
+              65000,
+              1695
+            ],
+            [
+              80000,
+              1825
+            ],
+            [
+              100000,
+              1891
+            ],
+            [
+              125000,
+              1950
+            ],
+            [
+              150000,
+              1990
+            ],
+            [
+              200000,
+              2037
+            ],
+            [
+              250000,
+              2089
+            ],
+            [
+              300000,
+              2090
+            ],
+            [
+              400000,
+              2137
+            ],
+            [
+              null,
+              2189
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "TG",
+      "name": " (TG)",
+      "items": [
+        {
+          "name": "canton_tg",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              100
+            ],
+            [
+              25000,
+              1213
+            ],
+            [
+              35000,
+              1506
+            ],
+            [
+              50000,
+              1727
+            ],
+            [
+              80000,
+              1757
+            ],
+            [
+              100000,
+              1855
+            ],
+            [
+              125000,
+              1883
+            ],
+            [
+              150000,
+              1882
+            ],
+            [
+              200000,
+              1987
+            ],
+            [
+              null,
+              2008
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "TI",
+      "name": " (TI)",
+      "items": [
+        {
+          "name": "canton_ti",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              187
+            ],
+            [
+              25000,
+              953
+            ],
+            [
+              35000,
+              1553
+            ],
+            [
+              50000,
+              1944
+            ],
+            [
+              65000,
+              2079
+            ],
+            [
+              80000,
+              2350
+            ],
+            [
+              100000,
+              2311
+            ],
+            [
+              125000,
+              2458
+            ],
+            [
+              200000,
+              2524
+            ],
+            [
+              250000,
+              2607
+            ],
+            [
+              300000,
+              2710
+            ],
+            [
+              400000,
+              2708
+            ],
+            [
+              null,
+              2702
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "VD",
+      "name": " (VD)",
+      "items": [
+        {
+          "name": "canton_vd",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              899
+            ],
+            [
+              25000,
+              1609
+            ],
+            [
+              35000,
+              1806
+            ],
+            [
+              50000,
+              1949
+            ],
+            [
+              65000,
+              2149
+            ],
+            [
+              80000,
+              2341
+            ],
+            [
+              100000,
+              2583
+            ],
+            [
+              125000,
+              2786
+            ],
+            [
+              150000,
+              2890
+            ],
+            [
+              200000,
+              3037
+            ],
+            [
+              250000,
+              3221
+            ],
+            [
+              300000,
+              3391
+            ],
+            [
+              400000,
+              3499
+            ],
+            [
+              500000,
+              3298
+            ],
+            [
+              null,
+              3000
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "VS",
+      "name": " (VS)",
+      "items": [
+        {
+          "name": "canton_vs",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              487
+            ],
+            [
+              25000,
+              916
+            ],
+            [
+              35000,
+              1298
+            ],
+            [
+              50000,
+              1622
+            ],
+            [
+              65000,
+              1987
+            ],
+            [
+              80000,
+              2271
+            ],
+            [
+              100000,
+              2515
+            ],
+            [
+              125000,
+              2937
+            ],
+            [
+              150000,
+              3280
+            ],
+            [
+              200000,
+              2918
+            ],
+            [
+              250000,
+              2545
+            ],
+            [
+              300000,
+              2621
+            ],
+            [
+              400000,
+              2708
+            ],
+            [
+              500000,
+              2515
+            ],
+            [
+              null,
+              2500
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "NE",
+      "name": " (NE)",
+      "items": [
+        {
+          "name": "canton_ne",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              299
+            ],
+            [
+              25000,
+              1756
+            ],
+            [
+              35000,
+              2195
+            ],
+            [
+              50000,
+              2271
+            ],
+            [
+              65000,
+              2405
+            ],
+            [
+              80000,
+              2537
+            ],
+            [
+              100000,
+              2668
+            ],
+            [
+              125000,
+              2792
+            ],
+            [
+              150000,
+              2898
+            ],
+            [
+              200000,
+              2986
+            ],
+            [
+              250000,
+              2587
+            ],
+            [
+              300000,
+              2526
+            ],
+            [
+              400000,
+              2569
+            ],
+            [
+              500000,
+              2614
+            ],
+            [
+              null,
+              2620
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "GE",
+      "name": " (GE)",
+      "items": [
+        {
+          "name": "canton_ge",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              0
+            ],
+            [
+              25000,
+              853
+            ],
+            [
+              35000,
+              1822
+            ],
+            [
+              50000,
+              2159
+            ],
+            [
+              65000,
+              2327
+            ],
+            [
+              80000,
+              2353
+            ],
+            [
+              100000,
+              2504
+            ],
+            [
+              125000,
+              2503
+            ],
+            [
+              150000,
+              2631
+            ],
+            [
+              200000,
+              2710
+            ],
+            [
+              250000,
+              2785
+            ],
+            [
+              300000,
+              2815
+            ],
+            [
+              400000,
+              2962
+            ],
+            [
+              500000,
+              3081
+            ],
+            [
+              750000,
+              3131
+            ],
+            [
+              null,
+              3173
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
+    },
+    {
+      "id": "JU",
+      "name": " (JU)",
+      "items": [
+        {
+          "name": "canton_ju",
+          "kind": "incomeTax",
+          "brackets": [
+            [
+              15000,
+              442
+            ],
+            [
+              25000,
+              1495
+            ],
+            [
+              35000,
+              1759
+            ],
+            [
+              50000,
+              1914
+            ],
+            [
+              65000,
+              2318
+            ],
+            [
+              80000,
+              2332
+            ],
+            [
+              100000,
+              2444
+            ],
+            [
+              200000,
+              2640
+            ],
+            [
+              250000,
+              2738
+            ],
+            [
+              null,
+              2750
+            ]
+          ],
+          "label": "Cantonal and communal income tax 2026, , single, no church tax (ESTV calculator)"
+        }
+      ],
+      "replaces": [
+        "canton"
+      ]
     }
   ]
 }
