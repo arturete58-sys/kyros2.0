@@ -17,9 +17,17 @@ const args = process.argv.slice(2);
 const out = args.includes('--out') ? args[args.indexOf('--out') + 1] : undefined;
 const today = new Date().toISOString().slice(0, 10);
 
-const res = await fetch(URL_, { headers: { accept: 'text/csv' }, signal: AbortSignal.timeout(120_000) });
-const csv = await res.text();
-if (!res.ok) throw new Error(`OECD: HTTP ${res.status}: ${csv.slice(0, 300)}`);
+let res, csv;
+try {
+  res = await fetch(URL_, { headers: { accept: 'application/vnd.sdmx.data+csv; charset=utf-8; labels=both' }, signal: AbortSignal.timeout(180_000) });
+  csv = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${csv.slice(0, 400)}`);
+} catch (e) {
+  const msg = `# National income-tax scales against the OECD Tax Database, ${today}\n\nThe OECD data could not be read: ${String(e.message ?? e).slice(0, 600)}\n`;
+  console.log(msg);
+  if (out) writeFileSync(out, msg);
+  process.exit(1);
+}
 
 // Minimal CSV parser (quoted fields).
 const rows = [];
@@ -37,7 +45,12 @@ if (field || row.length) { row.push(field); rows.push(row); }
 const head = rows.shift();
 const col = (name) => head.findIndex((h) => h === name);
 const iArea = col('REF_AREA'), iTime = col('TIME_PERIOD'), iVal = col('OBS_VALUE');
-if (iArea < 0 || iTime < 0 || iVal < 0) throw new Error(`OECD: unexpected columns ${head.join(',')}`);
+if (iArea < 0 || iTime < 0 || iVal < 0) {
+  const msg = `# National income-tax scales against the OECD Tax Database, ${today}\n\nUnexpected columns: ${head.join(', ').slice(0, 800)}\n\nFirst row: ${(rows[0] ?? []).join(', ').slice(0, 800)}\n`;
+  console.log(msg);
+  if (out) writeFileSync(out, msg);
+  process.exit(1);
+}
 
 // Keep every row of our countries for the latest year each reports; label columns help the review.
 const wanted = new Set(Object.values(OECD));
