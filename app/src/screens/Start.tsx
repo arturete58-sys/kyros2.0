@@ -3,49 +3,36 @@ import { split, type ActivityId, type ClientKind, type RulePack } from 'kyros-sd
 import { countries, countryName, loadPack } from '../packs';
 import { createVault, followLaw, makePlan, money, type Answers } from '../kyros';
 import { connectPasskeyWallet, createPasskeyWallet } from '../wallet/passkey';
-import { Button, Option, pct, Seg, Toggle, Top, useApp } from '../ui';
+import { fmtNumber, t, type Key } from '../i18n';
+import { Button, LangPicker, Option, pct, Seg, Toggle, Top, useApp } from '../ui';
 
-export const ACTIVITY_ES: Record<ActivityId, [string, string]> = {
-  software: ['Desarrollo de software', 'Apps, webs, smart contracts'],
-  consulting: ['Consultoría', 'Asesoría, gestión, marketing'],
-  creative: ['Diseño y contenido', 'Diseño, vídeo, creadores'],
-  web3: ['Servicios Web3', 'Auditorías, nodos, contratos'],
-  ecommerce: ['Venta online', 'Productos físicos o digitales'],
-  education: ['Formación', 'Cursos y clases reconocidos'],
-  health: ['Salud', 'Atención médica y sanitaria'],
-  books: ['Libros y e-books', 'Edición y venta de libros'],
-  hospitality: ['Hostelería', 'Restaurantes y comida'],
+export const ACTIVITIES: ActivityId[] = ['software', 'consulting', 'creative', 'web3', 'ecommerce', 'education', 'health', 'books', 'hospitality'];
+export const CLIENTS: ClientKind[] = ['business-local', 'consumer-local', 'business-eu', 'abroad'];
+
+/** [title, subtitle] of an activity, in the user's language. */
+export const activityText = (a: ActivityId): [string, string] => [t(`act_${a}` as Key), t(`act_${a}_s` as Key)];
+export const clientText = (c: ClientKind): [string, string] => {
+  const k = `cl_${c.replace('-', '_')}`;
+  return [t(k as Key), t(`${k}_s` as Key)];
 };
 
-export const CLIENT_ES: Record<ClientKind, [string, string]> = {
-  'business-local': ['Empresas de tu país', 'Facturas con IVA'],
-  'consumer-local': ['Particulares de tu país', 'Facturas con IVA'],
-  'business-eu': ['Empresas de otro país de la UE', 'Sin IVA: lo declara tu cliente'],
-  abroad: ['Clientes de fuera de tu país', 'Normalmente sin IVA'],
-};
+const PRECISION_TONE: Record<string, string> = { exact: 'ok', presumptive: 'info', 'exact-on-profit': 'info', estimate: 'warn', none: 'warn' };
+const precisionText = (p: string): [string, string] => [t((`prec_${p}` in PRECISION_TONE ? `prec_${p}` : 'prec_estimate') as Key), PRECISION_TONE[p] ?? 'warn'];
 
-const PRECISION_ES: Record<string, [string, string]> = {
-  exact: ['Exacto', 'ok'],
-  presumptive: ['Presunto', 'info'],
-  'exact-on-profit': ['Exacto sobre beneficio', 'info'],
-  estimate: ['Estimación', 'warn'],
-  none: ['Sin estimación', 'warn'],
-};
-
-export function vatLabel(t: string, bps: number, name = 'IVA'): string {
-  switch (t) {
+export function vatLabel(treatment: string, bps: number, name = t('vat')): string {
+  switch (treatment) {
     case 'standard':
-      return `${name} ${pct(bps)}`;
+      return t('vatStd', { name, pct: pct(bps) });
     case 'reduced':
-      return `${name} reducido ${pct(bps)}`;
+      return t('vatReduced', { name, pct: pct(bps) });
     case 'exempt':
-      return `Exento de ${name}`;
+      return t('vatExempt', { name });
     case 'reverse-charge':
-      return `Sin ${name}: lo declara tu cliente`;
+      return t('vatReverse', { name });
     case 'outside-scope':
-      return `Sin ${name}: cliente en el extranjero`;
+      return t('vatOutside', { name });
     default:
-      return `Sin ${name}`;
+      return t('vatNone', { name });
   }
 }
 
@@ -54,7 +41,7 @@ export function Welcome() {
   const [name, setName] = useState('');
   const start = (f: () => Promise<import('../wallet/types').Wallet>, title: string) =>
     run(title, async (step) => {
-      step('Esperando a tu Face ID o huella');
+      step(t('waitingFaceId'));
       const w = await f();
       setWallet(w);
       return w;
@@ -62,31 +49,30 @@ export function Welcome() {
   return (
     <>
       <div className="content" style={{ justifyContent: 'center' }}>
+        <LangPicker compact />
         <div className="logo">Kyros</div>
-        <h1>Aparta tus impuestos en el momento en que cobras.</h1>
-        <p className="muted">Cada cobro en stablecoins se reparte solo: lo tuyo a tu wallet, el IVA y la renta a tu bóveda, hasta que toque pagar.</p>
+        <h1>{t('heroTitle')}</h1>
+        <p className="muted">{t('heroSub')}</p>
         <div className="card info">
-          <p className="small">
-            <b>Tu dinero es tuyo.</b> La bóveda es un contrato que solo tú controlas; Kyros no guarda tus claves ni tus fondos.
-          </p>
+          <p className="small" dangerouslySetInnerHTML={{ __html: t('yourMoney') }} />
         </div>
         <div className="field">
-          <label htmlFor="name">Tu nombre (para tu passkey)</label>
+          <label htmlFor="name">{t('nameForPasskey')}</label>
           <input id="name" className="input" value={name} placeholder="Lucía" onChange={(e) => setName(e.target.value)} />
         </div>
       </div>
       <div className="footer">
-        <Button testid="create-passkey" onClick={() => start(() => createPasskeyWallet(chain, name.trim() || 'Kyros'), 'Creando tu wallet con Face ID')}>
-          Crear mi cuenta con Face ID
+        <Button testid="create-passkey" onClick={() => start(() => createPasskeyWallet(chain, name.trim() || 'Kyros'), t('creatingWallet'))}>
+          {t('createFaceId')}
         </Button>
-        <Button kind="secondary" testid="connect-passkey" onClick={() => start(() => connectPasskeyWallet(chain), 'Entrando con Face ID')}>
-          Ya tengo cuenta
+        <Button kind="secondary" testid="connect-passkey" onClick={() => start(() => connectPasskeyWallet(chain), t('enteringFaceId'))}>
+          {t('haveAccount')}
         </Button>
-        <button className="link" style={{ textAlign: 'center', padding: 8 }} onClick={() => start(async () => (await import('../wallet/classic')).connectClassicWallet(chain), 'Conectando tu wallet')}>
-          Conectar otra wallet (Freighter, LOBSTR, xBull…)
+        <button className="link" style={{ textAlign: 'center', padding: 8 }} onClick={() => start(async () => (await import('../wallet/classic')).connectClassicWallet(chain), t('connectingWallet'))}>
+          {t('otherWallet')}
         </button>
         <p className="tiny muted" style={{ textAlign: 'center' }}>
-          Red de pruebas de Stellar (testnet): el dinero no es real.
+          {t('testnetNote')}
         </p>
       </div>
     </>
@@ -94,8 +80,8 @@ export function Welcome() {
 }
 
 export function Onboarding() {
-  const { chain, wallet, setVault, run } = useApp();
-  const all = useMemo(countries, []);
+  const { chain, wallet, setVault, run, lang } = useApp();
+  const all = useMemo(countries, [lang]);
   const [step, setStep] = useState(1);
   const [packId, setPackId] = useState('es');
   const [pack, setPack] = useState<RulePack | null>(null);
@@ -121,10 +107,10 @@ export function Onboarding() {
       <>
         <div className="content">
           <Top step={1} />
-          <h1>¿Dónde vives la mayor parte del año?</h1>
-          <p className="muted">Pagas impuestos donde tienes tu residencia fiscal, no donde está tu cliente.</p>
+          <h1>{t('q1')}</h1>
+          <p className="muted">{t('q1Sub')}</p>
           <div className="field">
-            <label htmlFor="country">País</label>
+            <label htmlFor="country">{t('country')}</label>
             <select id="country" className="input" value={packId} onChange={(e) => setPackId(e.target.value)}>
               {all.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -135,7 +121,7 @@ export function Onboarding() {
           </div>
           {pack?.regions?.length ? (
             <div className="field">
-              <label htmlFor="region">Región</label>
+              <label htmlFor="region">{t('region')}</label>
               <select id="region" className="input" value={region} onChange={(e) => setRegion(e.target.value)}>
                 {pack.regions.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -143,22 +129,22 @@ export function Onboarding() {
                   </option>
                 ))}
               </select>
-              <span className="tiny muted">El impuesto sobre la renta cambia según la región. Lo tenemos en cuenta.</span>
+              <span className="tiny muted">{t('regionNote')}</span>
             </div>
           ) : null}
           <div className="card">
             <p className="small" style={{ fontWeight: 500 }}>
-              ¿Pasas más de 183 días al año aquí?
+              {t('days183')}
             </p>
-            <Seg value={resident} onChange={setResident} options={[['yes', 'Sí'], ['no', 'No'], ['unsure', 'No lo sé']]} />
+            <Seg value={resident} onChange={setResident} options={[['yes', t('yes')], ['no', t('no')], ['unsure', t('unsure')]]} />
             {resident !== 'yes' && (
-              <p className="tiny muted">Si vives entre varios países, tu residencia fiscal depende también de dónde está tu casa y tu familia. Si dudas, consúltalo con un asesor.</p>
+              <p className="tiny muted">{t('residenceHelp')}</p>
             )}
           </div>
         </div>
         <div className="footer">
           <Button testid="next-1" onClick={() => setStep(2)} disabled={!pack}>
-            Continuar
+            {t('continue')}
           </Button>
         </div>
       </>
@@ -169,15 +155,15 @@ export function Onboarding() {
       <>
         <div className="content">
           <Top onBack={() => setStep(1)} step={2} />
-          <h1>¿A qué te dedicas?</h1>
-          <p className="muted">Con esto elegimos el IVA y el régimen que te corresponden.</p>
-          {(Object.keys(ACTIVITY_ES) as ActivityId[]).map((a) => (
-            <Option key={a} testid={`activity-${a}`} on={activity === a} title={ACTIVITY_ES[a][0]} sub={ACTIVITY_ES[a][1]} onClick={() => setActivity(a)} />
+          <h1>{t('q2')}</h1>
+          <p className="muted">{t('q2Sub')}</p>
+          {ACTIVITIES.map((a) => (
+            <Option key={a} testid={`activity-${a}`} on={activity === a} title={activityText(a)[0]} sub={activityText(a)[1]} onClick={() => setActivity(a)} />
           ))}
         </div>
         <div className="footer">
           <Button testid="next-2" onClick={() => setStep(3)}>
-            Continuar
+            {t('continue')}
           </Button>
         </div>
       </>
@@ -188,20 +174,20 @@ export function Onboarding() {
       <>
         <div className="content">
           <Top onBack={() => setStep(2)} step={3} />
-          <h1>¿Quién te paga normalmente?</h1>
-          <p className="muted">Si tienes de todo, elige lo más habitual. Podrás cambiarlo en cada cobro.</p>
-          {(Object.keys(CLIENT_ES) as ClientKind[]).map((k) => (
-            <Option key={k} testid={`client-${k}`} on={client === k} title={CLIENT_ES[k][0]} sub={CLIENT_ES[k][1]} onClick={() => setClient(k)} />
+          <h1>{t('q3')}</h1>
+          <p className="muted">{t('q3Sub')}</p>
+          {CLIENTS.map((k) => (
+            <Option key={k} testid={`client-${k}`} on={client === k} title={clientText(k)[0]} sub={clientText(k)[1]} onClick={() => setClient(k)} />
           ))}
           <div className="field">
-            <label htmlFor="revenue">¿Cuánto crees que facturarás este año? ({pack?.currency ?? 'EUR'})</label>
+            <label htmlFor="revenue">{t('revenueQ', { cur: pack?.currency ?? 'EUR' })}</label>
             <input id="revenue" className="input" inputMode="numeric" value={revenue} onChange={(e) => setRevenue(e.target.value.replace(/[^\d]/g, ''))} />
-            <span className="tiny muted">Una cifra aproximada basta. Sirve para calcular tu reserva.</span>
+            <span className="tiny muted">{t('revenueNote')}</span>
           </div>
         </div>
         <div className="footer">
           <Button testid="next-3" onClick={() => setStep(4)}>
-            Ver mi plan
+            {t('seePlan')}
           </Button>
         </div>
       </>
@@ -214,16 +200,16 @@ export function Onboarding() {
   const ex = split(plan.rule, gross);
   const reserveOnly = ex.reserve - ex.vat;
   const w = (x: bigint) => `${Number((x * 1000n) / (gross || 1n)) / 10}%`;
-  const [precLabel, precTone] = PRECISION_ES[s.precision] ?? ['Estimación', 'warn'];
+  const [precLabel, precTone] = precisionText(s.precision);
   const canFollow = s.vat.treatment === 'standard';
   return (
     <>
       <div className="content">
         <Top onBack={() => setStep(3)} />
-        <h1>Tu plan está listo</h1>
-        <p className="muted">Así repartiremos cada cobro, sin que tengas que hacer nada.</p>
+        <h1>{t('planReady')}</h1>
+        <p className="muted">{t('planSub')}</p>
         <div className="card">
-          <p className="small muted">Si te pagan {money(gross)} USDC</p>
+          <p className="small muted">{t('ifPaid', { amount: money(gross) })}</p>
           <div className="bar">
             <span style={{ width: w(ex.net), background: 'var(--spend)' }} />
             {ex.vat > 0n && <span style={{ width: w(ex.vat), background: 'var(--tax)' }} />}
@@ -231,42 +217,45 @@ export function Onboarding() {
           </div>
           <div className="row">
             <span className="dot" style={{ background: 'var(--spend)' }} />
-            <span className="grow">Para ti</span>
+            <span className="grow">{t('forYou')}</span>
             <b>{money(ex.net)}</b>
           </div>
           <div className="row">
             <span className="dot" style={{ background: 'var(--tax)' }} />
             <span className="grow">
-              {vatLabel(s.vat.treatment, s.vat.bps, pack.vatName ?? 'IVA')} <span className="badge ok">Exacto</span>
+              {vatLabel(s.vat.treatment, s.vat.bps, pack.vatName ?? t('vat'))} <span className="badge ok">{t('exact')}</span>
             </span>
             <b>{money(ex.vat)}</b>
           </div>
           <div className="row">
             <span className="dot" style={{ background: 'var(--warn)' }} />
             <span className="grow">
-              Reserva renta {pct(s.reserveBps)} <span className={`badge ${precTone}`}>{precLabel}</span>
+              {t('incomeReserve', { pct: pct(s.reserveBps) })} <span className={`badge ${precTone}`}>{precLabel}</span>
             </span>
             <b>{money(reserveOnly)}</b>
           </div>
         </div>
         <div className="card info">
           <p className="small" style={{ fontWeight: 600, color: 'var(--primary)' }}>
-            ¿Por qué {pct(s.reserveBps)}?
+            {t('whyPct', { pct: pct(s.reserveBps) })}
           </p>
           <p className="small">
-            Calculamos el impuesto sobre la renta de {countryName(pack.country)}
-            {region ? ` (${pack.regions?.find((r) => r.id === region)?.name ?? region})` : ''} para {Number(revenue).toLocaleString('es-ES')} {pack.currency} al año
-            {s.precision !== 'none' ? ' y añadimos un margen de seguridad según lo estricto que es el país' : ''}. Te avisaremos si se queda corta.
+            {t('whyBody', {
+              place: countryName(pack.country) + (region ? ` (${pack.regions?.find((r) => r.id === region)?.name ?? region})` : ''),
+              revenue: fmtNumber(Number(revenue)),
+              cur: pack.currency,
+              margin: s.precision !== 'none' ? t('whyMargin') : '',
+            })}
           </p>
         </div>
         {canFollow && (
           <div className="card">
             <div className="row">
               <div className="grow">
-                <p style={{ fontWeight: 500 }}>Ajustar solo si cambia la ley</p>
-                <p className="small muted">Si cambia el IVA, tu reparto se actualiza en la fecha oficial.</p>
+                <p style={{ fontWeight: 500 }}>{t('followLaw')}</p>
+                <p className="small muted">{t('followLawSub')}</p>
               </div>
-              <Toggle on={follow} onClick={() => setFollow(!follow)} label="Ajustar solo si cambia la ley" />
+              <Toggle on={follow} onClick={() => setFollow(!follow)} label={t('followLaw')} />
             </div>
           </div>
         )}
@@ -275,10 +264,10 @@ export function Onboarding() {
         <Button
           testid="create-vault"
           onClick={() =>
-            run('Creando tu bóveda', async (step) => {
+            run(t('creatingVault'), async (step) => {
               const v = await createVault(chain, wallet!, plan, answers, step);
               if (follow && canFollow) {
-                step('Activando "ajustar si cambia la ley" (confirma con tu wallet)');
+                step(t('stepFollow'));
                 try {
                   await followLaw(chain, wallet!, v, pack.country);
                 } catch {
@@ -289,7 +278,7 @@ export function Onboarding() {
             })
           }
         >
-          Crear mi bóveda
+          {t('createVault')}
         </Button>
       </div>
     </>

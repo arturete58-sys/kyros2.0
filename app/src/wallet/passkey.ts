@@ -6,6 +6,7 @@
  * transactions; the wallet signs its own authorizations.
  */
 import { Address, BASE_FEE, Operation, rpc, Transaction, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import { t } from '../i18n';
 import { MercuryIndexer, PasskeyKit, SignerKey } from 'passkey-kit';
 import { IndexedDBStorage } from 'passkey-kit/storage';
 import type { Chain } from '../chain';
@@ -87,5 +88,5 @@ export async function connectPasskeyWallet(chain: Chain): Promise<Wallet> {
 /** Turns a host error into something a person can read. */
 export function friendly(e: string): string {
   const m = /Error\(Contract, #(\d+)\)/.exec(e);
-  return m ? `El contrato rechazó la operación (error ${m[1]}).` : e.slice(0, 200);
+  return m ? t('errContract', { code: m[1] }) : e.slice(0, 200);
 }

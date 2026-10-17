@@ -59,3 +59,13 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await settle(page);
   await expect(page.getByText('Ver en el explorador →').first()).toBeVisible();
 });
+
+test('the user picks the language and it is remembered', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.getByTestId('lang')).toHaveValue('es');
+  await page.getByTestId('lang').selectOption('en');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Set your taxes aside the moment you get paid.');
+  await page.reload();
+  await expect(page.getByTestId('lang')).toHaveValue('en');
+  await expect(page.getByTestId('create-passkey')).toHaveText('Create my account with Face ID');
+});

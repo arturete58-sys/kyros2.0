@@ -2,15 +2,13 @@ import { useState } from 'react';
 import { formatAmount, payableUnits, requestTotals, money as cents, type PaymentRequest } from 'kyros-sdk';
 import { convertNow, expectPayment, followLaw, money, payTaxes, proposeEuroReserve, simulateClientPayment } from '../kyros';
 import { countryName } from '../packs';
-import { Button, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
-import { ACTIVITY_ES, CLIENT_ES } from './Start';
+import { Button, LangPicker, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
+import { activityText, clientText } from './Start';
+import { fmtDate as fmtDay, fmtDateTime, fmtTime, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
-const bucketLabel = (b: string) => (b === 'vat' ? 'IVA' : 'Reserva de renta');
-
-function fmtDate(secs: bigint): string {
-  return new Date(Number(secs) * 1000).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-}
+const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : 'bucketIncome');
+const fmtDate = (secs: bigint) => fmtDay(new Date(Number(secs) * 1000));
 
 export function Home() {
   const { snap, vault, wallet, chain, run, refresh, go } = useApp();
@@ -29,22 +27,22 @@ export function Home() {
       <div className="content" style={{ paddingBottom: 90 }}>
         <div className="row spread">
           <div>
-            <h1 style={{ fontSize: 22 }}>Hola</h1>
+            <h1 style={{ fontSize: 22 }}>{t('hello')}</h1>
             <p className="small muted">
-              {countryName(vault.answers.packId.toUpperCase())} · {ACTIVITY_ES[vault.answers.activity][0]} · {wallet.label}
+              {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]} · {wallet.label}
             </p>
           </div>
         </div>
         <div className="card hero" data-testid="spendable">
-          <span className="label small">Puedes gastar</span>
+          <span className="label small">{t('canSpend')}</span>
           <span className="big">{money(s?.spendable.usd ?? 0n)} USDC</span>
-          {(s?.spendable.eur ?? 0n) > 0n && <span className="small">y {money(s!.spendable.eur)} EURC</span>}
-          <span className="note small">Esto es tuyo. Los impuestos ya están apartados.</span>
+          {(s?.spendable.eur ?? 0n) > 0n && <span className="small">{t('andEur', { amount: money(s!.spendable.eur) })}</span>}
+          <span className="note small">{t('canSpendNote')}</span>
         </div>
         <div className="card" data-testid="reserved">
           <div className="row spread">
-            <span className="small muted">Apartado para impuestos{reservedEur > 0n ? ' · en euros' : ''}</span>
-            <span className="badge ok">Va bien</span>
+            <span className="small muted">{t('setAside')}{reservedEur > 0n ? t('inEuros') : ''}</span>
+            <span className="badge ok">{t('onTrack')}</span>
           </div>
           <span className="amount">
             {reservedEur > 0n ? `${money(reservedEur)} €` : ''}
@@ -52,54 +50,54 @@ export function Home() {
             {reservedUsd > 0n || reservedEur === 0n ? `${money(reservedUsd)} USDC` : ''}
           </span>
           <div className="row small muted">
-            <span className="dot" style={{ background: 'var(--tax)' }} /> IVA {money((vat?.usd ?? 0n) + (vat?.eur ?? 0n))}
-            <span className="dot" style={{ background: 'var(--warn)', marginLeft: 12 }} /> Renta {money(otherUsd + otherEur)}
+            <span className="dot" style={{ background: 'var(--tax)' }} /> {t('vat')} {money((vat?.usd ?? 0n) + (vat?.eur ?? 0n))}
+            <span className="dot" style={{ background: 'var(--warn)', marginLeft: 12 }} /> {t('incomeTax')} {money(otherUsd + otherEur)}
           </div>
-          <span className="tiny muted">Periodo actual hasta el {s?.dueDate ? fmtDate(s.dueDate) : '…'} (fecha en la que se puede liberar lo que sobre).</span>
+          <span className="tiny muted">{t('periodUntil', { date: s?.dueDate ? fmtDate(s.dueDate) : '…' })}</span>
         </div>
         <div className="card warn">
           <div className="row">
             <div className="grow">
               <p className="small" style={{ fontWeight: 600, color: 'var(--warn)' }}>
-                Pagar impuestos
+                {t('payTaxes')}
               </p>
-              <p className="small">Cuando toque, se paga desde la bóveda con un toque.</p>
+              <p className="small">{t('payTaxesSub')}</p>
             </div>
             <Button small onClick={() => go('pay')}>
-              Pagar
+              {t('pay')}
             </Button>
           </div>
         </div>
         <div className="card">
           <p className="small" style={{ fontWeight: 600 }}>
-            Prueba un cobro <span className="badge warn">Testnet</span>
+            {t('tryPayment')} <span className="badge warn">Testnet</span>
           </p>
-          <p className="small muted">Un cliente de pruebas te paga 1.210 USDC de test. Verás cómo se reparte al instante.</p>
+          <p className="small muted">{t('tryPaymentSub')}</p>
           <Button
             kind="secondary"
             testid="simulate-payment"
             onClick={() =>
-              run('Tu cliente de pruebas te está pagando', async (step) => {
-                step('Preparando el cliente y su dinero de prueba');
+              run(t('clientPaying'), async (step) => {
+                step(t('stepClient'));
                 const h = await simulateClientPayment(chain, vault.vault, 1210n * UNIT);
                 setLastTx(h);
-                step('Leyendo tu bóveda');
+                step(t('stepReading'));
                 await refresh();
               })
             }
           >
-            Simular un cobro de 1.210 USDC
+            {t('simulate1210')}
           </Button>
           {lastTx && <TxLink hash={lastTx} />}
         </div>
         {received.length > 0 && (
           <div className="list">
-            <h2>Últimos cobros</h2>
+            <h2>{t('lastPayments')}</h2>
             {received.map((e) => (
               <div className="item" key={e.txHash}>
                 <div className="grow">
-                  <div style={{ fontWeight: 500 }}>Cobro de {formatAmount(e.gross ?? 0n)}</div>
-                  <div className="small muted">{new Date(e.closedAt).toLocaleString('es-ES')}</div>
+                  <div style={{ fontWeight: 500 }}>{t('paymentOf', { amount: formatAmount(e.gross ?? 0n) })}</div>
+                  <div className="small muted">{fmtDateTime(new Date(e.closedAt))}</div>
                 </div>
                 <b>+{money(e.net ?? 0n)}</b>
               </div>
@@ -108,7 +106,7 @@ export function Home() {
         )}
       </div>
       <button className="fab" data-testid="request" onClick={() => go('request')}>
-        + Pedir un cobro
+        {t('requestPayment')}
       </button>
       <Tabs current="home" />
     </>
@@ -130,13 +128,13 @@ export function Request() {
     currency: 'EUR',
     withholding: withhold ? { rate: '15' } : undefined,
     payTo: { address: vault.vault, asset: 'USDC' },
-    lines: [{ description: `Factura ${number} a ${client}`, quantity: '1', unitPrice: base || '0', vatRate: String(vatBps / 100) }],
+    lines: [{ description: t('invoiceTo', { number, client }), quantity: '1', unitPrice: base || '0', vatRate: String(vatBps / 100) }],
   };
-  let t: ReturnType<typeof requestTotals> | null = null;
+  let tot: ReturnType<typeof requestTotals> | null = null;
   try {
-    t = requestTotals(req);
+    tot = requestTotals(req);
   } catch {
-    t = null;
+    tot = null;
   }
   const reserveBps = vault.rule.buckets.reduce((a, b) => a + b.bps, 0);
   const bucket = vault.rule.buckets[0]?.name ?? 'income_tax';
@@ -144,64 +142,64 @@ export function Request() {
     <>
       <div className="content">
         <Top onBack={() => go('home')} />
-        <h1>Pedir un cobro</h1>
+        <h1>{t('requestTitle')}</h1>
         {!done ? (
           <>
             <div className="field">
-              <label>Cliente</label>
+              <label>{t('client')}</label>
               <input className="input" value={client} onChange={(e) => setClient(e.target.value)} />
             </div>
             <div className="field">
-              <label>Nº de tu factura</label>
+              <label>{t('invoiceNo')}</label>
               <input className="input" value={number} onChange={(e) => setNumber(e.target.value)} />
             </div>
             <div className="field">
-              <label>Importe sin IVA (€)</label>
+              <label>{t('amountNoVat')}</label>
               <input className="input" inputMode="decimal" value={base} onChange={(e) => setBase(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} />
             </div>
-            {t && (
+            {tot && (
               <div className="card">
                 <div className="row spread small">
-                  <span className="muted">Base</span>
-                  <b>{cents(t.net)} €</b>
+                  <span className="muted">{t('base')}</span>
+                  <b>{cents(tot.net)} €</b>
                 </div>
                 <div className="row spread small">
                   <span className="muted">
-                    IVA {pct(vatBps)} <span className="badge ok">Automático</span>
+                    {t('vat')} {pct(vatBps)} <span className="badge ok">{t('automatic')}</span>
                   </span>
-                  <b>{cents(t.tax)} €</b>
+                  <b>{cents(tot.tax)} €</b>
                 </div>
                 <div className="row spread small">
-                  <span className="muted">Retención IRPF 15 %</span>
-                  <Toggle on={withhold} onClick={() => setWithhold(!withhold)} label="Retención IRPF" />
+                  <span className="muted">{t('withholding15')}</span>
+                  <Toggle on={withhold} onClick={() => setWithhold(!withhold)} label={t('withholding15')} />
                 </div>
                 {withhold && (
                   <div className="row spread small">
-                    <span className="muted">Te retienen</span>
-                    <b>−{cents(t.withheld)} €</b>
+                    <span className="muted">{t('withheld')}</span>
+                    <b>−{cents(tot.withheld)} €</b>
                   </div>
                 )}
                 <div className="row spread">
-                  <b>Te pagarán</b>
+                  <b>{t('willPay')}</b>
                   <span className="amount" style={{ fontSize: 20 }}>
-                    {cents(t.payable)} €
+                    {cents(tot.payable)} €
                   </span>
                 </div>
               </div>
             )}
             <div className="card info">
-              <p className="small">Haz la factura con tu programa de siempre. Cuando te paguen con este enlace, Kyros aparta exactamente el IVA de ese cobro.</p>
+              <p className="small">{t('ownInvoiceNote')}</p>
             </div>
           </>
         ) : (
           <>
             <div className="card ok">
-              <p style={{ fontWeight: 600 }}>Cobro registrado en tu bóveda</p>
-              <p className="small">Cuando llegue un pago con la referencia de la factura {number}, se repartirá con su IVA{withhold ? ' y su retención' : ''}.</p>
+              <p style={{ fontWeight: 600 }}>{t('registered')}</p>
+              <p className="small">{t('registeredBody', { number, wh: withhold ? t('andWithholding') : '' })}</p>
               <TxLink hash={done.hash} />
             </div>
             <div className="field">
-              <label>Enlace de pago para tu cliente</label>
+              <label>{t('payLinkLabel')}</label>
               <input className="input mono" readOnly value={`${location.origin}${import.meta.env.BASE_URL}#pagar?v=${vault.vault}&r=${done.ref}&a=${done.payable}`} onFocus={(e) => e.currentTarget.select()} />
             </div>
           </>
@@ -211,33 +209,33 @@ export function Request() {
         {!done ? (
           <Button
             testid="register-request"
-            disabled={!t || t.net <= 0n}
+            disabled={!tot || tot.net <= 0n}
             onClick={() =>
-              run('Registrando el cobro (confirma con tu wallet)', async (step) => {
-                step('Confirma con Face ID o con tu wallet');
+              run(t('registering'), async (step) => {
+                step(t('confirmWallet'));
                 const r = await expectPayment(chain, wallet, vault.vault, req, reserveBps, bucket);
                 setDone({ ref: Buffer.from(r.reference).toString('hex'), hash: r.hash, payable: payableUnits(req) });
               })
             }
           >
-            Registrar y crear enlace
+            {t('registerAndLink')}
           </Button>
         ) : (
           <>
             <Button
               testid="simulate-request-payment"
               onClick={() =>
-                run('Tu cliente de pruebas está pagando la factura', async () => {
+                run(t('clientPayingInvoice'), async () => {
                   await simulateClientPayment(chain, vault.vault, done.payable, Buffer.from(done.ref, 'hex'));
                   await refresh();
                   go('home');
                 })
               }
             >
-              Simular que el cliente paga
+              {t('simulateClientPays')}
             </Button>
             <Button kind="secondary" onClick={() => navigator.clipboard?.writeText(`${location.origin}${import.meta.env.BASE_URL}#pagar?v=${vault.vault}&r=${done.ref}&a=${done.payable}`)}>
-              Copiar enlace
+              {t('copyLink')}
             </Button>
           </>
         )}
@@ -256,10 +254,10 @@ export function Pay() {
     <>
       <div className="content">
         <Top onBack={() => go('home')} />
-        <h1>Pagar impuestos</h1>
-        <p className="muted">Lo apartado en este periodo, listo para pagar.</p>
+        <h1>{t('payTaxes')}</h1>
+        <p className="muted">{t('paySub')}</p>
         <div className="card">
-          {rows.length === 0 && <p className="small muted">No hay nada apartado en este periodo todavía.</p>}
+          {rows.length === 0 && <p className="small muted">{t('nothingYet')}</p>}
           {rows.map(([b, v]) => (
             <div className="row spread" key={b}>
               <span>{bucketLabel(b)}</span>
@@ -270,21 +268,21 @@ export function Pay() {
           ))}
           {rows.length > 0 && (
             <div className="row spread" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-              <b>Total</b>
+              <b>{t('total')}</b>
               <span className="amount" style={{ fontSize: 20 }}>
                 {money(total)}
               </span>
             </div>
           )}
         </div>
-        <h2>Cómo se paga</h2>
+        <h2>{t('howPaid')}</h2>
         <div className="list">
-          <div className="item small">1 · Kyros envía lo apartado a tu destino fiscal: tu anchor, el servicio que lo cambia a euros.</div>
-          <div className="item small">2 · El anchor te ingresa los euros en tu cuenta bancaria.</div>
-          <div className="item small">3 · Hacienda los cobra por domiciliación.</div>
+          <div className="item small">{t('how1')}</div>
+          <div className="item small">{t('how2')}</div>
+          <div className="item small">{t('how3')}</div>
         </div>
         <div className="card warn">
-          <p className="small">En testnet el destino es una cuenta de pruebas que hace de anchor; no se mueve dinero real.</p>
+          <p className="small">{t('testnetDestination')}</p>
         </div>
         {hashes.map((h) => (
           <TxLink key={h} hash={h} />
@@ -295,14 +293,14 @@ export function Pay() {
           testid="pay-taxes"
           disabled={rows.length === 0 || !snap}
           onClick={() =>
-            run('Pagando tus impuestos', async (step) => {
+            run(t('paying'), async (step) => {
               const hs = await payTaxes(chain, wallet, vault, snap!.period, step);
               setHashes(hs);
               await refresh();
             })
           }
         >
-          Pagar desde mi bóveda
+          {t('payFromVault')}
         </Button>
       </div>
     </>
@@ -319,47 +317,48 @@ export function Settings() {
   return (
     <>
       <div className="content" style={{ gap: 10 }}>
-        <h1>Ajustes</h1>
-        <h2 className="tiny muted">TU SITUACIÓN</h2>
+        <h1>{t('settings')}</h1>
+        <LangPicker />
+        <h2 className="tiny muted">{t('yourSituation')}</h2>
         <div className="card" style={{ gap: 6 }}>
           <div className="row spread small">
-            <span>País</span>
+            <span>{t('country')}</span>
             <span className="muted">{countryName(vault.answers.packId.toUpperCase())}</span>
           </div>
           <div className="row spread small">
-            <span>Actividad</span>
-            <span className="muted">{ACTIVITY_ES[vault.answers.activity][0]}</span>
+            <span>{t('activity')}</span>
+            <span className="muted">{activityText(vault.answers.activity)[0]}</span>
           </div>
           <div className="row spread small">
-            <span>Clientes</span>
-            <span className="muted">{CLIENT_ES[vault.answers.client][0]}</span>
+            <span>{t('clients')}</span>
+            <span className="muted">{clientText(vault.answers.client)[0]}</span>
           </div>
           <div className="row spread small">
-            <span>Reparto</span>
+            <span>{t('split')}</span>
             <span className="muted">
-              IVA {pct(vault.rule.vatBps)} · renta {pct(reserveBps)}
+              {t('splitValue', { vat: pct(vault.rule.vatBps), res: pct(reserveBps) })}
             </span>
           </div>
         </div>
-        <h2 className="tiny muted">EUROS Y LEY</h2>
+        <h2 className="tiny muted">{t('eurosAndLaw')}</h2>
         <div className="card">
           <div className="row">
             <div className="grow">
-              <p style={{ fontWeight: 500 }}>Guardar mis impuestos en euros</p>
+              <p style={{ fontWeight: 500 }}>{t('keepEuros')}</p>
               <p className="small muted">
                 {euroActive
-                  ? 'Activado: lo apartado en USDC se cambia a EURC, nunca por debajo del precio de mercado menos un 1 %.'
+                  ? t('eurosOn')
                   : euroPending
-                    ? `Se activa el ${new Date(Number(euroPending) * 1000).toLocaleTimeString('es-ES')} (plazo de aviso de seguridad).`
-                    : 'Te pagan en dólares, pero Hacienda cobra en euros.'}
+                    ? t('eurosPending', { time: fmtTime(new Date(Number(euroPending) * 1000)) })
+                    : t('eurosOff')}
               </p>
             </div>
             <Toggle
               on={euroActive || !!euroPending}
               disabled={euroActive || !!euroPending || !chain.cfg.conversion}
-              label="Guardar en euros"
+              label={t('keepEuros')}
               onClick={() =>
-                run('Activando la reserva en euros (confirma con tu wallet)', async () => {
+                run(t('turningEuros'), async () => {
                   await proposeEuroReserve(chain, wallet, vault);
                   await refresh();
                 })
@@ -371,26 +370,26 @@ export function Settings() {
               kind="secondary"
               small
               onClick={() =>
-                run('Cambiando la reserva a euros', async () => {
+                run(t('converting'), async () => {
                   await convertNow(chain, vault, snap!.period);
                   await refresh();
                 })
               }
             >
-              Cambiar ahora {money(snap!.reserved.usd)} USDC a EURC
+              {t('convertNow', { amount: money(snap!.reserved.usd) })}
             </Button>
           )}
           <div className="row" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
             <div className="grow">
-              <p style={{ fontWeight: 500 }}>Ajustar solo si cambia la ley</p>
-              <p className="small muted">{snap?.feed ? `Sigue el IVA oficial de ${snap.feed.country}.` : 'El IVA se actualiza en la fecha oficial, sin firmar nada.'}</p>
+              <p style={{ fontWeight: 500 }}>{t('followLaw')}</p>
+              <p className="small muted">{snap?.feed ? t('followsLaw', { country: countryName(snap.feed.country) }) : t('followLawOff')}</p>
             </div>
             <Toggle
               on={!!snap?.feed}
               disabled={!!snap?.feed}
-              label="Ajustar si cambia la ley"
+              label={t('followLaw')}
               onClick={() =>
-                run('Activando (confirma con tu wallet)', async () => {
+                run(t('turningOn'), async () => {
                   await followLaw(chain, wallet, vault, vault.answers.packId.toUpperCase());
                   await refresh();
                 })
@@ -399,22 +398,22 @@ export function Settings() {
           </div>
           <div className="row" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
             <div className="grow">
-              <p style={{ fontWeight: 500 }}>Hacer que rinda</p>
-              <p className="small muted">Prestar una parte en Blend. Aún no disponible en testnet.</p>
+              <p style={{ fontWeight: 500 }}>{t('yieldTitle')}</p>
+              <p className="small muted">{t('yieldSoon')}</p>
             </div>
-            <Toggle on={false} disabled label="Rendimiento" onClick={() => {}} />
+            <Toggle on={false} disabled label={t('yieldTitle')} onClick={() => {}} />
           </div>
         </div>
-        <h2 className="tiny muted">CUENTA</h2>
+        <h2 className="tiny muted">{t('account')}</h2>
         <div className="card" style={{ gap: 6 }}>
           <div className="small">
             Wallet ({wallet.label}): <span className="mono">{wallet.address}</span>
           </div>
           <div className="small">
-            Bóveda: <span className="mono">{vault.vault}</span>
+            {t('vault')}: <span className="mono">{vault.vault}</span>
           </div>
           <div className="small">
-            Dirección de cobro: <span className="mono">{vault.inbox}</span>
+            {t('payAddress')}: <span className="mono">{vault.inbox}</span>
           </div>
           <button
             className="link"
@@ -424,7 +423,7 @@ export function Settings() {
               setWallet(null);
             }}
           >
-            Salir
+            {t('signOut')}
           </button>
         </div>
       </div>
@@ -433,19 +432,8 @@ export function Settings() {
   );
 }
 
-const KIND_ES: Record<string, string> = {
-  received: 'Cobro repartido',
-  tax_paid: 'Impuesto pagado',
-  released: 'Reserva liberada',
-  converted: 'Reserva cambiada a euros',
-  rule_proposed: 'Cambio de reparto propuesto',
-  destination_proposed: 'Cambio de destino propuesto',
-  rule_applied: 'Cambio de reparto aplicado',
-  destination_applied: 'Cambio de destino aplicado',
-  change_cancelled: 'Cambio cancelado',
-  invested: 'Reserva invertida',
-  harvested: 'Rendimiento retirado',
-};
+const KNOWN_EVENTS = ['received', 'tax_paid', 'released', 'converted', 'invested', 'harvested'];
+const eventText = (kind: string) => t((KNOWN_EVENTS.includes(kind) ? `ev_${kind}` : 'ev_change') as Key);
 
 export function Activity() {
   const { snap, chain } = useApp();
@@ -453,14 +441,14 @@ export function Activity() {
   return (
     <>
       <div className="content">
-        <h1>Movimientos</h1>
-        {ev.length === 0 && <p className="muted">Todavía no hay movimientos.</p>}
+        <h1>{t('movements')}</h1>
+        {ev.length === 0 && <p className="muted">{t('noMovements')}</p>}
         <div className="list">
           {ev.map((e) => (
             <a className="item" key={e.txHash + e.kind} href={chain.explorerTx(e.txHash)} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
               <div className="grow">
-                <div style={{ fontWeight: 500 }}>{KIND_ES[e.kind] ?? e.kind}</div>
-                <div className="small muted">{new Date(e.closedAt).toLocaleString('es-ES')}</div>
+                <div style={{ fontWeight: 500 }}>{eventText(e.kind)}</div>
+                <div className="small muted">{fmtDateTime(new Date(e.closedAt))}</div>
               </div>
               <b>{e.kind === 'received' ? `+${money(e.net ?? 0n)}` : e.amount ? money(e.amount) : ''}</b>
             </a>
@@ -477,16 +465,16 @@ export function Alerts() {
   const now = BigInt(Math.floor(Date.now() / 1000));
   const items: { tone: string; title: string; body: string }[] = [];
   if (snap?.pendingConversionAt && snap.pendingConversionAt > now)
-    items.push({ tone: 'info', title: 'CAMBIO PROGRAMADO', body: `La reserva en euros se activa el ${new Date(Number(snap.pendingConversionAt) * 1000).toLocaleString('es-ES')}. El plazo de aviso protege tu bóveda si alguien te roba el acceso.` });
-  if (snap?.feed) items.push({ tone: 'ok', title: 'LEY AL DÍA', body: `Tu IVA sigue el registro oficial de ${snap.feed.country}: si cambia, tu reparto se ajusta solo en la fecha legal.` });
-  if (snap?.conversion && (snap.reserved.usd ?? 0n) > 0n) items.push({ tone: 'warn', title: 'RESERVA EN DÓLARES', body: 'Tienes reserva en USDC pendiente de cambiar a euros. Puedes hacerlo en Ajustes.' });
+    items.push({ tone: 'info', title: t('al_scheduled'), body: t('al_scheduledBody', { date: fmtDateTime(new Date(Number(snap.pendingConversionAt) * 1000)) }) });
+  if (snap?.feed) items.push({ tone: 'ok', title: t('al_law'), body: t('al_lawBody', { country: countryName(snap.feed.country) }) });
+  if (snap?.conversion && (snap.reserved.usd ?? 0n) > 0n) items.push({ tone: 'warn', title: t('al_usd'), body: t('al_usdBody') });
   const paid = snap?.events.filter((e) => e.kind === 'tax_paid') ?? [];
-  if (paid.length) items.push({ tone: 'ok', title: 'PAGADO', body: `${paid.length} pago(s) de impuestos hechos desde tu bóveda.` });
+  if (paid.length) items.push({ tone: 'ok', title: t('al_paid'), body: t('al_paidBody', { n: paid.length }) });
   return (
     <>
       <div className="content">
-        <h1>Avisos</h1>
-        {items.length === 0 && <p className="muted">Nada pendiente.</p>}
+        <h1>{t('alerts')}</h1>
+        {items.length === 0 && <p className="muted">{t('nothingPending')}</p>}
         {items.map((i) => (
           <div key={i.title} className={`card ${i.tone}`}>
             <p className="tiny" style={{ fontWeight: 700 }}>

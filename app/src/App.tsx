@@ -7,6 +7,7 @@ import { Activity, Alerts, Home, Pay, Request, Settings } from './screens/Main';
 import { Onboarding, Welcome } from './screens/Start';
 import { PayLink } from './screens/PayLink';
 import type { Wallet } from './wallet/types';
+import { getLang, setLang as applyLang, t, type Lang } from './i18n';
 
 function payLinkFromHash(): { vault: string; refHex: string; amount: bigint } | null {
   const m = /^#pagar\?(.*)$/.exec(location.hash);
@@ -28,6 +29,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [busy, setBusy] = useState<{ title: string; step: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null);
+  const [lang, setLangState] = useState<Lang>(getLang());
   const payLink = payLinkFromHash();
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function App() {
       setWallet({
         kind: 'passkey',
         address: 'CUITEST',
-        label: 'Prueba',
+        label: 'Test',
         signAndSend: async () => {
           throw new Error('wallet de prueba: no firma');
         },
@@ -97,6 +99,11 @@ export default function App() {
     refresh,
     toast: (msg) => setToast({ msg }),
     go: setScreen,
+    lang,
+    setLang: (l) => {
+      applyLang(l);
+      setLangState(l);
+    },
     async run(title, f) {
       setBusy({ title, step: '' });
       try {
@@ -127,7 +134,7 @@ export default function App() {
   return (
     <AppCtx.Provider value={ctx}>
       <div className="phone">
-        <div className="testnet">Testnet · dinero de prueba</div>
+        <div className="testnet">{t('testnetBanner')}</div>
         {page}
       </div>
       {busy && (

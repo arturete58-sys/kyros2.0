@@ -1,5 +1,6 @@
 /** What the app does with the Kyros contracts, on behalf of the connected wallet. */
 import { Keypair, scValToNative } from '@stellar/stellar-sdk';
+import { fmtNumber, t } from './i18n';
 import { requestRef, requestTerms, suggestSetup, termsFromPack, vaultEvents, type ActivityId, type ClientKind, type PaymentRequest, type RulePack, type Rule, type Setup, type VaultEventRow } from 'kyros-sdk';
 import { Chain, localKey, store } from './chain';
 import type { Wallet } from './wallet/types';
@@ -47,10 +48,10 @@ export function savedVault(owner: string, deployedAt: string): VaultInfo | null 
 export async function createVault(chain: Chain, wallet: Wallet, plan: Plan, answers: Answers, onStep: (s: string) => void): Promise<VaultInfo> {
   const cfg = chain.cfg;
   const fp = chain.feePayer;
-  onStep('Preparando la cuenta que paga las comisiones de red');
+  onStep(t('stepFeePayer'));
   await chain.ensureAccount(fp.publicKey());
   const terms = termsFromPack(plan.pack, plan.setup.presetId);
-  onStep('Creando tu bóveda');
+  onStep(t('stepVault'));
   const vault = await chain.client.deployVault(fp, Buffer.from(cfg.wasm.vault, 'hex'), {
     owner: wallet.address,
     rule: plan.rule,
@@ -60,7 +61,7 @@ export async function createVault(chain: Chain, wallet: Wallet, plan: Plan, answ
     dueOffsetSecs: terms.dueOffsetSecs,
     tokens: [cfg.tokens.usd.contract, cfg.tokens.eur.contract],
   });
-  onStep('Creando tu dirección de cobro');
+  onStep(t('stepInbox'));
   const inbox = await chain.client.deployInbox(fp, Buffer.from(cfg.wasm.inbox, 'hex'), vault.contractId);
   const info: VaultInfo = {
     vault: vault.contractId,
@@ -167,7 +168,7 @@ export async function payTaxes(chain: Chain, wallet: Wallet, v: VaultInfo, perio
     const p = await chain.client.period(v.vault, period, token);
     for (const [bucket, amount] of Object.entries(p.buckets)) {
       if (amount <= 0n) continue;
-      onStep(`Pagando ${bucket === 'vat' ? 'IVA' : 'reserva de renta'} (${which})`);
+      onStep(t('payingBucket', { what: t(bucket === 'vat' ? 'bucketVat' : 'bucketIncome'), cur: which }));
       hashes.push(await wallet.signAndSend(chain.client.payTaxOp(v.vault, { period, token, bucket, amount })));
     }
   }
@@ -177,7 +178,7 @@ export async function payTaxes(chain: Chain, wallet: Wallet, v: VaultInfo, perio
 /** Owner: keep the reserve in euros, through the deployment's swapper and Reflector's fiat oracle. */
 export async function proposeEuroReserve(chain: Chain, wallet: Wallet, v: VaultInfo): Promise<string> {
   const conv = chain.cfg.conversion;
-  if (!conv) throw new Error('La conversión a euros no está disponible en este despliegue de testnet.');
+  if (!conv) throw new Error(t('errNoConversion'));
   return wallet.signAndSend(
     chain.client.proposeConversionOp(v.vault, {
       fromToken: chain.cfg.tokens.usd.contract,
@@ -208,6 +209,6 @@ export function units(x: bigint): number {
 }
 
 export const money = (x: bigint, cur: '€' | 'USDC' | 'EURC' | '' = '') =>
-  `${units(x).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${cur ? ` ${cur}` : ''}`;
+  `${fmtNumber(units(x), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${cur ? ` ${cur}` : ''}`;
 
 export { Keypair };

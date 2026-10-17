@@ -49,6 +49,7 @@ Every behaviour that matters is enforced by a contract:
 | [`contracts/rate-registry`](contracts/rate-registry) | Rate Registry: dated VAT rates per country on-chain, published at least a fixed notice ahead; vaults can follow it |
 | [`contracts/swap-soroswap`](contracts/swap-soroswap) | Swapper over Soroswap, for the euro reserve (tested against the mainnet bytecode) |
 | [`contracts/yield-blend`](contracts/yield-blend) | Yield strategy over a Blend v2 pool, one per vault (tested against Blend's contracts) |
+| [`app`](app) | Web app (Vite + React) on testnet: sign up with a passkey (Face ID) smart wallet the user owns, or connect an existing Stellar wallet; onboarding, vault, test payments, expected payments, tax payment, euro reserve. In Spanish, English, Portuguese, French, German and Italian, chosen by the user |
 | [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check with precision and objective targets, registry sync, country moves, SEP-7 links, event reader and CSV export, keeper; anchors (SEP-1/10/24/6); expected payments with their VAT and withholding |
 | [`rule-packs`](rule-packs) | Rule packs for 46 jurisdictions: dated VAT tables, presets, fiscal calendars and tax estimates, with their JSON schema |
 | [`test-vectors`](test-vectors) | Split and calendar cases checked by both the Rust and the SDK tests |
@@ -124,6 +125,15 @@ KEEPER_SECRET=S... npx kyros-keeper --network testnet --watch <inbox>:<token>
 ## Testnet
 
 The [testnet demo workflow](.github/workflows/testnet-demo.yml) deploys the contracts and runs the whole cycle with real transactions: a Router payment, an inbox payment swept by the keeper, an expected payment with IRPF withheld split by its own terms, a tax payment with an anchor-style memo, a refused early release, a refused early change of destination, the release after the due date, scheduled and registry-followed VAT changes, a move to another country, a reserve converted to euros through the Soroswap testnet router, and the CSV export. The latest results, with every transaction link, are in [docs/testnet](docs/testnet).
+
+## Web app
+
+[`app`](app) is the product people use, wired to the contracts on testnet and published on GitHub Pages by the [App workflow](.github/workflows/app.yml).
+
+- **The wallet is the user's.** "Create my account with Face ID" makes a passkey smart wallet ([passkey-kit](https://github.com/kalepail/passkey-kit)) that only the user's device can authorize; "Connect another wallet" uses Freighter, LOBSTR, xBull and others through Stellar Wallets Kit. The vault's owner is that wallet; Kyros holds no key and no funds.
+- **Fees.** A throwaway testnet account created in the browser and funded by friendbot pays network fees and deploys the user's vault and inbox. It never owns anything.
+- **Test money.** The deployment's test-token issuer key is published in `testnet.json` on purpose, so the app can hand out test USDC. It exists only on testnet.
+- **Languages.** Spanish, English, Portuguese, French, German and Italian. The app follows the browser's language until the user picks one on the first screen or in Settings; the choice is remembered, and country names, numbers and dates follow it.
 
 ## Stellar building blocks
 

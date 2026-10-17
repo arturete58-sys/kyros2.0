@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { Chain } from './chain';
 import type { Snapshot, VaultInfo } from './kyros';
 import type { Wallet } from './wallet/types';
+import { fmtNumber, LANGS, t, type Lang } from './i18n';
 
 export interface Ctx {
   chain: Chain;
@@ -15,6 +16,8 @@ export interface Ctx {
   run<T>(title: string, f: (step: (s: string) => void) => Promise<T>): Promise<T | undefined>;
   toast(msg: string): void;
   go(screen: Screen): void;
+  lang: Lang;
+  setLang(l: Lang): void;
 }
 
 export type Screen = 'home' | 'request' | 'pay' | 'settings' | 'activity' | 'alerts';
@@ -62,7 +65,7 @@ export function Top(p: { onBack?: () => void; step?: number; of?: number }) {
   return (
     <div className="top">
       {p.onBack && (
-        <button className="back" onClick={p.onBack} aria-label="Atrás">
+        <button className="back" onClick={p.onBack} aria-label={t('back')}>
           ‹
         </button>
       )}
@@ -74,7 +77,7 @@ export function Top(p: { onBack?: () => void; step?: number; of?: number }) {
             ))}
           </div>
           <span className="small muted">
-            {p.step} de {p.of ?? 3}
+            {t('step', { n: p.step, of: p.of ?? 3 })}
           </span>
         </>
       )}
@@ -102,10 +105,10 @@ const icons: Record<string, ReactNode> = {
 export function Tabs(p: { current: Screen }) {
   const { go } = useApp();
   const tabs: [Screen, string, string][] = [
-    ['home', 'Inicio', 'home'],
-    ['activity', 'Movimientos', 'list'],
-    ['alerts', 'Avisos', 'bell'],
-    ['settings', 'Ajustes', 'gear'],
+    ['home', t('tabHome'), 'home'],
+    ['activity', t('movements'), 'list'],
+    ['alerts', t('alerts'), 'bell'],
+    ['settings', t('settings'), 'gear'],
   ];
   return (
     <nav className="tabs">
@@ -125,9 +128,26 @@ export function TxLink(p: { hash: string }) {
   const { chain } = useApp();
   return (
     <a href={chain.explorerTx(p.hash)} target="_blank" rel="noreferrer" className="small">
-      Ver en el explorador →
+      {t('seeExplorer')}
     </a>
   );
 }
 
-export const pct = (bps: number) => `${(bps / 100).toLocaleString('es-ES', { maximumFractionDigits: 2 })} %`;
+export const pct = (bps: number) => `${fmtNumber(bps / 100, { maximumFractionDigits: 2 })} %`;
+
+/** The language picker: on the first screen and in Settings. */
+export function LangPicker(p: { compact?: boolean }) {
+  const { lang, setLang } = useApp();
+  return (
+    <label className={p.compact ? 'lang compact' : 'lang'}>
+      <span className="tiny muted">{t('language')}</span>
+      <select data-testid="lang" className="input" value={lang} aria-label={t('language')} onChange={(e) => setLang(e.target.value as Lang)}>
+        {LANGS.map((l) => (
+          <option key={l.id} value={l.id}>
+            {l.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}

@@ -1,9 +1,15 @@
 /** Rule packs bundled into the app (the same JSON the SDK and the contracts' docs use). */
 import { checkRulePack, type RulePack } from 'kyros-sdk';
+import { getLang, locale } from './i18n';
 
 const files = import.meta.glob('../../rule-packs/[a-z][a-z].json', { import: 'default' }) as Record<string, () => Promise<unknown>>;
 
-const names = new Intl.DisplayNames(['es'], { type: 'region' });
+const cache = new Map<string, Intl.DisplayNames>();
+function names(): Intl.DisplayNames {
+  const l = getLang();
+  if (!cache.has(l)) cache.set(l, new Intl.DisplayNames([l], { type: 'region' }));
+  return cache.get(l)!;
+}
 
 export interface CountryOption {
   id: string;
@@ -11,12 +17,12 @@ export interface CountryOption {
   name: string;
 }
 
-/** Every bundled country, sorted by its Spanish name. */
+/** Every bundled country, named and sorted in the user's language. */
 export function countries(): CountryOption[] {
   return Object.keys(files)
     .map((f) => /([a-z]{2})\.json$/.exec(f)![1])
-    .map((id) => ({ id, country: id.toUpperCase(), name: names.of(id.toUpperCase()) ?? id.toUpperCase() }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    .map((id) => ({ id, country: id.toUpperCase(), name: names().of(id.toUpperCase()) ?? id.toUpperCase() }))
+    .sort((a, b) => a.name.localeCompare(b.name, locale()));
 }
 
 export async function loadPack(id: string): Promise<RulePack> {
@@ -28,5 +34,5 @@ export async function loadPack(id: string): Promise<RulePack> {
 }
 
 export function countryName(code: string): string {
-  return names.of(code) ?? code;
+  return names().of(code) ?? code;
 }

@@ -1,3 +1,4 @@
+import { t } from './i18n';
 /** What the testnet deployment workflow wrote (app/public/testnet.json). */
 export interface AppConfig {
   network: 'testnet';
@@ -23,6 +24,8 @@ export interface Token {
 
 export async function loadConfig(): Promise<AppConfig> {
   const r = await fetch(`${import.meta.env.BASE_URL}testnet.json`, { cache: 'no-store' });
-  if (!r.ok) throw new Error('Kyros todavía no está desplegado en testnet (falta testnet.json).');
-  return (await r.json()) as AppConfig;
+  if (!r.ok) throw new Error(`${t('notDeployed')} (testnet.json)`);
+  const c = (await r.json()) as Partial<AppConfig>;
+  if (!c.router || !c.rpcUrl) throw new Error(t('notDeployed'));
+  return c as AppConfig;
 }

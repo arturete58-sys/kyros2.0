@@ -5,6 +5,7 @@
  * user's money (the vault's owner is the user's wallet).
  */
 import { Asset, BASE_FEE, Keypair, Operation, rpc, Transaction, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import { t } from './i18n';
 import { KyrosClient } from 'kyros-sdk';
 import type { AppConfig } from './config';
 
@@ -72,15 +73,15 @@ export class Chain {
         await new Promise((res) => setTimeout(res, 1500));
       }
     }
-    throw new Error('No se pudo crear la cuenta de pruebas (friendbot).');
+    throw new Error(t('errFriendbot'));
   }
 
   /** Submits a signed transaction and waits for it. Returns its hash. */
   async submit(tx: Transaction): Promise<string> {
     const sent = await this.server.sendTransaction(tx);
-    if (sent.status === 'ERROR') throw new Error(`La red rechazó la transacción: ${sent.errorResult?.result().switch().name ?? 'error'}`);
+    if (sent.status === 'ERROR') throw new Error(t('errRejected', { why: sent.errorResult?.result().switch().name ?? 'error' }));
     const done = await this.server.pollTransaction(sent.hash, { attempts: 40, sleepStrategy: () => 1000 });
-    if (done.status !== 'SUCCESS') throw new Error(`La transacción ${sent.hash.slice(0, 8)}… terminó en ${done.status}`);
+    if (done.status !== 'SUCCESS') throw new Error(t('errTxStatus', { tx: sent.hash.slice(0, 8), status: String(done.status) }));
     return sent.hash;
   }
 

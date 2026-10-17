@@ -1,0 +1,284 @@
+/**
+ * The app's languages. The user picks one on the first screen or in
+ * Settings; by default it follows the browser. Missing strings fall back to
+ * English.
+ */
+export type Lang = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'it';
+
+export const LANGS: { id: Lang; name: string; locale: string }[] = [
+  { id: 'es', name: 'Español', locale: 'es-ES' },
+  { id: 'en', name: 'English', locale: 'en-GB' },
+  { id: 'pt', name: 'Português', locale: 'pt-PT' },
+  { id: 'fr', name: 'Français', locale: 'fr-FR' },
+  { id: 'de', name: 'Deutsch', locale: 'de-DE' },
+  { id: 'it', name: 'Italiano', locale: 'it-IT' },
+];
+
+export function detectLang(): Lang {
+  try {
+    const saved = localStorage.getItem('kyros.lang') as Lang | null;
+    if (saved && LANGS.some((l) => l.id === saved)) return saved;
+  } catch {
+    /* no storage */
+  }
+  const nav = (navigator.language || 'en').slice(0, 2) as Lang;
+  return LANGS.some((l) => l.id === nav) ? nav : 'en';
+}
+
+export function saveLang(l: Lang): void {
+  try {
+    localStorage.setItem('kyros.lang', l);
+  } catch {
+    /* no storage */
+  }
+}
+
+export const localeOf = (l: Lang) => LANGS.find((x) => x.id === l)!.locale;
+
+type Entry = Partial<Record<Lang, string>> & { en: string };
+
+const D = {
+  testnetBanner: { es: 'Testnet · dinero de prueba', en: 'Testnet · test money', pt: 'Testnet · dinheiro de teste', fr: 'Testnet · argent de test', de: 'Testnet · Testgeld', it: 'Testnet · denaro di prova' },
+  language: { es: 'Idioma', en: 'Language', pt: 'Idioma', fr: 'Langue', de: 'Sprache', it: 'Lingua' },
+  // Welcome
+  heroTitle: { es: 'Aparta tus impuestos en el momento en que cobras.', en: 'Set your taxes aside the moment you get paid.', pt: 'Separe os seus impostos no momento em que recebe.', fr: 'Mettez vos impôts de côté dès que vous êtes payé.', de: 'Leg deine Steuern beiseite, sobald du bezahlt wirst.', it: 'Metti da parte le tasse nel momento in cui vieni pagato.' },
+  heroSub: { es: 'Cada cobro en stablecoins se reparte solo: lo tuyo a tu wallet, el IVA y la renta a tu bóveda, hasta que toque pagar.', en: 'Every stablecoin payment splits itself: yours to your wallet, VAT and income tax to your vault, until they are due.', pt: 'Cada pagamento em stablecoins divide-se sozinho: o seu para a sua carteira, o IVA e o IRS para o seu cofre, até à data de pagamento.', fr: 'Chaque paiement en stablecoins se répartit seul : votre part dans votre wallet, la TVA et l’impôt sur le revenu dans votre coffre, jusqu’à l’échéance.', de: 'Jede Stablecoin-Zahlung teilt sich von selbst: dein Anteil in dein Wallet, Umsatzsteuer und Einkommensteuer in deinen Tresor, bis sie fällig sind.', it: 'Ogni pagamento in stablecoin si divide da solo: la tua parte nel wallet, IVA e imposte sul reddito nel tuo caveau, fino alla scadenza.' },
+  yourMoney: { es: '<b>Tu dinero es tuyo.</b> La bóveda es un contrato que solo tú controlas; Kyros no guarda tus claves ni tus fondos.', en: '<b>Your money is yours.</b> The vault is a contract only you control; Kyros never holds your keys or your funds.', pt: '<b>O seu dinheiro é seu.</b> O cofre é um contrato que só você controla; a Kyros nunca guarda as suas chaves nem os seus fundos.', fr: '<b>Votre argent vous appartient.</b> Le coffre est un contrat que vous seul contrôlez ; Kyros ne détient ni vos clés ni vos fonds.', de: '<b>Dein Geld gehört dir.</b> Der Tresor ist ein Vertrag, den nur du kontrollierst; Kyros verwahrt weder deine Schlüssel noch dein Geld.', it: '<b>I tuoi soldi sono tuoi.</b> Il caveau è un contratto che controlli solo tu; Kyros non custodisce né le tue chiavi né i tuoi fondi.' },
+  nameForPasskey: { es: 'Tu nombre (para tu passkey)', en: 'Your name (for your passkey)', pt: 'O seu nome (para a sua passkey)', fr: 'Votre nom (pour votre passkey)', de: 'Dein Name (für deinen Passkey)', it: 'Il tuo nome (per la tua passkey)' },
+  createFaceId: { es: 'Crear mi cuenta con Face ID', en: 'Create my account with Face ID', pt: 'Criar a minha conta com Face ID', fr: 'Créer mon compte avec Face ID', de: 'Konto mit Face ID erstellen', it: 'Crea il mio account con Face ID' },
+  haveAccount: { es: 'Ya tengo cuenta', en: 'I already have an account', pt: 'Já tenho conta', fr: 'J’ai déjà un compte', de: 'Ich habe schon ein Konto', it: 'Ho già un account' },
+  otherWallet: { es: 'Conectar otra wallet (Freighter, LOBSTR, xBull…)', en: 'Connect another wallet (Freighter, LOBSTR, xBull…)', pt: 'Ligar outra carteira (Freighter, LOBSTR, xBull…)', fr: 'Connecter un autre wallet (Freighter, LOBSTR, xBull…)', de: 'Anderes Wallet verbinden (Freighter, LOBSTR, xBull…)', it: 'Collega un altro wallet (Freighter, LOBSTR, xBull…)' },
+  testnetNote: { es: 'Red de pruebas de Stellar (testnet): el dinero no es real.', en: 'Stellar test network (testnet): the money is not real.', pt: 'Rede de testes da Stellar (testnet): o dinheiro não é real.', fr: 'Réseau de test Stellar (testnet) : l’argent n’est pas réel.', de: 'Stellar-Testnetz (Testnet): Das Geld ist nicht echt.', it: 'Rete di test Stellar (testnet): il denaro non è reale.' },
+  creatingWallet: { es: 'Creando tu wallet con Face ID', en: 'Creating your wallet with Face ID', pt: 'A criar a sua carteira com Face ID', fr: 'Création de votre wallet avec Face ID', de: 'Dein Wallet wird mit Face ID erstellt', it: 'Creazione del wallet con Face ID' },
+  enteringFaceId: { es: 'Entrando con Face ID', en: 'Signing in with Face ID', pt: 'A entrar com Face ID', fr: 'Connexion avec Face ID', de: 'Anmeldung mit Face ID', it: 'Accesso con Face ID' },
+  connectingWallet: { es: 'Conectando tu wallet', en: 'Connecting your wallet', pt: 'A ligar a sua carteira', fr: 'Connexion de votre wallet', de: 'Wallet wird verbunden', it: 'Connessione del wallet' },
+  waitingFaceId: { es: 'Esperando a tu Face ID o huella', en: 'Waiting for your Face ID or fingerprint', pt: 'À espera do seu Face ID ou impressão digital', fr: 'En attente de votre Face ID ou empreinte', de: 'Warte auf Face ID oder Fingerabdruck', it: 'In attesa di Face ID o impronta' },
+  // Onboarding
+  step: { es: '{n} de {of}', en: '{n} of {of}', pt: '{n} de {of}', fr: '{n} sur {of}', de: '{n} von {of}', it: '{n} di {of}' },
+  q1: { es: '¿Dónde vives la mayor parte del año?', en: 'Where do you live most of the year?', pt: 'Onde vive a maior parte do ano?', fr: 'Où vivez-vous la plus grande partie de l’année ?', de: 'Wo lebst du den Großteil des Jahres?', it: 'Dove vivi per la maggior parte dell’anno?' },
+  q1Sub: { es: 'Pagas impuestos donde tienes tu residencia fiscal, no donde está tu cliente.', en: 'You pay tax where you are tax resident, not where your client is.', pt: 'Paga impostos onde tem residência fiscal, não onde está o seu cliente.', fr: 'Vous payez l’impôt là où vous êtes résident fiscal, pas là où se trouve votre client.', de: 'Du zahlst Steuern dort, wo du steuerlich ansässig bist, nicht wo dein Kunde sitzt.', it: 'Paghi le tasse dove hai la residenza fiscale, non dove si trova il cliente.' },
+  country: { es: 'País', en: 'Country', pt: 'País', fr: 'Pays', de: 'Land', it: 'Paese' },
+  region: { es: 'Región', en: 'Region', pt: 'Região', fr: 'Région', de: 'Region', it: 'Regione' },
+  regionNote: { es: 'El impuesto sobre la renta cambia según la región. Lo tenemos en cuenta.', en: 'Income tax changes by region. We take it into account.', pt: 'O imposto sobre o rendimento muda consoante a região. Temos isso em conta.', fr: 'L’impôt sur le revenu varie selon la région. Nous en tenons compte.', de: 'Die Einkommensteuer hängt von der Region ab. Wir berücksichtigen das.', it: 'L’imposta sul reddito cambia in base alla regione. Ne teniamo conto.' },
+  days183: { es: '¿Pasas más de 183 días al año aquí?', en: 'Do you spend more than 183 days a year here?', pt: 'Passa mais de 183 dias por ano aqui?', fr: 'Passez-vous plus de 183 jours par an ici ?', de: 'Verbringst du mehr als 183 Tage im Jahr hier?', it: 'Trascorri più di 183 giorni l’anno qui?' },
+  yes: { es: 'Sí', en: 'Yes', pt: 'Sim', fr: 'Oui', de: 'Ja', it: 'Sì' },
+  no: { es: 'No', en: 'No', pt: 'Não', fr: 'Non', de: 'Nein', it: 'No' },
+  unsure: { es: 'No lo sé', en: 'Not sure', pt: 'Não sei', fr: 'Je ne sais pas', de: 'Weiß nicht', it: 'Non lo so' },
+  residenceHelp: { es: 'Si vives entre varios países, tu residencia fiscal depende también de dónde está tu casa y tu familia. Si dudas, consúltalo con un asesor.', en: 'If you live between several countries, your tax residence also depends on where your home and family are. If in doubt, ask an adviser.', pt: 'Se vive entre vários países, a residência fiscal depende também de onde está a sua casa e a sua família. Em caso de dúvida, consulte um consultor.', fr: 'Si vous vivez entre plusieurs pays, votre résidence fiscale dépend aussi de votre logement et de votre famille. En cas de doute, consultez un conseiller.', de: 'Wenn du zwischen mehreren Ländern lebst, hängt deine steuerliche Ansässigkeit auch von Wohnung und Familie ab. Im Zweifel frag einen Berater.', it: 'Se vivi tra più paesi, la residenza fiscale dipende anche da casa e famiglia. Nel dubbio, chiedi a un consulente.' },
+  continue: { es: 'Continuar', en: 'Continue', pt: 'Continuar', fr: 'Continuer', de: 'Weiter', it: 'Continua' },
+  q2: { es: '¿A qué te dedicas?', en: 'What do you do?', pt: 'A que se dedica?', fr: 'Que faites-vous ?', de: 'Was machst du beruflich?', it: 'Di cosa ti occupi?' },
+  q2Sub: { es: 'Con esto elegimos el IVA y el régimen que te corresponden.', en: 'This sets the VAT and the regime that apply to you.', pt: 'Com isto escolhemos o IVA e o regime que lhe correspondem.', fr: 'Cela détermine la TVA et le régime qui s’appliquent à vous.', de: 'Damit wählen wir die passende Umsatzsteuer und das Regime.', it: 'Così scegliamo l’IVA e il regime che ti spettano.' },
+  q3: { es: '¿Quién te paga normalmente?', en: 'Who usually pays you?', pt: 'Quem lhe paga normalmente?', fr: 'Qui vous paie en général ?', de: 'Wer bezahlt dich normalerweise?', it: 'Chi ti paga di solito?' },
+  q3Sub: { es: 'Si tienes de todo, elige lo más habitual. Podrás cambiarlo en cada cobro.', en: 'If you have a mix, pick the most common. You can change it for each payment.', pt: 'Se tem de tudo, escolha o mais habitual. Pode alterar em cada pagamento.', fr: 'Si vous avez de tout, choisissez le plus fréquent. Vous pourrez le changer à chaque paiement.', de: 'Wenn es gemischt ist, wähle das Häufigste. Du kannst es bei jeder Zahlung ändern.', it: 'Se hai un po’ di tutto, scegli il caso più comune. Potrai cambiarlo per ogni pagamento.' },
+  revenueQ: { es: '¿Cuánto crees que facturarás este año? ({cur})', en: 'How much do you expect to invoice this year? ({cur})', pt: 'Quanto prevê faturar este ano? ({cur})', fr: 'Combien pensez-vous facturer cette année ? ({cur})', de: 'Wie viel wirst du dieses Jahr voraussichtlich in Rechnung stellen? ({cur})', it: 'Quanto pensi di fatturare quest’anno? ({cur})' },
+  revenueNote: { es: 'Una cifra aproximada basta. Sirve para calcular tu reserva.', en: 'A rough figure is enough. It sizes your reserve.', pt: 'Um valor aproximado chega. Serve para calcular a sua reserva.', fr: 'Un chiffre approximatif suffit. Il sert à calculer votre réserve.', de: 'Eine grobe Zahl reicht. Damit berechnen wir deine Rücklage.', it: 'Basta una cifra indicativa. Serve a calcolare la tua riserva.' },
+  seePlan: { es: 'Ver mi plan', en: 'See my plan', pt: 'Ver o meu plano', fr: 'Voir mon plan', de: 'Meinen Plan ansehen', it: 'Vedi il mio piano' },
+  // Activities and clients
+  act_software: { es: 'Desarrollo de software', en: 'Software development', pt: 'Desenvolvimento de software', fr: 'Développement logiciel', de: 'Softwareentwicklung', it: 'Sviluppo software' },
+  act_software_s: { es: 'Apps, webs, smart contracts', en: 'Apps, websites, smart contracts', pt: 'Apps, sites, smart contracts', fr: 'Apps, sites web, smart contracts', de: 'Apps, Websites, Smart Contracts', it: 'App, siti web, smart contract' },
+  act_consulting: { es: 'Consultoría', en: 'Consulting', pt: 'Consultoria', fr: 'Conseil', de: 'Beratung', it: 'Consulenza' },
+  act_consulting_s: { es: 'Asesoría, gestión, marketing', en: 'Advice, management, marketing', pt: 'Assessoria, gestão, marketing', fr: 'Conseil, gestion, marketing', de: 'Beratung, Management, Marketing', it: 'Consulenza, gestione, marketing' },
+  act_creative: { es: 'Diseño y contenido', en: 'Design and content', pt: 'Design e conteúdo', fr: 'Design et contenu', de: 'Design und Content', it: 'Design e contenuti' },
+  act_creative_s: { es: 'Diseño, vídeo, creadores', en: 'Design, video, creators', pt: 'Design, vídeo, criadores', fr: 'Design, vidéo, créateurs', de: 'Design, Video, Creator', it: 'Design, video, creator' },
+  act_web3: { es: 'Servicios Web3', en: 'Web3 services', pt: 'Serviços Web3', fr: 'Services Web3', de: 'Web3-Dienste', it: 'Servizi Web3' },
+  act_web3_s: { es: 'Auditorías, nodos, contratos', en: 'Audits, nodes, contracts', pt: 'Auditorias, nós, contratos', fr: 'Audits, nœuds, contrats', de: 'Audits, Nodes, Verträge', it: 'Audit, nodi, contratti' },
+  act_ecommerce: { es: 'Venta online', en: 'Online sales', pt: 'Venda online', fr: 'Vente en ligne', de: 'Onlinehandel', it: 'Vendita online' },
+  act_ecommerce_s: { es: 'Productos físicos o digitales', en: 'Physical or digital products', pt: 'Produtos físicos ou digitais', fr: 'Produits physiques ou numériques', de: 'Physische oder digitale Produkte', it: 'Prodotti fisici o digitali' },
+  act_education: { es: 'Formación', en: 'Education', pt: 'Formação', fr: 'Formation', de: 'Bildung', it: 'Formazione' },
+  act_education_s: { es: 'Cursos y clases reconocidos', en: 'Recognised courses and classes', pt: 'Cursos e aulas reconhecidos', fr: 'Cours et formations reconnus', de: 'Anerkannte Kurse und Unterricht', it: 'Corsi e lezioni riconosciuti' },
+  act_health: { es: 'Salud', en: 'Health care', pt: 'Saúde', fr: 'Santé', de: 'Gesundheit', it: 'Sanità' },
+  act_health_s: { es: 'Atención médica y sanitaria', en: 'Medical and health care', pt: 'Cuidados médicos e de saúde', fr: 'Soins médicaux et de santé', de: 'Medizinische Versorgung', it: 'Assistenza medica e sanitaria' },
+  act_books: { es: 'Libros y e-books', en: 'Books and e-books', pt: 'Livros e e-books', fr: 'Livres et e-books', de: 'Bücher und E-Books', it: 'Libri ed e-book' },
+  act_books_s: { es: 'Edición y venta de libros', en: 'Publishing and selling books', pt: 'Edição e venda de livros', fr: 'Édition et vente de livres', de: 'Verlag und Buchverkauf', it: 'Editoria e vendita di libri' },
+  act_hospitality: { es: 'Hostelería', en: 'Hospitality', pt: 'Restauração', fr: 'Restauration', de: 'Gastronomie', it: 'Ristorazione' },
+  act_hospitality_s: { es: 'Restaurantes y comida', en: 'Restaurants and food', pt: 'Restaurantes e comida', fr: 'Restaurants et alimentation', de: 'Restaurants und Essen', it: 'Ristoranti e cibo' },
+  cl_business_local: { es: 'Empresas de tu país', en: 'Businesses in your country', pt: 'Empresas do seu país', fr: 'Entreprises de votre pays', de: 'Unternehmen in deinem Land', it: 'Aziende del tuo paese' },
+  cl_business_local_s: { es: 'Facturas con IVA', en: 'Invoices with VAT', pt: 'Faturas com IVA', fr: 'Factures avec TVA', de: 'Rechnungen mit USt.', it: 'Fatture con IVA' },
+  cl_consumer_local: { es: 'Particulares de tu país', en: 'Individuals in your country', pt: 'Particulares do seu país', fr: 'Particuliers de votre pays', de: 'Privatpersonen in deinem Land', it: 'Privati del tuo paese' },
+  cl_consumer_local_s: { es: 'Facturas con IVA', en: 'Invoices with VAT', pt: 'Faturas com IVA', fr: 'Factures avec TVA', de: 'Rechnungen mit USt.', it: 'Fatture con IVA' },
+  cl_business_eu: { es: 'Empresas de otro país de la UE', en: 'Businesses in another EU country', pt: 'Empresas de outro país da UE', fr: 'Entreprises d’un autre pays de l’UE', de: 'Unternehmen in einem anderen EU-Land', it: 'Aziende di un altro paese UE' },
+  cl_business_eu_s: { es: 'Sin IVA: lo declara tu cliente', en: 'No VAT: your client accounts for it', pt: 'Sem IVA: o seu cliente declara-o', fr: 'Sans TVA : votre client l’autoliquide', de: 'Ohne USt.: dein Kunde führt sie ab', it: 'Senza IVA: la dichiara il cliente' },
+  cl_abroad: { es: 'Clientes de fuera de tu país', en: 'Clients outside your country', pt: 'Clientes fora do seu país', fr: 'Clients hors de votre pays', de: 'Kunden außerhalb deines Landes', it: 'Clienti fuori dal tuo paese' },
+  cl_abroad_s: { es: 'Normalmente sin IVA', en: 'Usually no VAT', pt: 'Normalmente sem IVA', fr: 'Généralement sans TVA', de: 'Meist ohne USt.', it: 'Di solito senza IVA' },
+  // Plan
+  planReady: { es: 'Tu plan está listo', en: 'Your plan is ready', pt: 'O seu plano está pronto', fr: 'Votre plan est prêt', de: 'Dein Plan ist fertig', it: 'Il tuo piano è pronto' },
+  planSub: { es: 'Así repartiremos cada cobro, sin que tengas que hacer nada.', en: 'This is how every payment will be split, with nothing for you to do.', pt: 'É assim que cada pagamento será dividido, sem ter de fazer nada.', fr: 'Voici comment chaque paiement sera réparti, sans rien à faire.', de: 'So wird jede Zahlung aufgeteilt, ohne dass du etwas tun musst.', it: 'Ecco come verrà diviso ogni pagamento, senza che tu debba fare nulla.' },
+  ifPaid: { es: 'Si te pagan {amount} USDC', en: 'If you are paid {amount} USDC', pt: 'Se receber {amount} USDC', fr: 'Si vous recevez {amount} USDC', de: 'Wenn du {amount} USDC erhältst', it: 'Se ricevi {amount} USDC' },
+  forYou: { es: 'Para ti', en: 'For you', pt: 'Para si', fr: 'Pour vous', de: 'Für dich', it: 'Per te' },
+  incomeReserve: { es: 'Reserva renta {pct}', en: 'Income tax reserve {pct}', pt: 'Reserva IRS {pct}', fr: 'Réserve impôt {pct}', de: 'Einkommensteuer-Rücklage {pct}', it: 'Riserva imposte {pct}' },
+  exact: { es: 'Exacto', en: 'Exact', pt: 'Exato', fr: 'Exact', de: 'Exakt', it: 'Esatto' },
+  prec_exact: { es: 'Exacto', en: 'Exact', pt: 'Exato', fr: 'Exact', de: 'Exakt', it: 'Esatto' },
+  prec_presumptive: { es: 'Presunto', en: 'Presumptive', pt: 'Presumido', fr: 'Forfaitaire', de: 'Pauschal', it: 'Presunto' },
+  'prec_exact-on-profit': { es: 'Exacto sobre beneficio', en: 'Exact on profit', pt: 'Exato sobre o lucro', fr: 'Exact sur le bénéfice', de: 'Exakt auf den Gewinn', it: 'Esatto sull’utile' },
+  prec_estimate: { es: 'Estimación', en: 'Estimate', pt: 'Estimativa', fr: 'Estimation', de: 'Schätzung', it: 'Stima' },
+  prec_none: { es: 'Sin estimación', en: 'No estimate', pt: 'Sem estimativa', fr: 'Sans estimation', de: 'Keine Schätzung', it: 'Nessuna stima' },
+  whyPct: { es: '¿Por qué {pct}?', en: 'Why {pct}?', pt: 'Porquê {pct}?', fr: 'Pourquoi {pct} ?', de: 'Warum {pct}?', it: 'Perché {pct}?' },
+  whyBody: { es: 'Calculamos el impuesto sobre la renta de {place} para {revenue} {cur} al año{margin}. Te avisaremos si se queda corta.', en: 'We estimate the income tax of {place} for {revenue} {cur} a year{margin}. We will warn you if it falls short.', pt: 'Calculamos o imposto sobre o rendimento de {place} para {revenue} {cur} por ano{margin}. Avisamos se ficar curta.', fr: 'Nous estimons l’impôt sur le revenu de {place} pour {revenue} {cur} par an{margin}. Nous vous préviendrons si elle est insuffisante.', de: 'Wir schätzen die Einkommensteuer von {place} für {revenue} {cur} im Jahr{margin}. Wir warnen dich, wenn sie nicht reicht.', it: 'Stimiamo l’imposta sul reddito di {place} per {revenue} {cur} l’anno{margin}. Ti avviseremo se non basta.' },
+  whyMargin: { es: ' y añadimos un margen de seguridad según lo estricto que es el país', en: ' and add a safety margin for how strict the country is', pt: ' e acrescentamos uma margem de segurança consoante o rigor do país', fr: ' et ajoutons une marge de sécurité selon la rigueur du pays', de: ' und schlagen eine Sicherheitsmarge je nach Strenge des Landes auf', it: ' e aggiungiamo un margine di sicurezza in base al rigore del paese' },
+  followLaw: { es: 'Ajustar solo si cambia la ley', en: 'Adjust automatically if the law changes', pt: 'Ajustar sozinho se a lei mudar', fr: 'Ajuster automatiquement si la loi change', de: 'Automatisch anpassen, wenn sich das Gesetz ändert', it: 'Adeguare da solo se cambia la legge' },
+  followLawSub: { es: 'Si cambia el IVA, tu reparto se actualiza en la fecha oficial.', en: 'If VAT changes, your split updates on the official date.', pt: 'Se o IVA mudar, a sua divisão atualiza-se na data oficial.', fr: 'Si la TVA change, votre répartition se met à jour à la date officielle.', de: 'Ändert sich die USt., passt sich die Aufteilung zum amtlichen Datum an.', it: 'Se cambia l’IVA, la ripartizione si aggiorna alla data ufficiale.' },
+  createVault: { es: 'Crear mi bóveda', en: 'Create my vault', pt: 'Criar o meu cofre', fr: 'Créer mon coffre', de: 'Meinen Tresor erstellen', it: 'Crea il mio caveau' },
+  creatingVault: { es: 'Creando tu bóveda', en: 'Creating your vault', pt: 'A criar o seu cofre', fr: 'Création de votre coffre', de: 'Dein Tresor wird erstellt', it: 'Creazione del caveau' },
+  stepFeePayer: { es: 'Preparando la cuenta que paga las comisiones de red', en: 'Preparing the account that pays network fees', pt: 'A preparar a conta que paga as comissões de rede', fr: 'Préparation du compte qui paie les frais de réseau', de: 'Konto für die Netzwerkgebühren wird vorbereitet', it: 'Preparazione del conto che paga le commissioni di rete' },
+  stepVault: { es: 'Creando tu bóveda', en: 'Creating your vault', pt: 'A criar o seu cofre', fr: 'Création de votre coffre', de: 'Tresor wird erstellt', it: 'Creazione del caveau' },
+  stepInbox: { es: 'Creando tu dirección de cobro', en: 'Creating your payment address', pt: 'A criar o seu endereço de pagamento', fr: 'Création de votre adresse de paiement', de: 'Zahlungsadresse wird erstellt', it: 'Creazione dell’indirizzo di pagamento' },
+  stepFollow: { es: 'Activando "ajustar si cambia la ley" (confirma con tu wallet)', en: 'Turning on "adjust if the law changes" (confirm in your wallet)', pt: 'A ativar "ajustar se a lei mudar" (confirme na carteira)', fr: 'Activation de « ajuster si la loi change » (confirmez dans votre wallet)', de: '„Bei Gesetzesänderung anpassen“ wird aktiviert (im Wallet bestätigen)', it: 'Attivazione di “adeguare se cambia la legge” (conferma nel wallet)' },
+  vat: { es: 'IVA', en: 'VAT', pt: 'IVA', fr: 'TVA', de: 'USt.', it: 'IVA' },
+  vatStd: { es: '{name} {pct}', en: '{name} {pct}', pt: '{name} {pct}', fr: '{name} {pct}', de: '{name} {pct}', it: '{name} {pct}' },
+  vatReduced: { es: '{name} reducido {pct}', en: 'Reduced {name} {pct}', pt: '{name} reduzido {pct}', fr: '{name} réduite {pct}', de: 'Ermäßigte {name} {pct}', it: '{name} ridotta {pct}' },
+  vatExempt: { es: 'Exento de {name}', en: 'Exempt from {name}', pt: 'Isento de {name}', fr: 'Exonéré de {name}', de: 'Von der {name} befreit', it: 'Esente da {name}' },
+  vatReverse: { es: 'Sin {name}: lo declara tu cliente', en: 'No {name}: your client accounts for it', pt: 'Sem {name}: o cliente declara-o', fr: 'Sans {name} : autoliquidée par le client', de: 'Ohne {name}: dein Kunde führt sie ab', it: 'Senza {name}: la dichiara il cliente' },
+  vatOutside: { es: 'Sin {name}: cliente en el extranjero', en: 'No {name}: client abroad', pt: 'Sem {name}: cliente no estrangeiro', fr: 'Sans {name} : client à l’étranger', de: 'Ohne {name}: Kunde im Ausland', it: 'Senza {name}: cliente all’estero' },
+  vatNone: { es: 'Sin {name}', en: 'No {name}', pt: 'Sem {name}', fr: 'Sans {name}', de: 'Ohne {name}', it: 'Senza {name}' },
+  // Home
+  hello: { es: 'Hola', en: 'Hello', pt: 'Olá', fr: 'Bonjour', de: 'Hallo', it: 'Ciao' },
+  canSpend: { es: 'Puedes gastar', en: 'You can spend', pt: 'Pode gastar', fr: 'Vous pouvez dépenser', de: 'Verfügbar', it: 'Puoi spendere' },
+  andEur: { es: 'y {amount} EURC', en: 'and {amount} EURC', pt: 'e {amount} EURC', fr: 'et {amount} EURC', de: 'und {amount} EURC', it: 'e {amount} EURC' },
+  canSpendNote: { es: 'Esto es tuyo. Los impuestos ya están apartados.', en: 'This is yours. Your taxes are already set aside.', pt: 'Isto é seu. Os impostos já estão separados.', fr: 'C’est à vous. Vos impôts sont déjà mis de côté.', de: 'Das gehört dir. Die Steuern sind schon zurückgelegt.', it: 'Questo è tuo. Le tasse sono già da parte.' },
+  setAside: { es: 'Apartado para impuestos', en: 'Set aside for taxes', pt: 'Separado para impostos', fr: 'Mis de côté pour les impôts', de: 'Für Steuern zurückgelegt', it: 'Da parte per le tasse' },
+  inEuros: { es: ' · en euros', en: ' · in euros', pt: ' · em euros', fr: ' · en euros', de: ' · in Euro', it: ' · in euro' },
+  onTrack: { es: 'Va bien', en: 'On track', pt: 'Em dia', fr: 'Ça va', de: 'Im Plan', it: 'Tutto ok' },
+  incomeTax: { es: 'Renta', en: 'Income tax', pt: 'IRS', fr: 'Impôt sur le revenu', de: 'Einkommensteuer', it: 'Imposte sul reddito' },
+  periodUntil: { es: 'Periodo actual hasta el {date} (fecha en la que se puede liberar lo que sobre).', en: 'Current period until {date} (when what is left can be released).', pt: 'Período atual até {date} (data em que o que sobrar pode ser libertado).', fr: 'Période en cours jusqu’au {date} (date à laquelle le reste peut être libéré).', de: 'Aktueller Zeitraum bis {date} (dann kann der Rest freigegeben werden).', it: 'Periodo attuale fino al {date} (quando si può liberare ciò che avanza).' },
+  payTaxes: { es: 'Pagar impuestos', en: 'Pay taxes', pt: 'Pagar impostos', fr: 'Payer les impôts', de: 'Steuern zahlen', it: 'Paga le tasse' },
+  payTaxesSub: { es: 'Cuando toque, se paga desde la bóveda con un toque.', en: 'When they are due, pay from the vault in one tap.', pt: 'Quando for altura, paga-se a partir do cofre com um toque.', fr: 'À l’échéance, payez depuis le coffre en un geste.', de: 'Wenn sie fällig sind, zahlst du mit einem Tipp aus dem Tresor.', it: 'Alla scadenza, paghi dal caveau con un tocco.' },
+  pay: { es: 'Pagar', en: 'Pay', pt: 'Pagar', fr: 'Payer', de: 'Zahlen', it: 'Paga' },
+  tryPayment: { es: 'Prueba un cobro', en: 'Try a payment', pt: 'Experimente um pagamento', fr: 'Essayez un paiement', de: 'Zahlung testen', it: 'Prova un pagamento' },
+  tryPaymentSub: { es: 'Un cliente de pruebas te paga 1.210 USDC de test. Verás cómo se reparte al instante.', en: 'A test client pays you 1,210 test USDC. Watch it split instantly.', pt: 'Um cliente de teste paga-lhe 1.210 USDC de teste. Veja como se divide na hora.', fr: 'Un client de test vous paie 1 210 USDC de test. Voyez la répartition instantanée.', de: 'Ein Testkunde zahlt dir 1.210 Test-USDC. Sieh zu, wie sie sofort aufgeteilt werden.', it: 'Un cliente di prova ti paga 1.210 USDC di test. Guarda come si dividono subito.' },
+  simulate1210: { es: 'Simular un cobro de 1.210 USDC', en: 'Simulate a 1,210 USDC payment', pt: 'Simular um pagamento de 1.210 USDC', fr: 'Simuler un paiement de 1 210 USDC', de: 'Zahlung über 1.210 USDC simulieren', it: 'Simula un pagamento di 1.210 USDC' },
+  clientPaying: { es: 'Tu cliente de pruebas te está pagando', en: 'Your test client is paying you', pt: 'O seu cliente de teste está a pagar', fr: 'Votre client de test vous paie', de: 'Dein Testkunde zahlt', it: 'Il tuo cliente di prova sta pagando' },
+  stepClient: { es: 'Preparando el cliente y su dinero de prueba', en: 'Preparing the client and its test money', pt: 'A preparar o cliente e o dinheiro de teste', fr: 'Préparation du client et de son argent de test', de: 'Kunde und Testgeld werden vorbereitet', it: 'Preparazione del cliente e del denaro di prova' },
+  stepReading: { es: 'Leyendo tu bóveda', en: 'Reading your vault', pt: 'A ler o seu cofre', fr: 'Lecture de votre coffre', de: 'Tresor wird gelesen', it: 'Lettura del caveau' },
+  lastPayments: { es: 'Últimos cobros', en: 'Latest payments', pt: 'Últimos pagamentos', fr: 'Derniers paiements', de: 'Letzte Zahlungen', it: 'Ultimi pagamenti' },
+  paymentOf: { es: 'Cobro de {amount}', en: 'Payment of {amount}', pt: 'Pagamento de {amount}', fr: 'Paiement de {amount}', de: 'Zahlung über {amount}', it: 'Pagamento di {amount}' },
+  requestPayment: { es: '+ Pedir un cobro', en: '+ Request a payment', pt: '+ Pedir um pagamento', fr: '+ Demander un paiement', de: '+ Zahlung anfordern', it: '+ Chiedi un pagamento' },
+  // Request
+  requestTitle: { es: 'Pedir un cobro', en: 'Request a payment', pt: 'Pedir um pagamento', fr: 'Demander un paiement', de: 'Zahlung anfordern', it: 'Chiedi un pagamento' },
+  client: { es: 'Cliente', en: 'Client', pt: 'Cliente', fr: 'Client', de: 'Kunde', it: 'Cliente' },
+  invoiceNo: { es: 'Nº de tu factura', en: 'Your invoice number', pt: 'N.º da sua fatura', fr: 'N° de votre facture', de: 'Deine Rechnungsnummer', it: 'N. della tua fattura' },
+  amountNoVat: { es: 'Importe sin IVA (€)', en: 'Amount before VAT (€)', pt: 'Montante sem IVA (€)', fr: 'Montant HT (€)', de: 'Nettobetrag (€)', it: 'Importo senza IVA (€)' },
+  base: { es: 'Base', en: 'Base', pt: 'Base', fr: 'Base', de: 'Netto', it: 'Imponibile' },
+  automatic: { es: 'Automático', en: 'Automatic', pt: 'Automático', fr: 'Automatique', de: 'Automatisch', it: 'Automatico' },
+  withholding15: { es: 'Retención IRPF 15 %', en: 'Income tax withheld 15%', pt: 'Retenção IRS 15 %', fr: 'Retenue d’impôt 15 %', de: 'Einbehaltene Steuer 15 %', it: 'Ritenuta d’acconto 15 %' },
+  withheld: { es: 'Te retienen', en: 'Withheld', pt: 'Retido', fr: 'Retenu', de: 'Einbehalten', it: 'Trattenuto' },
+  willPay: { es: 'Te pagarán', en: 'You will receive', pt: 'Vai receber', fr: 'Vous recevrez', de: 'Du erhältst', it: 'Riceverai' },
+  ownInvoiceNote: { es: 'Haz la factura con tu programa de siempre. Cuando te paguen con este enlace, Kyros aparta exactamente el IVA de ese cobro.', en: 'Issue the invoice with your usual tool. When you are paid with this link, Kyros sets aside exactly that payment’s VAT.', pt: 'Emita a fatura com o programa de sempre. Quando lhe pagarem com este link, a Kyros separa exatamente o IVA desse pagamento.', fr: 'Émettez la facture avec votre outil habituel. Quand vous êtes payé via ce lien, Kyros met de côté exactement la TVA de ce paiement.', de: 'Stell die Rechnung mit deinem gewohnten Programm aus. Wirst du über diesen Link bezahlt, legt Kyros genau die USt. dieser Zahlung zurück.', it: 'Emetti la fattura con il tuo programma di sempre. Quando ti pagano con questo link, Kyros mette da parte esattamente l’IVA di quel pagamento.' },
+  registered: { es: 'Cobro registrado en tu bóveda', en: 'Payment registered in your vault', pt: 'Pagamento registado no seu cofre', fr: 'Paiement enregistré dans votre coffre', de: 'Zahlung in deinem Tresor registriert', it: 'Pagamento registrato nel caveau' },
+  registeredBody: { es: 'Cuando llegue un pago con la referencia de la factura {number}, se repartirá con su IVA{wh}.', en: 'When a payment with invoice {number}’s reference arrives, it will be split with its VAT{wh}.', pt: 'Quando chegar um pagamento com a referência da fatura {number}, será dividido com o seu IVA{wh}.', fr: 'Quand un paiement portant la référence de la facture {number} arrivera, il sera réparti avec sa TVA{wh}.', de: 'Kommt eine Zahlung mit der Referenz von Rechnung {number}, wird sie mit ihrer USt.{wh} aufgeteilt.', it: 'Quando arriverà un pagamento con il riferimento della fattura {number}, verrà diviso con la sua IVA{wh}.' },
+  andWithholding: { es: ' y su retención', en: ' and its withholding', pt: ' e a sua retenção', fr: ' et sa retenue', de: ' und dem Steuerabzug', it: ' e la sua ritenuta' },
+  payLinkLabel: { es: 'Enlace de pago para tu cliente', en: 'Payment link for your client', pt: 'Link de pagamento para o seu cliente', fr: 'Lien de paiement pour votre client', de: 'Zahlungslink für deinen Kunden', it: 'Link di pagamento per il cliente' },
+  registerAndLink: { es: 'Registrar y crear enlace', en: 'Register and create link', pt: 'Registar e criar link', fr: 'Enregistrer et créer le lien', de: 'Registrieren und Link erstellen', it: 'Registra e crea il link' },
+  registering: { es: 'Registrando el cobro (confirma con tu wallet)', en: 'Registering the payment (confirm in your wallet)', pt: 'A registar o pagamento (confirme na carteira)', fr: 'Enregistrement du paiement (confirmez dans votre wallet)', de: 'Zahlung wird registriert (im Wallet bestätigen)', it: 'Registrazione del pagamento (conferma nel wallet)' },
+  confirmWallet: { es: 'Confirma con Face ID o con tu wallet', en: 'Confirm with Face ID or your wallet', pt: 'Confirme com Face ID ou com a carteira', fr: 'Confirmez avec Face ID ou votre wallet', de: 'Mit Face ID oder deinem Wallet bestätigen', it: 'Conferma con Face ID o con il wallet' },
+  simulateClientPays: { es: 'Simular que el cliente paga', en: 'Simulate the client paying', pt: 'Simular que o cliente paga', fr: 'Simuler le paiement du client', de: 'Zahlung des Kunden simulieren', it: 'Simula il pagamento del cliente' },
+  clientPayingInvoice: { es: 'Tu cliente de pruebas está pagando la factura', en: 'Your test client is paying the invoice', pt: 'O seu cliente de teste está a pagar a fatura', fr: 'Votre client de test paie la facture', de: 'Dein Testkunde zahlt die Rechnung', it: 'Il cliente di prova sta pagando la fattura' },
+  copyLink: { es: 'Copiar enlace', en: 'Copy link', pt: 'Copiar link', fr: 'Copier le lien', de: 'Link kopieren', it: 'Copia link' },
+  invoiceTo: { es: 'Factura {number} a {client}', en: 'Invoice {number} to {client}', pt: 'Fatura {number} a {client}', fr: 'Facture {number} à {client}', de: 'Rechnung {number} an {client}', it: 'Fattura {number} a {client}' },
+  // Pay
+  paySub: { es: 'Lo apartado en este periodo, listo para pagar.', en: 'What this period set aside, ready to pay.', pt: 'O que foi separado neste período, pronto a pagar.', fr: 'Ce qui a été mis de côté sur la période, prêt à payer.', de: 'Was in diesem Zeitraum zurückgelegt wurde, bereit zum Zahlen.', it: 'Quanto messo da parte in questo periodo, pronto da pagare.' },
+  nothingYet: { es: 'No hay nada apartado en este periodo todavía.', en: 'Nothing set aside in this period yet.', pt: 'Ainda não há nada separado neste período.', fr: 'Rien n’a encore été mis de côté sur cette période.', de: 'In diesem Zeitraum wurde noch nichts zurückgelegt.', it: 'Non c’è ancora nulla da parte in questo periodo.' },
+  total: { es: 'Total', en: 'Total', pt: 'Total', fr: 'Total', de: 'Gesamt', it: 'Totale' },
+  howPaid: { es: 'Cómo se paga', en: 'How it is paid', pt: 'Como se paga', fr: 'Comment c’est payé', de: 'So wird gezahlt', it: 'Come si paga' },
+  how1: { es: '1 · Kyros envía lo apartado a tu destino fiscal: tu anchor, el servicio que lo cambia a euros.', en: '1 · Kyros sends what is set aside to your tax destination: your anchor, the service that changes it into euros.', pt: '1 · A Kyros envia o que foi separado para o seu destino fiscal: o seu anchor, o serviço que o converte em euros.', fr: '1 · Kyros envoie la réserve vers votre destination fiscale : votre anchor, le service qui la convertit en euros.', de: '1 · Kyros schickt die Rücklage an dein Steuerziel: deinen Anchor, der sie in Euro tauscht.', it: '1 · Kyros invia quanto messo da parte alla tua destinazione fiscale: il tuo anchor, il servizio che lo cambia in euro.' },
+  how2: { es: '2 · El anchor te ingresa los euros en tu cuenta bancaria.', en: '2 · The anchor pays the euros into your bank account.', pt: '2 · O anchor deposita os euros na sua conta bancária.', fr: '2 · L’anchor verse les euros sur votre compte bancaire.', de: '2 · Der Anchor zahlt die Euro auf dein Bankkonto.', it: '2 · L’anchor ti versa gli euro sul conto in banca.' },
+  how3: { es: '3 · Hacienda los cobra por domiciliación.', en: '3 · The tax authority collects them by direct debit.', pt: '3 · A Autoridade Tributária cobra-os por débito direto.', fr: '3 · L’administration fiscale les prélève.', de: '3 · Das Finanzamt zieht sie per Lastschrift ein.', it: '3 · Il fisco li incassa con addebito diretto.' },
+  testnetDestination: { es: 'En testnet el destino es una cuenta de pruebas que hace de anchor; no se mueve dinero real.', en: 'On testnet the destination is a test account acting as the anchor; no real money moves.', pt: 'Na testnet o destino é uma conta de teste que faz de anchor; não se move dinheiro real.', fr: 'Sur testnet, la destination est un compte de test qui joue l’anchor ; aucun argent réel ne circule.', de: 'Im Testnet ist das Ziel ein Testkonto als Anchor; es fließt kein echtes Geld.', it: 'In testnet la destinazione è un conto di prova che fa da anchor; non si muove denaro reale.' },
+  payFromVault: { es: 'Pagar desde mi bóveda', en: 'Pay from my vault', pt: 'Pagar a partir do cofre', fr: 'Payer depuis mon coffre', de: 'Aus meinem Tresor zahlen', it: 'Paga dal caveau' },
+  paying: { es: 'Pagando tus impuestos', en: 'Paying your taxes', pt: 'A pagar os seus impostos', fr: 'Paiement de vos impôts', de: 'Steuern werden gezahlt', it: 'Pagamento delle tasse' },
+  payingBucket: { es: 'Pagando {what} ({cur})', en: 'Paying {what} ({cur})', pt: 'A pagar {what} ({cur})', fr: 'Paiement : {what} ({cur})', de: 'Zahle {what} ({cur})', it: 'Pagamento {what} ({cur})' },
+  bucketVat: { es: 'IVA', en: 'VAT', pt: 'IVA', fr: 'TVA', de: 'USt.', it: 'IVA' },
+  bucketIncome: { es: 'Reserva de renta', en: 'Income tax reserve', pt: 'Reserva de IRS', fr: 'Réserve d’impôt', de: 'Einkommensteuer-Rücklage', it: 'Riserva imposte' },
+  seeExplorer: { es: 'Ver en el explorador →', en: 'View in the explorer →', pt: 'Ver no explorador →', fr: 'Voir dans l’explorateur →', de: 'Im Explorer ansehen →', it: 'Vedi nell’explorer →' },
+  // Settings
+  settings: { es: 'Ajustes', en: 'Settings', pt: 'Definições', fr: 'Réglages', de: 'Einstellungen', it: 'Impostazioni' },
+  yourSituation: { es: 'TU SITUACIÓN', en: 'YOUR SITUATION', pt: 'A SUA SITUAÇÃO', fr: 'VOTRE SITUATION', de: 'DEINE SITUATION', it: 'LA TUA SITUAZIONE' },
+  activity: { es: 'Actividad', en: 'Activity', pt: 'Atividade', fr: 'Activité', de: 'Tätigkeit', it: 'Attività' },
+  clients: { es: 'Clientes', en: 'Clients', pt: 'Clientes', fr: 'Clients', de: 'Kunden', it: 'Clienti' },
+  split: { es: 'Reparto', en: 'Split', pt: 'Divisão', fr: 'Répartition', de: 'Aufteilung', it: 'Ripartizione' },
+  splitValue: { es: 'IVA {vat} · renta {res}', en: 'VAT {vat} · income {res}', pt: 'IVA {vat} · IRS {res}', fr: 'TVA {vat} · revenu {res}', de: 'USt. {vat} · ESt. {res}', it: 'IVA {vat} · reddito {res}' },
+  eurosAndLaw: { es: 'EUROS Y LEY', en: 'EUROS AND THE LAW', pt: 'EUROS E LEI', fr: 'EUROS ET LOI', de: 'EURO UND GESETZ', it: 'EURO E LEGGE' },
+  keepEuros: { es: 'Guardar mis impuestos en euros', en: 'Keep my taxes in euros', pt: 'Guardar os impostos em euros', fr: 'Garder mes impôts en euros', de: 'Steuern in Euro halten', it: 'Tieni le tasse in euro' },
+  eurosOn: { es: 'Activado: lo apartado en USDC se cambia a EURC, nunca por debajo del precio de mercado menos un 1 %.', en: 'On: what is set aside in USDC is changed into EURC, never below the market price minus 1%.', pt: 'Ativo: o que é separado em USDC é trocado por EURC, nunca abaixo do preço de mercado menos 1 %.', fr: 'Activé : la réserve en USDC est convertie en EURC, jamais en dessous du prix du marché moins 1 %.', de: 'An: Die Rücklage in USDC wird in EURC getauscht, nie unter Marktpreis minus 1 %.', it: 'Attivo: quanto messo da parte in USDC viene cambiato in EURC, mai sotto il prezzo di mercato meno l’1 %.' },
+  eurosPending: { es: 'Se activa a las {time} (plazo de aviso de seguridad).', en: 'Turns on at {time} (security notice period).', pt: 'Ativa-se às {time} (prazo de aviso de segurança).', fr: 'S’active à {time} (préavis de sécurité).', de: 'Aktiv ab {time} (Sicherheits-Vorlaufzeit).', it: 'Si attiva alle {time} (preavviso di sicurezza).' },
+  eurosOff: { es: 'Te pagan en dólares, pero Hacienda cobra en euros.', en: 'You are paid in dollars, but the tax authority collects in euros.', pt: 'Recebe em dólares, mas o fisco cobra em euros.', fr: 'Vous êtes payé en dollars, mais l’impôt se paie en euros.', de: 'Du wirst in Dollar bezahlt, das Finanzamt kassiert in Euro.', it: 'Sei pagato in dollari, ma il fisco incassa in euro.' },
+  turningEuros: { es: 'Activando la reserva en euros (confirma con tu wallet)', en: 'Turning on the euro reserve (confirm in your wallet)', pt: 'A ativar a reserva em euros (confirme na carteira)', fr: 'Activation de la réserve en euros (confirmez dans votre wallet)', de: 'Euro-Rücklage wird aktiviert (im Wallet bestätigen)', it: 'Attivazione della riserva in euro (conferma nel wallet)' },
+  convertNow: { es: 'Cambiar ahora {amount} USDC a EURC', en: 'Change {amount} USDC into EURC now', pt: 'Trocar agora {amount} USDC por EURC', fr: 'Convertir maintenant {amount} USDC en EURC', de: 'Jetzt {amount} USDC in EURC tauschen', it: 'Cambia ora {amount} USDC in EURC' },
+  converting: { es: 'Cambiando la reserva a euros', en: 'Changing the reserve into euros', pt: 'A trocar a reserva por euros', fr: 'Conversion de la réserve en euros', de: 'Rücklage wird in Euro getauscht', it: 'Cambio della riserva in euro' },
+  followsLaw: { es: 'Sigue el IVA oficial de {country}.', en: 'Follows the official VAT of {country}.', pt: 'Segue o IVA oficial de {country}.', fr: 'Suit la TVA officielle de {country}.', de: 'Folgt der amtlichen USt. von {country}.', it: 'Segue l’IVA ufficiale di {country}.' },
+  followLawOff: { es: 'El IVA se actualiza en la fecha oficial, sin firmar nada.', en: 'VAT updates on the official date, with nothing to sign.', pt: 'O IVA atualiza-se na data oficial, sem assinar nada.', fr: 'La TVA se met à jour à la date officielle, sans rien signer.', de: 'Die USt. ändert sich zum amtlichen Datum, ohne Unterschrift.', it: 'L’IVA si aggiorna alla data ufficiale, senza firmare nulla.' },
+  turningOn: { es: 'Activando (confirma con tu wallet)', en: 'Turning on (confirm in your wallet)', pt: 'A ativar (confirme na carteira)', fr: 'Activation (confirmez dans votre wallet)', de: 'Wird aktiviert (im Wallet bestätigen)', it: 'Attivazione (conferma nel wallet)' },
+  yieldTitle: { es: 'Hacer que rinda', en: 'Earn yield', pt: 'Pôr a render', fr: 'Faire fructifier', de: 'Rendite erzielen', it: 'Fai fruttare' },
+  yieldSoon: { es: 'Prestar una parte en Blend. Aún no disponible en testnet.', en: 'Lend part of it on Blend. Not available on testnet yet.', pt: 'Emprestar uma parte na Blend. Ainda não disponível na testnet.', fr: 'Prêter une partie sur Blend. Pas encore disponible sur testnet.', de: 'Einen Teil auf Blend verleihen. Im Testnet noch nicht verfügbar.', it: 'Prestarne una parte su Blend. Non ancora disponibile in testnet.' },
+  account: { es: 'CUENTA', en: 'ACCOUNT', pt: 'CONTA', fr: 'COMPTE', de: 'KONTO', it: 'ACCOUNT' },
+  vault: { es: 'Bóveda', en: 'Vault', pt: 'Cofre', fr: 'Coffre', de: 'Tresor', it: 'Caveau' },
+  payAddress: { es: 'Dirección de cobro', en: 'Payment address', pt: 'Endereço de pagamento', fr: 'Adresse de paiement', de: 'Zahlungsadresse', it: 'Indirizzo di pagamento' },
+  signOut: { es: 'Salir', en: 'Sign out', pt: 'Sair', fr: 'Se déconnecter', de: 'Abmelden', it: 'Esci' },
+  // Activity and alerts
+  movements: { es: 'Movimientos', en: 'Activity', pt: 'Movimentos', fr: 'Mouvements', de: 'Bewegungen', it: 'Movimenti' },
+  noMovements: { es: 'Todavía no hay movimientos.', en: 'No activity yet.', pt: 'Ainda não há movimentos.', fr: 'Aucun mouvement pour l’instant.', de: 'Noch keine Bewegungen.', it: 'Ancora nessun movimento.' },
+  ev_received: { es: 'Cobro repartido', en: 'Payment split', pt: 'Pagamento dividido', fr: 'Paiement réparti', de: 'Zahlung aufgeteilt', it: 'Pagamento diviso' },
+  ev_tax_paid: { es: 'Impuesto pagado', en: 'Tax paid', pt: 'Imposto pago', fr: 'Impôt payé', de: 'Steuer gezahlt', it: 'Imposta pagata' },
+  ev_released: { es: 'Reserva liberada', en: 'Reserve released', pt: 'Reserva libertada', fr: 'Réserve libérée', de: 'Rücklage freigegeben', it: 'Riserva liberata' },
+  ev_converted: { es: 'Reserva cambiada a euros', en: 'Reserve changed into euros', pt: 'Reserva trocada por euros', fr: 'Réserve convertie en euros', de: 'Rücklage in Euro getauscht', it: 'Riserva cambiata in euro' },
+  ev_change: { es: 'Cambio de configuración', en: 'Settings change', pt: 'Alteração de configuração', fr: 'Changement de réglages', de: 'Einstellungsänderung', it: 'Modifica delle impostazioni' },
+  alerts: { es: 'Avisos', en: 'Alerts', pt: 'Avisos', fr: 'Alertes', de: 'Hinweise', it: 'Avvisi' },
+  nothingPending: { es: 'Nada pendiente.', en: 'Nothing pending.', pt: 'Nada pendente.', fr: 'Rien en attente.', de: 'Nichts offen.', it: 'Niente in sospeso.' },
+  al_scheduled: { es: 'CAMBIO PROGRAMADO', en: 'SCHEDULED CHANGE', pt: 'ALTERAÇÃO PROGRAMADA', fr: 'CHANGEMENT PROGRAMMÉ', de: 'GEPLANTE ÄNDERUNG', it: 'MODIFICA PROGRAMMATA' },
+  al_scheduledBody: { es: 'La reserva en euros se activa el {date}. El plazo de aviso protege tu bóveda si alguien te roba el acceso.', en: 'The euro reserve turns on on {date}. The notice period protects your vault if someone steals your access.', pt: 'A reserva em euros ativa-se a {date}. O prazo de aviso protege o cofre se alguém roubar o seu acesso.', fr: 'La réserve en euros s’active le {date}. Le préavis protège votre coffre si quelqu’un vole votre accès.', de: 'Die Euro-Rücklage startet am {date}. Die Vorlaufzeit schützt deinen Tresor, falls jemand deinen Zugang stiehlt.', it: 'La riserva in euro si attiva il {date}. Il preavviso protegge il caveau se qualcuno ti ruba l’accesso.' },
+  al_law: { es: 'LEY AL DÍA', en: 'LAW UP TO DATE', pt: 'LEI EM DIA', fr: 'LOI À JOUR', de: 'GESETZ AKTUELL', it: 'LEGGE AGGIORNATA' },
+  al_lawBody: { es: 'Tu IVA sigue el registro oficial de {country}: si cambia, tu reparto se ajusta solo en la fecha legal.', en: 'Your VAT follows the official registry for {country}: if it changes, your split adjusts itself on the legal date.', pt: 'O seu IVA segue o registo oficial de {country}: se mudar, a divisão ajusta-se sozinha na data legal.', fr: 'Votre TVA suit le registre officiel de {country} : si elle change, votre répartition s’ajuste seule à la date légale.', de: 'Deine USt. folgt dem amtlichen Register für {country}: Ändert sie sich, passt sich die Aufteilung zum Stichtag an.', it: 'La tua IVA segue il registro ufficiale di {country}: se cambia, la ripartizione si adegua da sola alla data di legge.' },
+  al_usd: { es: 'RESERVA EN DÓLARES', en: 'RESERVE IN DOLLARS', pt: 'RESERVA EM DÓLARES', fr: 'RÉSERVE EN DOLLARS', de: 'RÜCKLAGE IN DOLLAR', it: 'RISERVA IN DOLLARI' },
+  al_usdBody: { es: 'Tienes reserva en USDC pendiente de cambiar a euros. Puedes hacerlo en Ajustes.', en: 'You have reserve in USDC waiting to be changed into euros. You can do it in Settings.', pt: 'Tem reserva em USDC por trocar em euros. Pode fazê-lo nas Definições.', fr: 'Vous avez une réserve en USDC à convertir en euros. Vous pouvez le faire dans Réglages.', de: 'Du hast eine USDC-Rücklage, die noch in Euro getauscht werden kann. Das geht in den Einstellungen.', it: 'Hai riserva in USDC da cambiare in euro. Puoi farlo in Impostazioni.' },
+  al_paid: { es: 'PAGADO', en: 'PAID', pt: 'PAGO', fr: 'PAYÉ', de: 'BEZAHLT', it: 'PAGATO' },
+  al_paidBody: { es: '{n} pago(s) de impuestos hechos desde tu bóveda.', en: '{n} tax payment(s) made from your vault.', pt: '{n} pagamento(s) de impostos feitos a partir do cofre.', fr: '{n} paiement(s) d’impôts effectué(s) depuis votre coffre.', de: '{n} Steuerzahlung(en) aus deinem Tresor.', it: '{n} pagamento/i di imposte dal caveau.' },
+  tabHome: { es: 'Inicio', en: 'Home', pt: 'Início', fr: 'Accueil', de: 'Start', it: 'Home' },
+  // Pay link
+  invoicePayment: { es: 'Pago de factura', en: 'Invoice payment', pt: 'Pagamento de fatura', fr: 'Paiement de facture', de: 'Rechnungszahlung', it: 'Pagamento della fattura' },
+  amount: { es: 'Importe', en: 'Amount', pt: 'Montante', fr: 'Montant', de: 'Betrag', it: 'Importo' },
+  toVault: { es: 'Para la bóveda {vault}', en: 'To vault {vault}', pt: 'Para o cofre {vault}', fr: 'Vers le coffre {vault}', de: 'An Tresor {vault}', it: 'Al caveau {vault}' },
+  payLinkNote: { es: 'El pago se reparte al instante: el vendedor recibe su parte y su IVA queda apartado. Red de pruebas: el dinero no es real.', en: 'The payment splits instantly: the seller gets their share and their VAT is set aside. Test network: the money is not real.', pt: 'O pagamento divide-se na hora: o vendedor recebe a sua parte e o IVA fica separado. Rede de testes: o dinheiro não é real.', fr: 'Le paiement se répartit instantanément : le vendeur reçoit sa part et sa TVA est mise de côté. Réseau de test : l’argent n’est pas réel.', de: 'Die Zahlung wird sofort aufgeteilt: Der Verkäufer erhält seinen Anteil, die USt. wird zurückgelegt. Testnetz: Das Geld ist nicht echt.', it: 'Il pagamento si divide subito: il venditore riceve la sua parte e l’IVA resta da parte. Rete di test: il denaro non è reale.' },
+  paid: { es: 'Pagado', en: 'Paid', pt: 'Pago', fr: 'Payé', de: 'Bezahlt', it: 'Pagato' },
+  payWithWallet: { es: 'Pagar con mi wallet', en: 'Pay with my wallet', pt: 'Pagar com a minha carteira', fr: 'Payer avec mon wallet', de: 'Mit meinem Wallet zahlen', it: 'Paga con il mio wallet' },
+  payingWithWallet: { es: 'Pagando con tu wallet', en: 'Paying with your wallet', pt: 'A pagar com a sua carteira', fr: 'Paiement avec votre wallet', de: 'Zahlung mit deinem Wallet', it: 'Pagamento con il wallet' },
+  stepTestUsdc: { es: 'Consiguiendo USDC de prueba para tu wallet', en: 'Getting test USDC for your wallet', pt: 'A obter USDC de teste para a sua carteira', fr: 'Obtention d’USDC de test pour votre wallet', de: 'Test-USDC für dein Wallet', it: 'Ottengo USDC di prova per il wallet' },
+  confirmPayment: { es: 'Confirma el pago en tu wallet', en: 'Confirm the payment in your wallet', pt: 'Confirme o pagamento na carteira', fr: 'Confirmez le paiement dans votre wallet', de: 'Zahlung im Wallet bestätigen', it: 'Conferma il pagamento nel wallet' },
+  simulatePayment: { es: 'Simular el pago', en: 'Simulate the payment', pt: 'Simular o pagamento', fr: 'Simuler le paiement', de: 'Zahlung simulieren', it: 'Simula il pagamento' },
+  payingTestClient: { es: 'Pagando con un cliente de pruebas', en: 'Paying with a test client', pt: 'A pagar com um cliente de teste', fr: 'Paiement avec un client de test', de: 'Zahlung mit einem Testkunden', it: 'Pagamento con un cliente di prova' },
+  notDeployed: { es: 'Kyros todavía no está desplegado en testnet.', en: 'Kyros is not deployed on testnet yet.', pt: 'A Kyros ainda não está implementada na testnet.', fr: 'Kyros n’est pas encore déployé sur testnet.', de: 'Kyros ist noch nicht im Testnet bereitgestellt.', it: 'Kyros non è ancora attivo in testnet.' },
+  back: { es: 'Atrás', en: 'Back', pt: 'Voltar', fr: 'Retour', de: 'Zurück', it: 'Indietro' },
+  ev_invested: { es: 'Reserva invertida', en: 'Reserve invested', pt: 'Reserva investida', fr: 'Réserve investie', de: 'Rücklage angelegt', it: 'Riserva investita' },
+  ev_harvested: { es: 'Rendimiento retirado', en: 'Yield withdrawn', pt: 'Rendimento levantado', fr: 'Rendement retiré', de: 'Rendite abgehoben', it: 'Rendimento ritirato' },
+  errFriendbot: { es: 'No se pudo crear la cuenta de pruebas (friendbot).', en: 'Could not create the test account (friendbot).', pt: 'Não foi possível criar a conta de teste (friendbot).', fr: 'Impossible de créer le compte de test (friendbot).', de: 'Das Testkonto konnte nicht erstellt werden (Friendbot).', it: 'Impossibile creare il conto di prova (friendbot).' },
+  errRejected: { es: 'La red rechazó la transacción: {why}', en: 'The network rejected the transaction: {why}', pt: 'A rede rejeitou a transação: {why}', fr: 'Le réseau a rejeté la transaction : {why}', de: 'Das Netzwerk hat die Transaktion abgelehnt: {why}', it: 'La rete ha rifiutato la transazione: {why}' },
+  errTxStatus: { es: 'La transacción {tx}… terminó en {status}', en: 'Transaction {tx}… ended in {status}', pt: 'A transação {tx}… terminou em {status}', fr: 'La transaction {tx}… s’est terminée par {status}', de: 'Transaktion {tx}… endete mit {status}', it: 'La transazione {tx}… è terminata con {status}' },
+  errNoConversion: { es: 'La conversión a euros no está disponible en este despliegue de testnet.', en: 'Conversion to euros is not available in this testnet deployment.', pt: 'A conversão para euros não está disponível nesta implementação de testnet.', fr: 'La conversion en euros n’est pas disponible sur ce déploiement testnet.', de: 'Der Tausch in Euro ist in diesem Testnet-Deployment nicht verfügbar.', it: 'La conversione in euro non è disponibile in questo deploy di testnet.' },
+  errContract: { es: 'El contrato rechazó la operación (error {code}).', en: 'The contract rejected the operation (error {code}).', pt: 'O contrato rejeitou a operação (erro {code}).', fr: 'Le contrat a refusé l’opération (erreur {code}).', de: 'Der Vertrag hat den Vorgang abgelehnt (Fehler {code}).', it: 'Il contratto ha rifiutato l’operazione (errore {code}).' },
+} satisfies Record<string, Entry>;
+
+export type Key = keyof typeof D;
+
+let current: Lang = detectLang();
+
+/** The language in use. Logic modules read it too, for their progress steps and errors. */
+export const getLang = () => current;
+export function setLang(l: Lang): void {
+  current = l;
+  saveLang(l);
+  document.documentElement.lang = l;
+}
+document.documentElement.lang = current;
+
+export function t(key: Key, vars: Record<string, string | number> = {}): string {
+  const e = D[key] as Entry;
+  let s = e[current] ?? e.en;
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
+
+/** The locale for numbers and dates in the language in use. */
+export const locale = () => localeOf(current);
+
+export const fmtNumber = (n: number, o?: Intl.NumberFormatOptions) => n.toLocaleString(locale(), o);
+export const fmtDate = (d: Date) => d.toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' });
+export const fmtDateTime = (d: Date) => d.toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
+export const fmtTime = (d: Date) => d.toLocaleTimeString(locale(), { timeStyle: 'short' });
