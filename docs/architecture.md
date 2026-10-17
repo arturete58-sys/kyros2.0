@@ -92,9 +92,9 @@ The contract checks:
 - `unfollow` applies at once and keeps the VAT in force as the vault's own.
 - In the registry, entries that have started to apply cannot be edited or withdrawn.
 
-## Invoices with their own terms
+## Expected payments with their own terms
 
-`expect_invoice(reference, terms)` (owner) registers how the payments of one invoice split: its VAT, what the client withholds and pays to the tax authority itself (Spanish IRPF), and the reserve buckets. A payment carrying that reference is split with `split_withheld`; anything else follows the rule. See [invoicing.md](invoicing.md).
+`expect_invoice(reference, terms)` (owner) registers how the payments of one invoice split: its VAT, what the client withholds and pays to the tax authority itself (Spanish IRPF), and the reserve buckets. A payment carrying that reference is split with `split_withheld`; anything else follows the rule. Kyros does not issue invoices. See [expected-payments.md](expected-payments.md).
 
 ## Euro reserve, yield and anchors
 

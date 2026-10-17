@@ -11,4 +11,4 @@ export * from './registry.js';
 export * from './activities.js';
 export * from './assets.js';
 export * from './anchor.js';
-export * from './invoice.js';
+export * from './payment-request.js';

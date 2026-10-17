@@ -8,20 +8,7 @@ import { split, splitWithheld, validateWithholding, RuleError } from '../split.j
 import { checkBuiltInAddresses, stablecoinContract, STABLECOINS } from '../assets.js';
 import { conversionToScVal, invoiceTermsToScVal } from '../scval.js';
 import { anchorAuth, anchorInfo, anchorPayout, startWithdrawal, withdrawalStatus } from '../anchor.js';
-import {
-  invoiceTotals,
-  invoiceRef,
-  isoWithOffset,
-  money,
-  payableUnits,
-  toFacturae,
-  toUbl,
-  vaultTerms,
-  verifactuAlta,
-  verifactuHash,
-  verifactuQrUrl,
-  type Invoice,
-} from '../invoice.js';
+import { money, payableUnits, requestRef, requestTerms, requestTotals, type PaymentRequest } from '../payment-request.js';
 import { invoiceReference } from '../client.js';
 
 const UNIT = 10_000_000n;
@@ -62,82 +49,29 @@ test('a conversion and invoice terms encode as the contract types (sorted struct
   assert.deepEqual(keys, ['buckets', 'vat_bps', 'withholding_bps']);
 });
 
-const seller = { name: 'Lucía', surname: 'Martín', person: 'F' as const, taxId: '12345678Z', country: 'ES', street: 'Calle Mayor 1', city: 'Madrid', postalCode: '28013', province: 'Madrid' };
-const buyer = { name: 'Acme Software SL', taxId: 'B12345674', country: 'ES', street: 'Gran Vía 2', city: 'Valencia', postalCode: '46002', province: 'Valencia' };
-
-const consulting: Invoice = {
-  series: '2026A-',
-  number: '0044',
-  issueDate: '2026-10-17',
+const consulting: PaymentRequest = {
+  invoiceNumber: '2026A-0044',
   currency: 'EUR',
-  seller,
-  buyer,
   withholding: { rate: '15' },
   lines: [
-    { description: 'Consultoría', quantity: '1', unitPrice: '1000', vat: { category: 'S', rate: '21' } },
-    { description: 'Horas de soporte', quantity: '2.5', unitPrice: '40.10', vat: { category: 'S', rate: '21' } },
+    { description: 'Consultoría', quantity: '1', unitPrice: '1000', vatRate: '21' },
+    { description: 'Horas de soporte', quantity: '2.5', unitPrice: '40.10', vatRate: '21' },
   ],
 };
 
-test('invoice totals follow EN 16931 rounding: line, then VAT per rate, then withholding', () => {
-  const t = invoiceTotals(consulting);
+test('expected payment totals: line, then VAT per rate, then withholding, to the cent', () => {
+  const t = requestTotals(consulting);
   assert.deepEqual(t.lines.map(money), ['1000.00', '100.25']);
   assert.equal(money(t.net), '1100.25');
   assert.equal(money(t.tax), '231.05'); // 1100.25 x 21% = 231.0525
   assert.equal(money(t.withheld), '165.04'); // 1100.25 x 15% = 165.0375
   assert.equal(money(t.payable), '1166.26');
   assert.equal(payableUnits(consulting), 1_166_2600000n);
-  assert.deepEqual(vaultTerms(consulting, [{ name: 'irpf', bps: 500 }]), { vatBps: 2100, withholdingBps: 1500, buckets: [{ name: 'irpf', bps: 500 }] });
-  // The vault's split of the payable amount gives back the invoice's own VAT, to the cent.
+  assert.deepEqual(requestTerms(consulting, [{ name: 'irpf', bps: 500 }]), { vatBps: 2100, withholdingBps: 1500, buckets: [{ name: 'irpf', bps: 500 }] });
+  // The vault's split of the payable amount gives back the request's own VAT, to the cent.
   const s = splitWithheld({ vatBps: 2100, buckets: [{ name: 'irpf', bps: 500 }] }, 1500, payableUnits(consulting));
   assert.ok(s.vat >= 231_0400000n && s.vat <= 231_0600000n, s.vat.toString());
-  assert.deepEqual(invoiceRef(consulting), invoiceReference('2026A-0044'));
-});
-
-test('Facturae carries the withholding; UBL refuses it and asks for Facturae', () => {
-  const x = toFacturae(consulting);
-  assert.match(x, /<TaxesWithheld>\s*<Tax>\s*<TaxTypeCode>04<\/TaxTypeCode>\s*<TaxRate>15.00<\/TaxRate>/);
-  assert.match(x, /<InvoiceTotal>1166.26<\/InvoiceTotal>/);
-  assert.throws(() => toUbl(consulting), /Facturae/);
-  const ubl = toUbl({ ...consulting, withholding: undefined, seller: { ...seller, taxId: 'ES12345678Z' }, buyer: { ...buyer, taxId: 'ESB12345674' } });
-  assert.match(ubl, /<cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0<\/cbc:CustomizationID>/);
-  assert.match(ubl, /<cbc:PayableAmount currencyID="EUR">1331.30<\/cbc:PayableAmount>/);
-});
-
-test('VERI*FACTU hashes match the reference implementation (josemmo/Verifactu-PHP test vectors)', () => {
-  const first = {
-    IDEmisorFactura: 'A00000000',
-    NumSerieFactura: 'PRUEBA-0001',
-    FechaExpedicionFactura: '01-06-2025',
-    TipoFactura: 'F2' as const,
-    CuotaTotal: '2.10',
-    ImporteTotal: '12.10',
-    HuellaAnterior: '',
-    FechaHoraHusoGenRegistro: '2025-06-01T10:20:30+02:00',
-  };
-  assert.equal(verifactuHash(first), 'F223F0A84F7D0C701C13C97CF10A1628FF9E46A003DDAEF3A804FBD799D82070');
-  const second = {
-    ...first,
-    NumSerieFactura: 'PRUEBA-0002',
-    FechaExpedicionFactura: '02-06-2025',
-    CuotaTotal: '21.00',
-    ImporteTotal: '121.00',
-    HuellaAnterior: 'A'.repeat(64),
-    FechaHoraHusoGenRegistro: '2025-06-02T20:30:40+02:00',
-  };
-  assert.equal(verifactuHash(second), '4566062C5A5D7DA4E0E876C0994071CD807962629F8D3C1F33B91EDAA65B2BA1');
-});
-
-test('a VERI*FACTU record: base plus VAT as total, Madrid time with offset, and its QR', () => {
-  const r = verifactuAlta(consulting, '', new Date('2026-10-17T08:30:00Z'));
-  assert.equal(r.ImporteTotal, '1331.30'); // the IRPF withheld is not subtracted
-  assert.equal(r.FechaHoraHusoGenRegistro, '2026-10-17T10:30:00+02:00');
-  assert.equal(r.Huella.length, 64);
-  assert.equal(isoWithOffset(new Date('2027-01-15T08:30:00Z')), '2027-01-15T09:30:00+01:00');
-  assert.equal(
-    verifactuQrUrl({ IDEmisorFactura: '89890001K', NumSerieFactura: '1/25A-321', FechaExpedicionFactura: '23-04-2025', ImporteTotal: '567.00' }),
-    'https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR?nif=89890001K&numserie=1%2F25A-321&fecha=23-04-2025&importe=567.00',
-  );
+  assert.deepEqual(requestRef(consulting), invoiceReference('2026A-0044'));
 });
 
 test('anchor: SEP-1, SEP-10 login, SEP-24 withdrawal, and a muxed payout only to the tax destination', async () => {

@@ -16,8 +16,8 @@
  * 10. the owner moves to Germany: a new vault from the German pack, and the same inbox pays
  *     into it after the notice, while the Spanish vault keeps its reserves;
  * 11. the vault's events are read back and exported as CSV;
- * 12. an invoice with IRPF withheld by the client (Facturae written to the
- *     results): the owner registers its terms and the 1,060 payment splits exactly;
+ * 12. an expected payment for an invoice with IRPF withheld by the client:
+ *     the owner registers its terms and the 1,060 payment splits exactly;
  * 13. the VAT is paid to the destination with an anchor-style memo (muxed address);
  * 14. a vault that keeps its reserve in euros: reserve received in KUSD is
  *     swapped into KEUR through the Soroswap testnet router, never below
@@ -32,7 +32,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Asset, BASE_FEE, Contract, Keypair, MuxedAccount, Account, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
 import { REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
-import { invoiceRef, invoiceTotals, money, payableUnits, toFacturae, vaultTerms, type Invoice } from '../invoice.js';
+import { money, payableUnits, requestRef, requestTerms, requestTotals, type PaymentRequest } from '../payment-request.js';
 import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
 import { invoiceReference, KyrosClient, KyrosError } from '../client.js';
 import { vaultEvents, toCsv } from '../events.js';
@@ -185,28 +185,25 @@ async function main(): Promise<void> {
   });
 
   log('invoice with IRPF withheld by the client: terms registered, payment split exactly');
-  const irpfInvoice: Invoice = {
-    series: 'KYR-',
-    number: '2027-003',
-    issueDate: new Date().toISOString().slice(0, 10),
+  // The invoice itself is issued with the freelancer's own invoicing tool; Kyros only needs its number and amounts.
+  const irpfInvoice: PaymentRequest = {
+    invoiceNumber: 'KYR-2027-003',
     currency: 'EUR',
-    seller: { name: 'Demo', surname: 'Freelancer', person: 'F', taxId: '12345678Z', country: 'ES', street: 'Calle Mayor 1', city: 'Madrid', postalCode: '28013', province: 'Madrid' },
-    buyer: { name: 'Demo Client SL', taxId: 'B12345674', country: 'ES', street: 'Gran Vía 2', city: 'Valencia', postalCode: '46002', province: 'Valencia' },
     withholding: { rate: '15' },
-    payment: { address: vault.contractId, asset: 'KUSD' },
-    lines: [{ description: 'Consultoría (demo)', quantity: '1', unitPrice: '1000', vat: { category: 'S', rate: '21' } }],
+    payTo: { address: vault.contractId, asset: 'KUSD' },
+    lines: [{ description: 'Consultoría (demo)', quantity: '1', unitPrice: '1000', vatRate: '21' }],
   };
   // The client already withholds 15% for income tax; the vault keeps 5% more on top.
-  const irpfTerms = vaultTerms(irpfInvoice, [{ name: 'irpf', bps: 500 }]);
-  const expected = await c.send(k.freelancer, c.expectInvoiceOp(vault.contractId, invoiceRef(irpfInvoice), irpfTerms));
+  const irpfTerms = requestTerms(irpfInvoice, [{ name: 'irpf', bps: 500 }]);
+  const expected = await c.send(k.freelancer, c.expectInvoiceOp(vault.contractId, requestRef(irpfInvoice), irpfTerms));
   steps.push({
-    step: 'Freelancer issues invoice KYR-2027-003 (base 1,000, VAT 21%, IRPF 15% withheld by the client) and registers its terms in the vault',
+    step: 'Expected payment for invoice KYR-2027-003 (base 1,000, VAT 21%, IRPF 15% withheld by the client): the freelancer registers its terms in the vault',
     ok: true,
     tx: expected.hash,
-    detail: `Facturae 3.2.2 in invoice-KYR-2027-003.xml; the client pays ${money(invoiceTotals(irpfInvoice).payable)}`,
+    detail: `the client pays ${money(requestTotals(irpfInvoice).payable)}`,
   });
   const before3 = { freelancer: await c.balance(token, k.freelancer.publicKey()), vault: await c.balance(token, vault.contractId) };
-  const paid3 = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: vault.contractId, token, amount: payableUnits(irpfInvoice), reference: invoiceRef(irpfInvoice) }));
+  const paid3 = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: vault.contractId, token, amount: payableUnits(irpfInvoice), reference: requestRef(irpfInvoice) }));
   const got3 = { freelancer: (await c.balance(token, k.freelancer.publicKey())) - before3.freelancer, vault: (await c.balance(token, vault.contractId)) - before3.vault };
   steps.push({
     step: 'The client pays 1,060 KUSD with the invoice reference: the vault applies the invoice terms, not the default rule',
@@ -482,7 +479,6 @@ async function main(): Promise<void> {
     allOk: steps.every((s) => s.ok),
   };
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, 'invoice-KYR-2027-003.xml'), toFacturae(irpfInvoice));
   writeFileSync(join(outDir, 'latest.json'), JSON.stringify(result, null, 2) + '\n');
   writeFileSync(join(outDir, 'latest.csv'), csv);
   writeFileSync(join(outDir, 'README.md'), report(result));
