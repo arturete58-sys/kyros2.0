@@ -42,8 +42,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (wallet && cfg) setVault(savedVault(wallet.address, cfg.deployedAt));
+    if (wallet && cfg && !(import.meta.env.DEV && location.hash.startsWith('#fixture'))) setVault(savedVault(wallet.address, cfg.deployedAt));
   }, [wallet, cfg]);
+
+  // Development only: `#fixture-home`, `#fixture-pay`... show a screen with sample data and no network.
+  const fixture = import.meta.env.DEV && location.hash.startsWith('#fixture') ? location.hash.slice(9) : null;
+  useEffect(() => {
+    if (!import.meta.env.DEV || fixture === null || !cfg) return;
+    void (async () => {
+      const f = await import('./dev/fixture');
+      const { loadPack, loadHolidays } = await import('./packs');
+      const pack = await loadPack('es');
+      setWallet(f.fixtureWallet);
+      if (fixture === 'start') return;
+      setVault(f.fixtureVault());
+      setSnap(f.fixtureSnapshot(pack, await loadHolidays('es')));
+      if (fixture) setScreen(fixture as Screen);
+    })();
+  }, [cfg, fixture]);
 
   // `#ui-test`: walk through the onboarding screens with a wallet that cannot sign (layout checks only).
   useEffect(() => {
@@ -61,7 +77,7 @@ export default function App() {
 
   const sweeping = useRef(false);
   const refresh = useCallback(async () => {
-    if (!chain || !vault) return;
+    if (!chain || !vault || (import.meta.env.DEV && location.hash.startsWith('#fixture'))) return;
     const s = await snapshot(chain, vault);
     setSnap(s);
     // Payments sent straight to the payment address are split here, by this browser's fee payer,

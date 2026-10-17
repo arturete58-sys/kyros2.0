@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { daysFromCivil, dayString, drawFrom, incomeTaxBuckets, readNotice, suggestPrepayment, taxYearStart, type Deadline, type PeriodKind, type ScheduledItem } from 'kyros-sdk';
 import { applyNotice, cancelScheduled, loadInputs, money, noticeText, runDueScheduled, saveInputs, schedulePayment, taxYearPeriods, type Held, type Snapshot, type VaultInfo } from '../kyros';
-import { fmtDate as fmtDay, t } from '../i18n';
+import { fmtDate as fmtDay, fmtNumber, locale, t } from '../i18n';
 import { Button, TxLink, useApp } from '../ui';
 
 const DAY = 86_400n;
@@ -38,6 +38,50 @@ function incomeRows(s: Snapshot, v: VaultInfo): Held[] {
   return s.held.filter((h) => h.bucket !== 'vat' && (names.length === 0 || names.includes(h.bucket)));
 }
 
+/** A deadline as a calendar leaf: the day, and the month under it. Amber when it is a week away or less. */
+export function Leaf({ iso }: { iso: string }) {
+  const d = new Date(`${iso}T12:00:00Z`);
+  const days = (d.getTime() - Date.now()) / 86_400_000;
+  return (
+    <span className={`leaf${days <= 7 ? ' soon' : ''}`} aria-hidden="true">
+      <span className="d">{d.getUTCDate()}</span>
+      <span className="m">{d.toLocaleDateString(locale(), { month: 'short', timeZone: 'UTC' }).replace('.', '')}</span>
+    </span>
+  );
+}
+
+/** What the money became, in proportion: yours, VAT, income tax. */
+export function SplitBar({ yours, vat, income }: { yours: bigint; vat: bigint; income: bigint }) {
+  const total = yours + vat + income;
+  const w = (x: bigint) => (total > 0n ? Number((x * 10_000n) / total) : 1);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="split" role="img" aria-label={`${t('yoursShort')} ${money(yours)}, ${t('vat')} ${money(vat)}, ${t('incomeTax')} ${money(income)}`}>
+        <span className="y" style={{ flexGrow: w(yours) }} />
+        <span className="v" style={{ flexGrow: w(vat) }} />
+        <span className="i" style={{ flexGrow: w(income) }} />
+      </div>
+      <div className="legend">
+        {(
+          [
+            ['yours', t('yoursShort'), yours],
+            ['vat', t('vat'), vat],
+            ['income', t('incomeTax'), income],
+          ] as const
+        ).map(([k, label, x]) => (
+          <div key={k}>
+            <span>
+              <i className="dot" style={{ background: `var(--${k})` }} />
+              {label}
+            </span>
+            <b>{total > 0n ? `${fmtNumber(Number((x * 1000n) / total) / 10, { maximumFractionDigits: 1 })} %` : '–'}</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function WorkdaysNote() {
   const { snap } = useApp();
   const w = snap?.pack?.calendar.workdays;
@@ -60,20 +104,23 @@ export function Deadlines() {
       {soon.map((d) => {
         const k = `${d.legal}${d.kind}${d.bucket ?? ''}${d.what}`;
         return (
-          <div key={k} style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div className="row spread small">
-              <span>{deadlineLabel(d)}</span>
-              <b>{showDay(d.date)}</b>
+          <div key={k} className="deadline">
+            <Leaf iso={d.date} />
+            <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span className="what">{deadlineLabel(d)}</span>
+              <span className="tiny muted">
+                {showDay(d.date)}
+                {d.legal !== d.date ? ` (${t('legalDate', { date: showDay(d.legal) })})` : ''}
+              </span>
+              {d.kind === 'prepayment' &&
+                (open === k ? (
+                  <Instalment d={d} />
+                ) : (
+                  <button className="link" data-testid="calc-instalment" onClick={() => setOpen(k)}>
+                    {t('calcPay')}
+                  </button>
+                ))}
             </div>
-            {d.legal !== d.date && <span className="tiny muted">{t('legalDate', { date: showDay(d.legal) })}</span>}
-            {d.kind === 'prepayment' &&
-              (open === k ? (
-                <Instalment d={d} />
-              ) : (
-                <Button small kind="secondary" testid="calc-instalment" onClick={() => setOpen(k)}>
-                  {t('calcPay')}
-                </Button>
-              ))}
           </div>
         );
       })}
@@ -133,7 +180,7 @@ function Instalment({ d }: { d: Deadline }) {
       await refresh();
     });
   return (
-    <div className="item" data-testid="instalment" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+    <div className="panel" data-testid="instalment">
       {s.needs === 'expenses' || s.rule === 'es130' ? (
         <label className="tiny">
           {t('needExpenses')}
@@ -205,7 +252,9 @@ export function NoticeReader() {
     <div className="card" data-testid="notice">
       <p style={{ fontWeight: 600 }}>{t('noticeTitle')}</p>
       <p className="tiny muted">{t('noticeSub')}</p>
-      <input
+      <label className="btn secondary small file" style={{ alignSelf: 'flex-start' }}>
+        {t('noticeUpload')}
+        <input
         type="file"
         accept="application/pdf,.pdf,.txt,.eml,text/plain"
         data-testid="notice-file"
@@ -219,6 +268,7 @@ export function NoticeReader() {
             });
         }}
       />
+      </label>
       <textarea className="input" rows={3} placeholder={t('noticePaste')} value={text} data-testid="notice-text" onChange={(e) => setText(e.target.value)} />
       <Button small kind="secondary" testid="notice-read" disabled={!text.trim()} onClick={() => parse(text)}>
         {t('noticeRead')}

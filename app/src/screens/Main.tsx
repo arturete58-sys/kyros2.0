@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
 import { convertNow, expectPayment, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
-import { Deadlines, NoticeReader, ScheduledList, deadlineLabel } from './Taxes';
+import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
 import { Button, LangPicker, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
 import { activityText, clientText } from './Start';
 import { fmtDate as fmtDay, fmtDateTime, fmtTime, locale, t, type Key } from '../i18n';
@@ -12,6 +12,9 @@ const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : 'bucketIncome')
 const fmtDate = (secs: bigint) => fmtDay(new Date(Number(secs) * 1000));
 
 /** The payment address: what the user shares so that every payment splits itself. */
+/** CBVAULT…AAAA: an address shortened in the middle (the full one is in the title and copied whole). */
+const short = (a: string) => (a.length > 20 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a);
+
 function PayAddress() {
   const { vault, go } = useApp();
   const [qr, setQr] = useState<string | null>(null);
@@ -41,8 +44,8 @@ function PayAddress() {
       <div className="row" style={{ alignItems: 'flex-start' }}>
         {qr && <img src={qr} alt={t('payAddress')} width={112} height={112} style={{ borderRadius: 8, flex: 'none' }} />}
         <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-          <span className="tiny mono" style={{ wordBreak: 'break-all' }}>
-            {vault.inbox}
+          <span className="tiny mono" style={{ wordBreak: 'break-all' }} title={vault.inbox}>
+            {short(vault.inbox)}
           </span>
           <div className="row">
             <Button small kind="secondary" onClick={copy}>
@@ -79,41 +82,75 @@ export function Home() {
     <>
       <div className="content" style={{ paddingBottom: 90 }}>
         <div>
-          <h1 style={{ fontSize: 22 }}>{t('hello')}</h1>
+          <h1 style={{ fontSize: 24 }}>{t('hello')}</h1>
           <p className="small muted">
             {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]} · {wallet.label}
           </p>
         </div>
-        <div className="card hero" data-testid="spendable">
-          <span className="label small">{t('canSpend')}</span>
-          <span className="big">{money(s?.spendable.usd ?? 0n)} USDC</span>
-          {(s?.spendable.eur ?? 0n) > 0n && <span className="small">{t('andEur', { amount: money(s!.spendable.eur) })}</span>}
-          <span className="note small">{t('canSpendNote')}</span>
-        </div>
-        <div className="card" data-testid="reserved">
-          <div className="row spread">
-            <span className="small muted">
-              {t('setAside')}
-              {reservedEur > 0n ? t('inEuros') : ''}
+        <section className="vault" aria-label={t('canSpend')}>
+          <div data-testid="spendable" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span className="small muted">{t('canSpend')}</span>
+            <span className="big">
+              {money(s?.spendable.usd ?? 0n)}
+              <small>USDC</small>
             </span>
-            <span className="badge ok">{t('onTrack')}</span>
+            {(s?.spendable.eur ?? 0n) > 0n && <span className="small muted">{t('andEur', { amount: money(s!.spendable.eur) })}</span>}
           </div>
-          <span className="amount">
-            {reservedEur > 0n ? `${money(reservedEur)} €` : ''}
-            {reservedEur > 0n && reservedUsd > 0n ? ' + ' : ''}
-            {reservedUsd > 0n || reservedEur === 0n ? `${money(reservedUsd)} USDC` : ''}
-          </span>
-          <div className="row small muted">
-            <span className="dot" style={{ background: 'var(--tax)' }} /> {t('vat')} {money((vat?.usd ?? 0n) + (vat?.eur ?? 0n))}
-            <span className="dot" style={{ background: 'var(--warn)', marginLeft: 12 }} /> {t('incomeTax')} {money(otherUsd + otherEur)}
+          <SplitBar yours={(s?.spendable.usd ?? 0n) + (s?.spendable.eur ?? 0n)} vat={(vat?.usd ?? 0n) + (vat?.eur ?? 0n)} income={otherUsd + otherEur} />
+          <hr />
+          <div data-testid="reserved" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="row spread">
+              <span className="small muted">
+                {t('setAside')}
+                {reservedEur > 0n ? t('inEuros') : ''}
+              </span>
+              <span className="badge ok">{t('onTrack')}</span>
+            </div>
+            <span className="amount">
+              {reservedEur > 0n ? `${money(reservedEur)} €` : ''}
+              {reservedEur > 0n && reservedUsd > 0n ? ' + ' : ''}
+              {reservedUsd > 0n || reservedEur === 0n ? (
+                <>
+                  {money(reservedUsd)}
+                  <small>USDC</small>
+                </>
+              ) : (
+                ''
+              )}
+            </span>
+            <div className="row tiny muted" style={{ gap: 16 }}>
+              <span className="row" style={{ gap: 6 }}>
+                <i className="dot" style={{ background: 'var(--vat)' }} />
+                {t('vat')} <b className="num" style={{ color: 'var(--ink)' }}>{money((vat?.usd ?? 0n) + (vat?.eur ?? 0n))}</b>
+              </span>
+              <span className="row" style={{ gap: 6 }}>
+                <i className="dot" style={{ background: 'var(--income)' }} />
+                {t('incomeTax')} <b className="num" style={{ color: 'var(--ink)' }}>{money(otherUsd + otherEur)}</b>
+              </span>
+            </div>
+            {s?.deadlines?.[0] && (
+              <div className="row">
+                <Leaf iso={s.deadlines[0].date} />
+                <div className="grow">
+                  <p className="small" style={{ fontWeight: 550 }}>
+                    {deadlineText(s.deadlines[0])}
+                  </p>
+                  <p className="tiny muted">{t('nextDeadlineShort')}</p>
+                </div>
+                <Button small onClick={() => go('pay')}>
+                  {t('pay')}
+                </Button>
+              </div>
+            )}
+            {!s?.deadlines?.[0] && (
+              <div className="row" style={{ justifyContent: 'flex-end' }}>
+                <Button small onClick={() => go('pay')}>
+                  {t('pay')}
+                </Button>
+              </div>
+            )}
           </div>
-          <div className="row spread" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-            <span className="small muted">{s?.deadlines?.[0] ? t('nextDeadline', { what: deadlineText(s.deadlines[0]), date: fmtDay(new Date(`${s.deadlines[0].date}T12:00:00Z`)) }) : ''}</span>
-            <Button small onClick={() => go('pay')}>
-              {t('pay')}
-            </Button>
-          </div>
-        </div>
+        </section>
         <PayAddress />
         {received.length > 0 && (
           <div className="list">
@@ -192,16 +229,16 @@ export function Request() {
         {!done ? (
           <>
             <div className="field">
-              <label>{t('client')}</label>
-              <input className="input" value={client} onChange={(e) => setClient(e.target.value)} />
+              <label htmlFor="req-client">{t('client')}</label>
+              <input id="req-client" name="client" autoComplete="organization" className="input" value={client} onChange={(e) => setClient(e.target.value)} />
             </div>
             <div className="field">
-              <label>{t('invoiceNo')}</label>
-              <input className="input" value={number} onChange={(e) => setNumber(e.target.value)} />
+              <label htmlFor="req-number">{t('invoiceNo')}</label>
+              <input id="req-number" name="invoice" autoComplete="off" spellCheck={false} className="input" value={number} onChange={(e) => setNumber(e.target.value)} />
             </div>
             <div className="field">
-              <label>{t('amountNoVat')}</label>
-              <input className="input" inputMode="decimal" value={base} onChange={(e) => setBase(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} />
+              <label htmlFor="req-base">{t('amountNoVat')}</label>
+              <input id="req-base" name="amount" autoComplete="off" className="input" inputMode="decimal" value={base} onChange={(e) => setBase(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} />
             </div>
             {tot && (
               <div className="card">
@@ -245,8 +282,8 @@ export function Request() {
               <TxLink hash={done.hash} />
             </div>
             <div className="field">
-              <label>{t('payLinkLabel')}</label>
-              <input className="input mono" readOnly value={`${location.origin}${import.meta.env.BASE_URL}#pagar?v=${vault.vault}&r=${done.ref}&a=${done.payable}`} onFocus={(e) => e.currentTarget.select()} />
+              <label htmlFor="req-link">{t('payLinkLabel')}</label>
+              <input id="req-link" className="input mono" readOnly value={`${location.origin}${import.meta.env.BASE_URL}#pagar?v=${vault.vault}&r=${done.ref}&a=${done.payable}`} onFocus={(e) => e.currentTarget.select()} />
             </div>
           </>
         )}
@@ -316,6 +353,7 @@ export function Pay() {
   const { vault, snap, chain, wallet, run, go, refresh } = useApp();
   const [hashes, setHashes] = useState<string[]>([]);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<string | null>(null);
   if (!vault || !wallet) return null;
   const now = BigInt(Math.floor(Date.now() / 1000));
   const held = snap?.held ?? [];
@@ -346,45 +384,55 @@ export function Pay() {
           {held.map((h) => {
             const past = h.dueAt > 0n && h.dueAt <= now;
             return (
-              <div key={key(h)} style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div className="row spread">
-                  <span>
-                    {bucketLabel(h.bucket)} · {periodText(snap?.periodKind ?? null, h.period)}
+              <div key={key(h)} className="deadline">
+                <span className="dot" style={{ background: h.bucket === 'vat' ? 'var(--vat)' : 'var(--income)', marginTop: 6 }} />
+                <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div className="row spread" style={{ alignItems: 'baseline' }}>
+                    <span className="what">
+                      {bucketLabel(h.bucket)}, {periodText(snap?.periodKind ?? null, h.period)}
+                    </span>
+                    <b className="num" style={{ whiteSpace: 'nowrap' }}>
+                      {money(h.amount)} <span className="tiny muted">{cur(h)}</span>
+                    </b>
+                  </div>
+                  <span className={`tiny ${past ? '' : 'muted'}`}>
+                    {h.dueAt > 0n ? (past ? t('pastDue', { date: dueDay(h.dueAt) }) : `${t('payBefore', { date: dueDay(h.payBy) })}${h.payBy !== h.dueAt ? `; ${t('lockOn', { date: dueDay(h.dueAt) })}` : ''}`) : ''}
                   </span>
-                  <b>
-                    {money(h.amount)} {cur(h)}
-                  </b>
-                </div>
-                <span className={`tiny ${past ? '' : 'muted'}`}>
-                  {h.dueAt > 0n ? (past ? t('pastDue', { date: dueDay(h.dueAt) }) : `${t('payBefore', { date: dueDay(h.payBy) })}${h.payBy !== h.dueAt ? ` · ${t('lockOn', { date: dueDay(h.dueAt) })}` : ''}`) : ''}
-                </span>
-                <div className="row">
-                  <input
-                    className="input"
-                    style={{ flex: 1, minHeight: 38, padding: '6px 10px' }}
-                    inputMode="decimal"
-                    aria-label={t('amount')}
-                    placeholder={money(h.amount)}
-                    value={amounts[key(h)] ?? ''}
-                    onChange={(e) => setAmounts({ ...amounts, [key(h)]: e.target.value.replace(/[^\d.,]/g, '') })}
-                  />
-                  <Button small onClick={() => payOne(h)}>
-                    {t('pay')}
-                  </Button>
-                  {past && (
-                    <Button
-                      small
-                      kind="secondary"
-                      onClick={() =>
-                        run(t('releasing'), async () => {
-                          setHashes([await releaseDue(chain, wallet, vault, h)]);
-                          await refresh();
-                        })
-                      }
-                    >
-                      {t('release')}
-                    </Button>
+                  {editing === key(h) && (
+                    <input
+                      className="input"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      aria-label={t('amount')}
+                      placeholder={`${money(h.amount)}…`}
+                      value={amounts[key(h)] ?? ''}
+                      onChange={(e) => setAmounts({ ...amounts, [key(h)]: e.target.value.replace(/[^\d.,]/g, '') })}
+                    />
                   )}
+                  <div className="row" style={{ marginTop: 2 }}>
+                    <Button small onClick={() => payOne(h)}>
+                      {t('pay')}
+                    </Button>
+                    {editing !== key(h) && (
+                      <button className="link" onClick={() => setEditing(key(h))}>
+                        {t('otherAmount')}
+                      </button>
+                    )}
+                    {past && (
+                      <Button
+                        small
+                        kind="secondary"
+                        onClick={() =>
+                          run(t('releasing'), async () => {
+                            setHashes([await releaseDue(chain, wallet, vault, h)]);
+                            await refresh();
+                          })
+                        }
+                      >
+                        {t('release')}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -392,9 +440,14 @@ export function Pay() {
         </div>
         <h2>{t('howPaid')}</h2>
         <div className="list">
-          <div className="item small">{t('how1')}</div>
-          <div className="item small">{t('how2')}</div>
-          <div className="item small">{t('how3')}</div>
+          {(['how1', 'how2', 'how3'] as const).map((k, i) => (
+            <div className="item small" key={k} style={{ alignItems: 'flex-start' }}>
+              <span className="leaf" style={{ width: 28, padding: '5px 0', borderRadius: 8 }} aria-hidden="true">
+                <span className="m" style={{ marginTop: 0, color: 'var(--ink)', fontWeight: 600 }}>{i + 1}</span>
+              </span>
+              <span className="grow">{t(k).replace(/^\d+\s*·\s*/, '')}</span>
+            </div>
+          ))}
         </div>
         <div className="card warn">
           <p className="small">{t('testnetDestination')}</p>
@@ -438,7 +491,7 @@ export function Settings() {
       <div className="content" style={{ gap: 10 }}>
         <h1>{t('settings')}</h1>
         <LangPicker />
-        <h2 className="tiny muted">{t('yourSituation')}</h2>
+        <h2>{t('yourSituation')}</h2>
         <div className="card" style={{ gap: 6 }}>
           <div className="row spread small">
             <span>{t('country')}</span>
@@ -459,7 +512,7 @@ export function Settings() {
             </span>
           </div>
         </div>
-        <h2 className="tiny muted">{t('eurosAndLaw')}</h2>
+        <h2>{t('eurosAndLaw')}</h2>
         <div className="card">
           <div className="row">
             <div className="grow">
@@ -523,16 +576,16 @@ export function Settings() {
             <Toggle on={false} disabled label={t('yieldTitle')} onClick={() => {}} />
           </div>
         </div>
-        <h2 className="tiny muted">{t('account')}</h2>
+        <h2>{t('account')}</h2>
         <div className="card" style={{ gap: 6 }}>
           <div className="small">
-            Wallet ({wallet.label}): <span className="mono">{wallet.address}</span>
+            Wallet ({wallet.label}): <span className="mono" title={wallet.address}>{short(wallet.address)}</span>
           </div>
           <div className="small">
-            {t('vault')}: <span className="mono">{vault.vault}</span>
+            {t('vault')}: <span className="mono" title={vault.vault}>{short(vault.vault)}</span>
           </div>
           <div className="small">
-            {t('payAddress')}: <span className="mono">{vault.inbox}</span>
+            {t('payAddress')}: <span className="mono" title={vault.inbox}>{short(vault.inbox)}</span>
           </div>
           <button
             className="link"
