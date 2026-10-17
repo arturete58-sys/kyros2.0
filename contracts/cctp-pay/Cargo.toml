@@ -1,0 +1,19 @@
+[package]
+name = "kyros-cctp-pay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true, features = ["hazmat-address"] }
+kyros-types = { workspace = true }
+
+[dev-dependencies]
+kyros-types = { workspace = true, features = ["testutils"] }
+soroban-sdk = { workspace = true, features = ["testutils", "hazmat-address"] }
+kyros-reserve-vault = { path = "../reserve-vault" }

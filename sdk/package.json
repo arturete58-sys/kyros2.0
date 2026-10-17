@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-packs.mjs",
-    "test": "npm run build && node --test dist/test/sdk.test.js dist/test/euro.test.js",
+    "test": "npm run build && node --test dist/test/sdk.test.js dist/test/euro.test.js dist/test/cctp.test.js",
     "demo:testnet": "node dist/demo/testnet.js"
   },
   "repository": {

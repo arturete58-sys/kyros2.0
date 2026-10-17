@@ -36,7 +36,7 @@
 #![no_std]
 use kyros_types::{
     period_end, period_of, split, split_withheld, validate, validate_withholding, vat_symbol,
-    Asset, Bucket, OracleClient, PeriodKind, RegistryClient, Rule, Split, SwapClient, YieldClient,
+    Asset, OracleClient, PeriodKind, RegistryClient, Rule, Split, SwapClient, YieldClient,
     BPS,
 };
 use soroban_sdk::{
@@ -106,19 +106,8 @@ pub enum VaultError {
     UnknownInvoice = 27,
 }
 
-/// How the payments of one invoice are split, registered by the owner when
-/// the invoice is issued and applied to every payment carrying its reference.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InvoiceTerms {
-    /// The VAT on the invoice (0 for exempt, reverse-charged or foreign).
-    pub vat_bps: u32,
-    /// Share of the base the client withholds and pays to the tax authority itself
-    /// (e.g. Spanish IRPF on professional invoices), so it never reaches the vault.
-    pub withholding_bps: u32,
-    /// The reserve buckets for this invoice, on its base.
-    pub buckets: Vec<Bucket>,
-}
+/// How the payments of one invoice are split (shared with the CCTP receiver, which predicts the split).
+pub use kyros_types::InvoiceTerms;
 
 /// Where the vault reads its VAT rate while it follows a registry.
 #[contracttype]

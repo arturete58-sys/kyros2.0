@@ -48,6 +48,7 @@ Every behaviour that matters is enforced by a contract:
 | [`contracts/inbox`](contracts/inbox) | Inbox: one per user, a payment address that needs no integration |
 | [`contracts/rate-registry`](contracts/rate-registry) | Rate Registry: dated VAT rates per country on-chain, published at least a fixed notice ahead; vaults can follow it |
 | [`contracts/swap-soroswap`](contracts/swap-soroswap) | Swapper over Soroswap, for the euro reserve (tested against the mainnet bytecode) |
+| [`contracts/cctp-pay`](contracts/cctp-pay) | CCTP receiver: a client pays a vault from Ethereum, Base, Arbitrum, OP or Avalanche; minted and split in one transaction ([cross-chain payments](docs/cross-chain-payments.md)) |
 | [`contracts/yield-blend`](contracts/yield-blend) | Yield strategy over a Blend v2 pool, one per vault (tested against Blend's contracts) |
 | [`app`](app) | Web app (Vite + React) on testnet: sign up with a passkey (Face ID) smart wallet the user owns, or connect an existing Stellar wallet; onboarding, vault, test payments, expected payments, tax payment, euro reserve. In Spanish, English, Portuguese, French, German and Italian, chosen by the user |
 | [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check with precision and objective targets, registry sync, country moves, SEP-7 links, event reader and CSV export, keeper; anchors (SEP-1/10/24/6); expected payments with their VAT and withholding |
@@ -130,14 +131,15 @@ The [testnet demo workflow](.github/workflows/testnet-demo.yml) deploys the cont
 
 [`app`](app) is the product people use, wired to the contracts on testnet and published on GitHub Pages by the [App workflow](.github/workflows/app.yml).
 
-- **The wallet is the user's.** "Create my account with Face ID" makes a passkey smart wallet ([passkey-kit](https://github.com/kalepail/passkey-kit)) that only the user's device can authorize; "Connect another wallet" uses Freighter, LOBSTR, xBull and others through Stellar Wallets Kit. The vault's owner is that wallet; Kyros holds no key and no funds.
+- **The wallet is the user's.** "Connect my wallet" takes any wallet that signs on Stellar (LOBSTR, xBull, Freighter, MetaMask, HOT, Bitget, OneKey, Ledger and more) through Stellar Wallets Kit; "Create my account with Face ID" makes a passkey smart wallet ([passkey-kit](https://github.com/kalepail/passkey-kit)) that only the user's device can authorize. The vault's owner is that wallet; Kyros holds no key and no funds.
+- **Clients pay from any major chain.** A payment link can be paid from Ethereum, Base, Arbitrum, OP or Avalanche with MetaMask, Rabby, Coinbase Wallet or Phantom, through Circle's CCTP ([cross-chain payments](docs/cross-chain-payments.md)).
 - **Fees.** A throwaway testnet account created in the browser and funded by friendbot pays network fees and deploys the user's vault and inbox. It never owns anything.
 - **Test money.** The deployment's test-token issuer key is published in `testnet.json` on purpose, so the app can hand out test USDC. It exists only on testnet.
 - **Languages.** Spanish, English, Portuguese, French, German and Italian. The app follows the browser's language until the user picks one on the first screen or in Settings; the choice is remembered, and country names, numbers and dates follow it.
 
 ## Stellar building blocks
 
-Soroban contracts and authorization · Stellar Asset Contracts (USDC, EURC) through the SEP-41 token interface · Stellar RPC (`simulateTransaction`, `sendTransaction`, `getEvents`) · SEP-7 transaction links · passkey (secp256r1) wallets · x402 on Stellar · SEP-24 anchors as tax-payment destinations. Details in [docs/stellar-integration.md](docs/stellar-integration.md).
+Soroban contracts and authorization · Stellar Asset Contracts (USDC, EURC) through the SEP-41 token interface · Stellar RPC (`simulateTransaction`, `sendTransaction`, `getEvents`) · SEP-7 transaction links · passkey (secp256r1) wallets · x402 on Stellar · Circle's CCTP V2 for USDC from other chains · SEP-24 anchors as tax-payment destinations. Details in [docs/stellar-integration.md](docs/stellar-integration.md).
 
 ## Status
 

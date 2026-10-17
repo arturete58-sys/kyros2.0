@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["types", "reserve-vault", "router", "inbox", "rate-registry", "swap-soroswap", "yield-blend"]
+members = ["types", "reserve-vault", "router", "inbox", "rate-registry", "swap-soroswap", "yield-blend", "cctp-pay"]
 
 [workspace.package]
 edition = "2021"

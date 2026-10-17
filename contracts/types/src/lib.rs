@@ -234,7 +234,22 @@ pub fn period_end(kind: &PeriodKind, id: u32) -> u64 {
     period_start(kind, id + 1)
 }
 
-/// The part of the Reserve Vault that the Router and the Inbox call.
+/// How the payments of one invoice are split, registered by the vault owner
+/// when the invoice is issued and applied to every payment carrying its
+/// reference.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InvoiceTerms {
+    /// The VAT on the invoice (0 for exempt, reverse-charged or foreign).
+    pub vat_bps: u32,
+    /// Share of the base the client withholds and pays to the tax authority itself
+    /// (e.g. Spanish IRPF on professional invoices), so it never reaches the vault.
+    pub withholding_bps: u32,
+    /// The reserve buckets for this invoice, on its base.
+    pub buckets: Vec<Bucket>,
+}
+
+/// The part of the Reserve Vault that the Router, the Inbox and the CCTP receiver call.
 #[contractclient(name = "VaultClient")]
 pub trait VaultApi {
     /// The vault owner, who receives the net amount.
@@ -248,6 +263,8 @@ pub trait VaultApi {
     fn receive(e: Env, from: Address, token: Address, gross: i128, reference: BytesN<32>) -> Split;
     /// Seconds a change to the vault waits before it takes effect.
     fn notice_secs(e: Env) -> u64;
+    /// The terms registered for an invoice reference, if any.
+    fn invoice(e: Env, reference: BytesN<32>) -> Option<InvoiceTerms>;
 }
 
 /// What a vault reads from a Kyros Rate Registry.

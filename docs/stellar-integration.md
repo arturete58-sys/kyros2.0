@@ -10,6 +10,7 @@
 | Contract events | Dashboard, accountant view, CSV export | `kyros_vault`, `kyros_router`, `kyros_inbox` topics; `sdk/src/events.ts` |
 | Stellar RPC | Simulate, submit, follow transactions; read events | `sdk/src/client.ts` |
 | SEP-7 transaction links | Invoice links a wallet opens and signs | `sdk/src/sep7.ts` |
+| Circle's CCTP V2 | A client pays from Ethereum, Base, Arbitrum, OP or Avalanche | the Kyros CCTP receiver is `mintRecipient` and `destinationCaller`; `mint_and_pay` mints and pays the vault with the invoice reference in one transaction ([cross-chain payments](cross-chain-payments.md)) |
 | x402 on Stellar | API sellers set their payment address to a Kyros inbox | the inbox accepts the SEP-41 transfer an x402 payment makes |
 | Passkeys (secp256r1) | Seedless wallets in the web app | planned web app; pattern from the team's earlier work |
 | SEP-1, SEP-10, SEP-24, SEP-6 | Paying the tax in euros through an anchor: stellar.toml, login, withdrawal | `sdk/src/anchor.ts` |

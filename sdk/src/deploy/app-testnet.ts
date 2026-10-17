@@ -8,7 +8,10 @@
  *     simulated client;
  *   - a deep Soroswap testnet pool KUSD/KEUR at Reflector's EUR/USD price,
  *     and the Kyros swapper over the Soroswap router;
- *   - a test "tax authority" account that tax payments go to.
+ *   - a test "tax authority" account that tax payments go to;
+ *   - the Kyros CCTP receiver over Circle's testnet CCTP, so a client can pay
+ *     a vault with Circle's testnet USDC from Base, Ethereum, Arbitrum, OP or
+ *     Avalanche testnets (vaults accept that USDC too).
  *
  *   node dist/deploy/app-testnet.js --wasm-dir ../contracts/target/wasm32v1-none/release --out ../app/public/testnet.json
  */
@@ -16,7 +19,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { Asset, BASE_FEE, Contract, Keypair, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
 import { KyrosClient } from '../client.js';
-import { REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
+import { REFLECTOR, SOROSWAP_ROUTER, STABLECOINS, stablecoinContract } from '../assets.js';
+import { STELLAR_CCTP } from '../cctp.js';
 import { listRulePacks, loadRulePack } from '../rulepacks.js';
 import { registrySyncPlan } from '../registry.js';
 import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
@@ -69,7 +73,9 @@ async function main(): Promise<void> {
   const usd = new Asset('KUSD', k.issuer.publicKey());
   const eur = new Asset('KEUR', k.issuer.publicKey());
   await classic(c, k.lp, [Operation.changeTrust({ asset: usd }), Operation.changeTrust({ asset: eur })]);
-  await classic(c, k.tax, [Operation.changeTrust({ asset: usd }), Operation.changeTrust({ asset: eur })]);
+  // Circle's testnet USDC, which cross-chain payments arrive in.
+  const circleUsdc = new Asset(STABLECOINS.testnet.USDC.code, STABLECOINS.testnet.USDC.issuer);
+  await classic(c, k.tax, [Operation.changeTrust({ asset: usd }), Operation.changeTrust({ asset: eur }), Operation.changeTrust({ asset: circleUsdc })]);
   await classic(c, k.issuer, [
     Operation.payment({ destination: k.lp.publicKey(), asset: usd, amount: '2000000' }),
     Operation.payment({ destination: k.lp.publicKey(), asset: eur, amount: '2000000' }),
@@ -86,6 +92,10 @@ async function main(): Promise<void> {
   const registryHash = await c.upload(k.deployer, wasm('kyros_rate_registry'));
   const swapperHash = await c.upload(k.deployer, wasm('kyros_swap_soroswap'));
   const router = await c.deployRouter(k.deployer, routerHash);
+
+  log('CCTP receiver over Circle\'s testnet CCTP');
+  const cctpHash = await c.upload(k.deployer, wasm('kyros_cctp_pay'));
+  const cctp = await c.deployCctpPay(k.deployer, cctpHash, { transmitter: STELLAR_CCTP.testnet.messageTransmitter, minter: STELLAR_CCTP.testnet.tokenMessengerMinter });
 
   log('rate registry, seeded with every pack\'s standard VAT');
   const registry = await c.deployRegistry(k.deployer, registryHash, k.deployer.publicKey(), NOTICE);
@@ -137,6 +147,10 @@ async function main(): Promise<void> {
     // Test tokens with no value: the app uses this key to give test money to a simulated client.
     faucetSecret: k.issuer.secret(),
     taxAccount: k.tax.publicKey(),
+    cctp: {
+      receiver: cctp.contractId,
+      usdc: { code: 'USDC', issuer: STABLECOINS.testnet.USDC.issuer, contract: stablecoinContract('testnet', 'USDC') },
+    },
     conversion: swapper ? { swapper, oracle: REFLECTOR.testnet.fiat, eurUsdAtDeploy: eurUsd } : null,
     // passkey-kit's canonical smart-wallet code on testnet (stellar/passkey-kit, docs/deployments-2026-09-01.md).
     passkeyWalletWasmHash: '97ce047884106b1c6c3bb40b8973cc48db1c4dad95c9e20462bf2c701daa764e',

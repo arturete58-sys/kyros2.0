@@ -62,14 +62,17 @@ export function Welcome() {
         </div>
       </div>
       <div className="footer">
-        <Button testid="create-passkey" onClick={() => start(() => createPasskeyWallet(chain, name.trim() || 'Kyros'), t('creatingWallet'))}>
+        <Button testid="connect-wallet" onClick={() => start(async () => (await import('../wallet/classic')).connectClassicWallet(chain), t('connectingWallet'))}>
+          {t('connectWallet')}
+        </Button>
+        <p className="tiny muted" style={{ textAlign: 'center', marginTop: -4 }}>
+          {t('walletList')}
+        </p>
+        <Button kind="secondary" testid="create-passkey" onClick={() => start(() => createPasskeyWallet(chain, name.trim() || 'Kyros'), t('creatingWallet'))}>
           {t('createFaceId')}
         </Button>
-        <Button kind="secondary" testid="connect-passkey" onClick={() => start(() => connectPasskeyWallet(chain), t('enteringFaceId'))}>
+        <button className="link" data-testid="connect-passkey" style={{ textAlign: 'center', padding: 8 }} onClick={() => start(() => connectPasskeyWallet(chain), t('enteringFaceId'))}>
           {t('haveAccount')}
-        </Button>
-        <button className="link" style={{ textAlign: 'center', padding: 8 }} onClick={() => start(async () => (await import('../wallet/classic')).connectClassicWallet(chain), t('connectingWallet'))}>
-          {t('otherWallet')}
         </button>
         <p className="tiny muted" style={{ textAlign: 'center' }}>
           {t('testnetNote')}

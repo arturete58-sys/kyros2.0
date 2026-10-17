@@ -186,6 +186,11 @@ export class KyrosClient {
     return this.create(deployer, wasmHash, [addr(s.vault), addr(s.pool), addr(s.asset)]);
   }
 
+  /** The CCTP receiver: Circle's MessageTransmitter and TokenMessengerMinter on this network. */
+  deployCctpPay(deployer: Keypair, wasmHash: Buffer, s: { transmitter: string; minter: string }) {
+    return this.create(deployer, wasmHash, [addr(s.transmitter), addr(s.minter)]);
+  }
+
   /** A Rate Registry; `minNoticeSecs` is fixed for its lifetime. */
   deployRegistry(deployer: Keypair, wasmHash: Buffer, admin: string, minNoticeSecs: bigint) {
     return this.create(deployer, wasmHash, [addr(admin), u64(minNoticeSecs)]);

@@ -1,9 +1,11 @@
 /** What the app does with the Kyros contracts, on behalf of the connected wallet. */
 import { Keypair, scValToNative } from '@stellar/stellar-sdk';
 import { fmtNumber, t } from './i18n';
+import { allowanceData, balanceOfData, burnCalls, fastFeeBps, fetchAttestation, mintAndPayOp, type EvmChain } from 'kyros-sdk';
 import { requestRef, requestTerms, suggestSetup, termsFromPack, vaultEvents, type ActivityId, type ClientKind, type PaymentRequest, type RulePack, type Rule, type Setup, type VaultEventRow } from 'kyros-sdk';
 import { Chain, localKey, store } from './chain';
 import type { Wallet } from './wallet/types';
+import type { EvmWallet } from './wallet/evm';
 
 export interface Answers {
   packId: string;
@@ -59,7 +61,7 @@ export async function createVault(chain: Chain, wallet: Wallet, plan: Plan, answ
     noticeSecs: BigInt(cfg.noticeSecs),
     period: terms.period,
     dueOffsetSecs: terms.dueOffsetSecs,
-    tokens: [cfg.tokens.usd.contract, cfg.tokens.eur.contract],
+    tokens: [...chain.dollarTokens, cfg.tokens.eur.contract],
   });
   onStep(t('stepInbox'));
   const inbox = await chain.client.deployInbox(fp, Buffer.from(cfg.wasm.inbox, 'hex'), vault.contractId);
@@ -117,7 +119,7 @@ export interface Snapshot {
 
 export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const c = chain.client;
-  const { usd, eur } = chain.cfg.tokens;
+  const { eur } = chain.cfg.tokens;
   const safe = async <T,>(f: () => Promise<T>, d: T): Promise<T> => {
     try {
       return await f();
@@ -125,16 +127,22 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
       return d;
     }
   };
-  const [sUsd, sEur, pUsd, pEur, period] = await Promise.all([
-    safe(() => c.balance(usd.contract, v.owner), 0n),
+  // Dollars can be the test KUSD or Circle's USDC from another chain; the app shows them together.
+  const dollars = chain.dollarTokens;
+  const none = { held: 0n, liquid: 0n, invested: 0n, surplus: 0n };
+  const sum = (xs: bigint[]) => xs.reduce((a, b) => a + b, 0n);
+  const [sUsds, sEur, pUsds, pEur, period] = await Promise.all([
+    Promise.all(dollars.map((d) => safe(() => c.balance(d, v.owner), 0n))),
     safe(() => c.balance(eur.contract, v.owner), 0n),
-    safe(() => c.position(v.vault, usd.contract), { held: 0n, liquid: 0n, invested: 0n, surplus: 0n }),
-    safe(() => c.position(v.vault, eur.contract), { held: 0n, liquid: 0n, invested: 0n, surplus: 0n }),
+    Promise.all(dollars.map((d) => safe(() => c.position(v.vault, d), none))),
+    safe(() => c.position(v.vault, eur.contract), none),
     safe(() => c.currentPeriod(v.vault), 0),
   ]);
-  const [dueDate, perUsd, perEur, conversion, pending, feed] = await Promise.all([
+  const sUsd = sum(sUsds);
+  const pUsd = { held: sum(pUsds.map((p) => p.held)) };
+  const [dueDate, perUsds, perEur, conversion, pending, feed] = await Promise.all([
     safe(() => c.dueDate(v.vault, period), 0n),
-    safe(() => c.period(v.vault, period, usd.contract), null),
+    Promise.all(dollars.map((d) => safe(() => c.period(v.vault, period, d), null))),
     safe(() => c.period(v.vault, period, eur.contract), null),
     safe(() => c.conversion(v.vault), null),
     safe(async () => {
@@ -144,7 +152,7 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     safe(() => c.feed(v.vault), null),
   ]);
   const buckets: Snapshot['buckets'] = {};
-  for (const [name, amt] of Object.entries(perUsd?.buckets ?? {})) (buckets[name] ??= { usd: 0n, eur: 0n }).usd = amt;
+  for (const perUsd of perUsds) for (const [name, amt] of Object.entries(perUsd?.buckets ?? {})) (buckets[name] ??= { usd: 0n, eur: 0n }).usd += amt;
   for (const [name, amt] of Object.entries(perEur?.buckets ?? {})) (buckets[name] ??= { usd: 0n, eur: 0n }).eur = amt;
   const latest = await safe(() => chain.server.getLatestLedger(), { sequence: 0 } as { sequence: number });
   const events = await safe(() => vaultEvents(chain.server, v.vault, Math.max(latest.sequence - 17_000, 1)), []);
@@ -164,7 +172,8 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
 /** Pays every bucket of the current period that holds something, in each token. Owner-signed, one call per bucket. */
 export async function payTaxes(chain: Chain, wallet: Wallet, v: VaultInfo, period: number, onStep: (s: string) => void): Promise<string[]> {
   const hashes: string[] = [];
-  for (const [which, token] of [['USD', chain.cfg.tokens.usd.contract], ['EUR', chain.cfg.tokens.eur.contract]] as const) {
+  const tokens: [string, string][] = [...chain.dollarTokens.map((d, i): [string, string] => [i === 0 ? 'USD' : 'USDC', d]), ['EUR', chain.cfg.tokens.eur.contract]];
+  for (const [which, token] of tokens) {
     const p = await chain.client.period(v.vault, period, token);
     for (const [bucket, amount] of Object.entries(p.buckets)) {
       if (amount <= 0n) continue;
@@ -212,3 +221,72 @@ export const money = (x: bigint, cur: '€' | 'USDC' | 'EURC' | '' = '') =>
   `${fmtNumber(units(x), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${cur ? ` ${cur}` : ''}`;
 
 export { Keypair };
+
+// ---- Paying from another chain (Circle's CCTP) ----
+
+/** A burn sent on another chain whose payment into the vault has not been made yet. */
+export interface PendingCrossChain {
+  vault: string;
+  sourceDomain: number;
+  chainName: string;
+  burnTx: string;
+  explorer: string;
+}
+
+const PENDING = 'kyros.cctp.pending';
+
+export function pendingCrossChain(): PendingCrossChain | null {
+  const raw = store.get(PENDING);
+  try {
+    return raw ? (JSON.parse(raw) as PendingCrossChain) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The client pays `amount` (Stellar units) into `vault` from an EVM chain:
+ * their wallet approves and burns USDC there; once Circle attests the burn,
+ * this browser's fee payer submits the mint-and-pay on Stellar.
+ */
+export async function payFromOtherChain(
+  chain: Chain,
+  evm: EvmWallet,
+  from: EvmChain,
+  p: { vault: string; reference?: Uint8Array; amount: bigint },
+  onStep: (s: string) => void,
+): Promise<{ burnTx: string; stellarTx: string }> {
+  const cctp = chain.cfg.cctp;
+  if (!cctp) throw new Error(t('noCrossChain'));
+  onStep(t('xcSwitching', { chain: from.name }));
+  await evm.useChain(from);
+  const feeBps = await fastFeeBps('testnet', from.domain);
+  const calls = burnCalls(from, { receiver: cctp.receiver, vault: p.vault, reference: p.reference, amount: p.amount, feeBps, fast: true });
+  const balance = await evm.read(from.usdc, balanceOfData(evm.address));
+  if (balance < calls.amount) throw new Error(t('xcNoUsdc', { need: formatUnits6(calls.amount), have: formatUnits6(balance), chain: from.name }));
+  if ((await evm.read(from.usdc, allowanceData(evm.address, from.tokenMessenger))) < calls.amount) {
+    onStep(t('xcApprove'));
+    await evm.send(calls.approve.to, calls.approve.data);
+  }
+  onStep(t('xcBurn'));
+  const burnTx = await evm.send(calls.burn.to, calls.burn.data);
+  const pending: PendingCrossChain = { vault: p.vault, sourceDomain: from.domain, chainName: from.name, burnTx, explorer: `${from.explorer}/tx/${burnTx}` };
+  store.set(PENDING, JSON.stringify(pending));
+  const stellarTx = await finishCrossChain(chain, pending, onStep);
+  return { burnTx, stellarTx };
+}
+
+/** Waits for Circle's attestation of a burn and pays it into the vault. Safe to repeat. */
+export async function finishCrossChain(chain: Chain, p: PendingCrossChain, onStep: (s: string) => void): Promise<string> {
+  const cctp = chain.cfg.cctp;
+  if (!cctp) throw new Error(t('noCrossChain'));
+  onStep(t('xcAttest'));
+  const a = await fetchAttestation('testnet', p.sourceDomain, p.burnTx, { timeoutMs: 20 * 60_000, onWait: () => onStep(t('xcAttest')) });
+  onStep(t('xcMint'));
+  await chain.ensureAccount(chain.feePayer.publicKey());
+  const hash = await chain.sendAs(chain.feePayer, mintAndPayOp(cctp.receiver, a));
+  store.set(PENDING, '');
+  return hash;
+}
+
+export const formatUnits6 = (x: bigint) => fmtNumber(Number(x) / 1e6, { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -12,3 +12,4 @@ export * from './activities.js';
 export * from './assets.js';
 export * from './anchor.js';
 export * from './payment-request.js';
+export * from './cctp.js';

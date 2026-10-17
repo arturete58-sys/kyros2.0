@@ -104,9 +104,14 @@ export class Chain {
     return this.submit(tx);
   }
 
-  asset(which: 'usd' | 'eur'): Asset {
-    const t = this.cfg.tokens[which];
+  asset(which: 'usd' | 'eur' | 'usdc'): Asset {
+    const t = which === 'usdc' ? this.cfg.cctp!.usdc : this.cfg.tokens[which];
     return new Asset(t.code, t.issuer);
+  }
+
+  /** Every dollar token a vault takes: the test KUSD and, if deployed, Circle's testnet USDC from other chains. */
+  get dollarTokens(): string[] {
+    return [this.cfg.tokens.usd.contract, ...(this.cfg.cctp ? [this.cfg.cctp.usdc.contract] : [])];
   }
 
   /** Test money from the faucet (the test tokens' issuer) to a classic account that trusts them. */

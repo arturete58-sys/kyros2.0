@@ -1077,6 +1077,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "kyros-cctp-pay"
+version = "0.1.0"
+dependencies = [
+ "kyros-reserve-vault",
+ "kyros-types",
+ "soroban-sdk",
+]
+
+[[package]]
 name = "kyros-inbox"
 version = "0.1.0"
 dependencies = [

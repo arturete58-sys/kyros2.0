@@ -26,7 +26,7 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await virtualFaceId(page);
   await page.goto('./');
 
-  await page.getByLabel('Tu nombre (para tu passkey)').fill('Prueba e2e');
+  await page.getByLabel('Tu nombre (solo si usas Face ID)').fill('Prueba e2e');
   await page.getByTestId('create-passkey').click();
   await settle(page);
   await expect(page.getByText('¿Dónde vives la mayor parte del año?')).toBeVisible();
@@ -72,4 +72,24 @@ test('the user picks the language and it is remembered', async ({ page }) => {
   await page.reload();
   await expect(page.getByTestId('lang')).toHaveValue('en');
   await expect(page.getByTestId('create-passkey')).toHaveText('Create my account with Face ID');
+});
+
+test('a client can pay a payment link from another chain with an EVM wallet', async ({ page }) => {
+  // A wallet that announces itself the way MetaMask, Rabby or Phantom do (EIP-6963).
+  await page.addInitScript(() => {
+    const provider = { request: async () => [] };
+    window.addEventListener('eip6963:requestProvider', () =>
+      window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: { info: { uuid: '1', name: 'Test Wallet', icon: '', rdns: 'test.wallet' }, provider } })),
+    );
+  });
+  const cfg = await (await page.request.get('./testnet.json')).json();
+  test.skip(!cfg.cctp, 'this testnet deployment predates cross-chain payments');
+  await page.goto(`./#pagar?v=${cfg.router}&r=${'00'.repeat(32)}&a=12100000000`);
+  await expect(page.getByTestId('cross-chain')).toBeVisible();
+  await expect(page.locator('#evm-chain option')).toHaveCount(5);
+  await page.getByTestId('find-evm-wallets').click();
+  await expect(page.getByText('Pagar con Test Wallet')).toBeVisible();
+  // Circle's attestation service answers this page (CORS), so the browser can finish the payment itself.
+  const status = await page.evaluate(async () => (await fetch('https://iris-api-sandbox.circle.com/v2/burn/USDC/fees/6/27')).status);
+  expect(status).toBe(200);
 });

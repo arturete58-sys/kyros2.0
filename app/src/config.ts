@@ -13,6 +13,8 @@ export interface AppConfig {
   faucetSecret: string;
   taxAccount: string;
   conversion: { swapper: string; oracle: string; eurUsdAtDeploy: string | null } | null;
+  /** Cross-chain payments: the Kyros CCTP receiver and Circle's testnet USDC they arrive in (older deployments have none). */
+  cctp?: { receiver: string; usdc: Token };
   passkeyWalletWasmHash: string;
 }
 
