@@ -9,16 +9,20 @@ async function virtualFaceId(page: Page) {
   });
 }
 
+const consoleErrors: string[] = [];
+
 async function settle(page: Page) {
   await expect(page.getByTestId('busy')).toHaveCount(0, { timeout: 300_000 });
   const err = page.getByTestId('error');
-  if (await err.count()) throw new Error(`app error: ${await err.textContent()}`);
+  // The browser's errors go into the message, so CI shows them in the run's annotations.
+  if (await err.count()) throw new Error(`app error: ${await err.textContent()}\n${consoleErrors.slice(-5).join('\n')}`);
 }
 
 const amountOf = async (page: Page, testid: string) => Number(((await page.getByTestId(testid).locator('.big, .amount').first().textContent()) ?? '0').replace(/[^\d,]/g, '').replace(',', '.'));
 
 test('a freelancer signs up with a passkey, gets paid, registers an expected payment and pays the tax', async ({ page }) => {
-  page.on('console', (m) => m.type() === 'error' && console.log('browser:', m.text()));
+  page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text().slice(0, 1500)));
+  page.on('pageerror', (e) => consoleErrors.push(String(e.stack ?? e).slice(0, 1500)));
   await virtualFaceId(page);
   await page.goto('./');
 

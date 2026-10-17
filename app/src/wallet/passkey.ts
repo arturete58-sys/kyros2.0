@@ -63,15 +63,25 @@ function makeWallet(chain: Chain, kit: PasskeyKit, contractId: string): Wallet {
   };
 }
 
+/** Runs one stage of a wallet flow; on failure logs which stage broke, with the stack, for diagnosis. */
+async function stage<T>(name: string, f: () => Promise<T>): Promise<T> {
+  try {
+    return await f();
+  } catch (e) {
+    console.error(`passkey wallet: ${name} failed: ${(e as Error)?.stack ?? String(e)}`);
+    throw e;
+  }
+}
+
 /** Creates a new smart wallet with a new passkey. */
 export async function createPasskeyWallet(chain: Chain, userName: string): Promise<Wallet> {
   const kit = kitFor(chain);
-  const created = await kit.createWallet('Kyros', userName);
+  const created = await stage('createWallet', () => kit.createWallet('Kyros', userName));
   const carrier = TransactionBuilder.fromXDR(created.signedTx, chain.cfg.networkPassphrase) as Transaction;
   const op = carrier.operations[0] as Operation.InvokeHostFunction;
-  const hash = await feePaid(chain, op.func, op.auth ?? []);
-  await kit.confirmWalletCreation(created, hash);
-  const { contractId } = await kit.connectWallet({ keyId: created.keyIdBase64 });
+  const hash = await stage('deploy', () => feePaid(chain, op.func, op.auth ?? []));
+  await stage('confirmWalletCreation', () => kit.confirmWalletCreation(created, hash));
+  const { contractId } = await stage('connectWallet', () => kit.connectWallet({ keyId: created.keyIdBase64 }));
   return makeWallet(chain, kit, contractId);
 }
 
