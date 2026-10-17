@@ -60,15 +60,24 @@
     "prepayments": [
       {
         "date": "07-20",
-        "what": "Pagamento por conta de IRS"
+        "what": "Pagamento por conta de IRS",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "09-20",
-        "what": "Pagamento por conta de IRS"
+        "what": "Pagamento por conta de IRS",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "12-20",
-        "what": "Pagamento por conta de IRS"
+        "what": "Pagamento por conta de IRS",
+        "amount": {
+          "kind": "notice"
+        }
       }
     ],
     "note": "Quarterly VAT returns are due by the 20th of the second month after the quarter (20 September for the second quarter) and payment by the 25th. The annual IRS return is filed from April to June and the tax paid by 31 August; category B payments on account fall on 20 July, September and December.",
@@ -85,7 +94,22 @@
         "title": "Portugal.gov: prazos do IRS",
         "url": "https://www.oe.gov.pt/financas-a-lupa/artigos/ja-comecou-a-campanha-do-irs-saiba-quais-os-prazos-a-nao-esquecer/"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "Deadlines on a weekend or holiday move to the next working day (Código Civil art. 279 e), applied by the tax calendar).",
+      "sources": [
+        {
+          "title": "Portal das Finanças: calendário fiscal 2024 (IVA due on the 25th moved to the 26th/27th)",
+          "url": "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/calendario_fiscal/Pages/Quadro_res_pag_2024.aspx"
+        }
+      ]
+    }
   },
   "presets": [
     {

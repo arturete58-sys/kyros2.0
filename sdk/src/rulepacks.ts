@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dueAt, periodOf as periodOfImpl, validDue, validPeriod, type Due, type Dues, type PeriodKind } from './periods.js';
 import { type Rule, validateRule } from './split.js';
 import type { Enforcement, Estimate, Precision, Prepayment, Region } from './estimate.js';
+import { WEEKDAYS, lockAt, lockMask, payBy, type HolidayData, type Workdays } from './workdays.js';
 
 /** How often the vault books reserves: the VAT filing period (Months2 = bimonthly, Months4 = four-monthly, Months6 = half-yearly). */
 export type CalendarPeriod = 'Month' | 'Quarter' | 'Year' | 'Months2' | 'Months4' | 'Months6';
@@ -21,6 +22,29 @@ export type DueSpec =
   | { monthsAfter: number; day: number; except?: { periodEndMonth: number; monthsAfter: number; day: number } }
   | { date: string; yearsAfter: number };
 
+/**
+ * How Kyros suggests the amount of a prepayment (see `installments.ts`):
+ *   `es130`: Spain's modelo 130, exactly: `rate` x (income - expenses) of the
+ *     year so far, minus what clients withheld and the earlier 130 payments;
+ *   `reservedSoFar` (default): what the income-tax reserve holds for the tax year so far;
+ *   `annualized`: `share` of the year's tax estimated from the reserve so far, minus what was paid;
+ *   `previousYear`: `share` of last year's income tax (which the user gives once);
+ *   `notice`: the amount on the tax office's notice.
+ * `taxYear: -1` means the tax year before the one the date falls in.
+ */
+export type PrepaymentAmount =
+  | { kind: 'es130'; rate: number; taxYear?: number }
+  | { kind: 'reservedSoFar'; taxYear?: number }
+  | { kind: 'annualized'; share: number; taxYear?: number }
+  | { kind: 'previousYear'; share: number }
+  | { kind: 'notice'; bucket?: string };
+
+export interface PrepaymentDate {
+  date: string;
+  what: string;
+  amount?: PrepaymentAmount;
+}
+
 /** A country's tax calendar: when VAT, the income-tax reserve and any other bucket fall due. */
 export interface TaxCalendar {
   period: CalendarPeriod;
@@ -32,8 +56,10 @@ export interface TaxCalendar {
   income: DueSpec;
   /** Buckets with their own date (e.g. a monthly turnover tax). */
   buckets?: Record<string, DueSpec>;
-  /** Prepayments along the year, paid from the reserve (MM-DD), for reminders. */
-  prepayments?: { date: string; what: string }[];
+  /** Prepayments along the year, paid from the reserve (MM-DD), with how Kyros suggests the amount. */
+  prepayments?: PrepaymentDate[];
+  /** What happens when a deadline falls on a weekend or public holiday. */
+  workdays?: Workdays;
   note: string;
   sources?: { title: string; url: string }[];
 }
@@ -174,12 +200,18 @@ export function calendarOf(pack: RulePack, presetId: string): TaxCalendar {
 }
 
 /** The vault's due rules for a calendar: VAT, the named buckets, and the income date for everything else. */
-export function duesOfCalendar(c: TaxCalendar): Dues {
+export function duesOfCalendar(c: TaxCalendar, holidays: Dues['holidays'] = null): Dues {
   const fy = c.fiscalYearStart ?? '01-01';
   const buckets: Record<string, Due> = {};
   if (c.vat) buckets.vat = dueOfSpec(c.vat, fy);
   for (const [k, v] of Object.entries(c.buckets ?? {})) buckets[k] = dueOfSpec(v, fy);
-  return { default: dueOfSpec(c.income, fy), buckets };
+  return { default: dueOfSpec(c.income, fy), buckets, closed: lockMask(c.workdays), holidays };
+}
+
+/** Loads the holidays generated for a bundled pack (`rule-packs/holidays/<id>.json`). */
+export function loadHolidays(id: string): HolidayData | undefined {
+  const f = join(packDir(), 'holidays', `${id}.json`);
+  return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as HolidayData) : undefined;
 }
 
 function checkCalendar(id: string, c: TaxCalendar): void {
@@ -188,7 +220,20 @@ function checkCalendar(id: string, c: TaxCalendar): void {
   if (!validPeriod(periodKindOf(c.period))) throw new Error(`${id}: period ${c.period}`);
   const d = duesOfCalendar(c);
   for (const due of [d.default, ...Object.values(d.buckets)]) if (!validDue(due)) throw new Error(`${id}: due rule ${JSON.stringify(due, (_, v) => (typeof v === 'bigint' ? String(v) : v))}`);
-  for (const pp of c.prepayments ?? []) mmdd(pp.date, `${id}: prepayment`);
+  for (const pp of c.prepayments ?? []) {
+    mmdd(pp.date, `${id}: prepayment`);
+    const a = pp.amount;
+    if (a && !['es130', 'reservedSoFar', 'annualized', 'previousYear', 'notice'].includes(a.kind)) throw new Error(`${id}: prepayment amount ${a.kind}`);
+    if (a && 'share' in a && !(a.share > 0 && a.share <= 1)) throw new Error(`${id}: prepayment share ${a.share}`);
+  }
+  const w = c.workdays;
+  if (w) {
+    if (!['next', 'previous', 'none'].includes(w.rule)) throw new Error(`${id}: workdays rule ${w.rule}`);
+    if (!w.closed.every((d) => WEEKDAYS.includes(d))) throw new Error(`${id}: workdays closed ${w.closed}`);
+    for (const x of w.extra ?? []) mmdd(x, `${id}: workdays extra`);
+    if (!w.note) throw new Error(`${id}: workdays note`);
+    if (w.verified && !(w.sources ?? []).length) throw new Error(`${id}: verified workdays need a source`);
+  }
 }
 
 export function checkRulePack(pack: RulePack): void {
@@ -353,12 +398,14 @@ function preset(pack: RulePack, presetId: string): RulePackPreset {
 }
 
 /** The vault terms for one preset of a pack, with the VAT in force on `date` (default: today). */
-export function termsFromPack(pack: RulePack, presetId: string, date: Date | string = new Date()): VaultTerms {
+export function termsFromPack(pack: RulePack, presetId: string, date: Date | string = new Date(), opts: { holidayRegistry?: string } = {}): VaultTerms {
   const p = preset(pack, presetId);
+  const c = calendarOf(pack, presetId);
+  const country = typeof c.workdays?.holidays === 'object' && c.workdays.holidays.country ? c.workdays.holidays.country : pack.country;
   return {
     rule: { vatBps: presetVatBps(pack, presetId, date), buckets: p.buckets.map(({ name, bps }) => ({ name, bps })) },
-    period: periodKindOf(calendarOf(pack, presetId).period),
-    dues: duesOfCalendar(calendarOf(pack, presetId)),
+    period: periodKindOf(c.period),
+    dues: duesOfCalendar(c, opts.holidayRegistry ? { registry: opts.holidayRegistry, country } : null),
   };
 }
 
@@ -461,8 +508,14 @@ export function residenceGuide(packs: RulePack[], s: ResidenceSituation): { find
 
 /** A tax deadline the user meets from the vault. */
 export interface Deadline {
-  /** The due day (UTC, YYYY-MM-DD). */
+  /** The day to pay by (UTC, YYYY-MM-DD): the legal date moved for weekends and holidays the country's way, never later than the real deadline. */
   date: string;
+  /** The legal date as the law writes it. */
+  legal: string;
+  /** When the vault releases what is left (never before the real deadline). */
+  lock: string;
+  /** The prepayment's amount rule, for prepayments. */
+  amount?: PrepaymentAmount;
   kind: 'vat' | 'income' | 'bucket' | 'prepayment';
   /** The bucket it pays (`vat`, `irpf`...), when one. */
   bucket?: string;
@@ -478,7 +531,7 @@ const dayOf = (secs: bigint) => new Date(Number(secs - 1n) * 1000).toISOString()
  * `pack`/`presetId`: each period's VAT and other buckets, the annual income-tax
  * payments and the prepayments, sorted by date.
  */
-export function upcomingDeadlines(pack: RulePack, presetId: string, from: Date = new Date(), days = 400): Deadline[] {
+export function upcomingDeadlines(pack: RulePack, presetId: string, from: Date = new Date(), days = 400, holidays?: HolidayData): Deadline[] {
   const c = calendarOf(pack, presetId);
   const kind = periodKindOf(c.period);
   const dues = duesOfCalendar(c);
@@ -488,7 +541,7 @@ export function upcomingDeadlines(pack: RulePack, presetId: string, from: Date =
   const out: Deadline[] = [];
   const seen = new Set<string>();
   const add = (d: Deadline) => {
-    const k = `${d.date}|${d.kind}|${d.bucket ?? ''}|${d.what}`;
+    const k = `${d.legal}|${d.kind}|${d.bucket ?? ''}|${d.what}`;
     if (!seen.has(k)) seen.add(k), out.push(d);
   };
   // Periods ending up to three years back can still fall due in the window (annual returns).
@@ -500,15 +553,17 @@ export function upcomingDeadlines(pack: RulePack, presetId: string, from: Date =
     for (const b of names) {
       if (b === 'vat' && !c.vat) continue;
       const due = dueAt(kind, id, b === 'vat' ? dues.buckets.vat : dues.buckets[b] ?? dues.default);
-      if (due <= start || due - 86_400n > end) continue;
-      add({ date: dayOf(due), kind: b === 'vat' ? 'vat' : b in (c.buckets ?? {}) ? 'bucket' : 'income', bucket: b, period: id, what: b === 'vat' ? (pack.vatName ?? 'VAT') : (p.buckets.find((x) => x.name === b)?.label ?? b) });
+      const by = payBy(due, c.workdays, holidays);
+      if (by <= start || by - 86_400n > end) continue;
+      add({ date: dayOf(by), legal: dayOf(due), lock: dayOf(lockAt(due, c.workdays, holidays)), kind: b === 'vat' ? 'vat' : b in (c.buckets ?? {}) ? 'bucket' : 'income', bucket: b, period: id, what: b === 'vat' ? (pack.vatName ?? 'VAT') : (p.buckets.find((x) => x.name === b)?.label ?? b) });
     }
   }
   for (const pp of c.prepayments ?? []) {
     const [m, d] = mmdd(pp.date, 'prepayment');
     for (let y = from.getUTCFullYear(); y <= from.getUTCFullYear() + Math.ceil(days / 365); y++) {
       const t = BigInt(Date.UTC(y, m - 1, d) / 1000) + 86_400n;
-      if (t > start && t - 86_400n <= end) add({ date: dayOf(t), kind: 'prepayment', what: pp.what });
+      const by = payBy(t, c.workdays, holidays);
+      if (by > start && by - 86_400n <= end) add({ date: dayOf(by), legal: dayOf(t), lock: dayOf(lockAt(t, c.workdays, holidays)), kind: 'prepayment', what: pp.what, amount: pp.amount });
     }
   }
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));

@@ -46,19 +46,32 @@
     "prepayments": [
       {
         "date": "03-31",
-        "what": "Annual income tax, first instalment"
+        "what": "Annual income tax, first instalment",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.5
+        }
       },
       {
         "date": "05-17",
-        "what": "Geçici vergi (Q1)"
+        "what": "Geçici vergi (Q1)",
+        "amount": {
+          "kind": "reservedSoFar"
+        }
       },
       {
         "date": "08-17",
-        "what": "Geçici vergi (Q2)"
+        "what": "Geçici vergi (Q2)",
+        "amount": {
+          "kind": "reservedSoFar"
+        }
       },
       {
         "date": "11-17",
-        "what": "Geçici vergi (Q3)"
+        "what": "Geçici vergi (Q3)",
+        "amount": {
+          "kind": "reservedSoFar"
+        }
       }
     ],
     "note": "KDV returns and payment are due by the 28th of the following month. The annual income tax return is filed in March and paid in two instalments, in March and July, with quarterly advance tax (geçici vergi) on 17 May, August and November.",
@@ -71,7 +84,21 @@
         "title": "GİB: Serbest meslek kazancı rehberi 2026",
         "url": "https://cdn.gib.gov.tr/api/gibportal-file/file/getFileResources?objectKey=arsiv%2Ffileadmin%2Fbeyannamerehberi%2F2026%2F2026_Serbest_Meslek_Kazanci.pdf"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sun"
+      ],
+      "verified": true,
+      "note": "If the last day is an official holiday the deadline ends on the next working day (VUK 18). Saturdays are not official holidays, so a Saturday deadline stays.",
+      "sources": [
+        {
+          "title": "VUK madde 18",
+          "url": "https://www.fatiharas.com/vuk-madde-18-surelerin-hesaplanmasi/"
+        }
+      ]
+    }
   },
   "presets": [
     {

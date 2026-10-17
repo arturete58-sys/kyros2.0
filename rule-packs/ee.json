@@ -68,11 +68,17 @@
     "prepayments": [
       {
         "date": "09-15",
-        "what": "Advance income tax"
+        "what": "Advance income tax",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "12-15",
-        "what": "Advance income tax"
+        "what": "Advance income tax",
+        "amount": {
+          "kind": "notice"
+        }
       }
     ],
     "note": "VAT returns (KMD) and payment are due on the 20th of the following month. A self-employed person (FIE) files the annual return by 30 April and pays the remaining income and social tax by 1 October, with advances on 15 September and 15 December.",
@@ -81,7 +87,16 @@
         "title": "EMTA: Self-employed person's tax calendar",
         "url": "https://www.emta.ee/en/admin/content/handbook_article/84"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

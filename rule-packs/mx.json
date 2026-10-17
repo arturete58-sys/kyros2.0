@@ -61,7 +61,22 @@
         "title": "SAT",
         "url": "https://www.sat.gob.mx"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "If the last day is a Saturday, Sunday or one of the days listed in CFF art. 12, the deadline moves to the next business day.",
+      "sources": [
+        {
+          "title": "Código Fiscal de la Federación, art. 12",
+          "url": "https://www.diputados.gob.mx/LeyesBiblio/pdf/CFF.pdf"
+        }
+      ]
+    }
   },
   "presets": [
     {

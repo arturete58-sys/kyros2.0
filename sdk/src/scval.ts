@@ -114,7 +114,12 @@ export function duesToScVal(d: Dues): xdr.ScVal {
   const entries = Object.keys(d.buckets)
     .sort()
     .map((k) => new xdr.ScMapEntry({ key: sym(k), val: dueToScVal(d.buckets[k]) }));
-  return struct({ default: dueToScVal(d.default), buckets: xdr.ScVal.scvMap(entries) });
+  return struct({
+    default: dueToScVal(d.default),
+    buckets: xdr.ScVal.scvMap(entries),
+    closed: u32(d.closed),
+    holidays: d.holidays ? xdr.ScVal.scvVec([sym('Registry'), struct({ registry: addr(d.holidays.registry), country: sym(d.holidays.country) })]) : xdr.ScVal.scvVec([sym('None')]),
+  });
 }
 
 export function dueFromNative(v: unknown): Due {
@@ -129,9 +134,28 @@ export function dueFromNative(v: unknown): Due {
 }
 
 export function duesFromNative(v: unknown): Dues {
-  const o = v as { default: unknown; buckets: Record<string, unknown> | Map<string, unknown> };
+  const o = v as { default: unknown; buckets: Record<string, unknown> | Map<string, unknown>; closed?: number; holidays?: unknown[] };
   const entries = o.buckets instanceof Map ? [...o.buckets.entries()] : Object.entries(o.buckets ?? {});
-  return { default: dueFromNative(o.default), buckets: Object.fromEntries(entries.map(([k, x]) => [String(k), dueFromNative(x)])) };
+  const h = o.holidays;
+  const src = h && String(h[0]) === 'Registry' ? (h[1] as { registry: string; country: string }) : null;
+  return {
+    default: dueFromNative(o.default),
+    buckets: Object.fromEntries(entries.map(([k, x]) => [String(k), dueFromNative(x)])),
+    closed: Number(o.closed ?? 0),
+    holidays: src ? { registry: String(src.registry), country: String(src.country) } : null,
+  };
+}
+
+/** One item of a scheduled payment (`Payment`). */
+export interface ScheduledItem {
+  period: number;
+  token: string;
+  bucket: string;
+  amount: bigint;
+}
+
+export function scheduledItemsToScVal(items: ScheduledItem[]): xdr.ScVal {
+  return xdr.ScVal.scvVec(items.map((p) => struct({ period: u32(p.period), token: addr(p.token), bucket: sym(p.bucket), amount: i128(p.amount) })));
 }
 
 export function splitFromScVal(v: xdr.ScVal): Split {

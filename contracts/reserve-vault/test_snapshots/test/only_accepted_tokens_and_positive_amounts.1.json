@@ -225,6 +225,14 @@
                                 },
                                 {
                                   "key": {
+                                    "symbol": "closed"
+                                  },
+                                  "val": {
+                                    "u32": 0
+                                  }
+                                },
+                                {
+                                  "key": {
                                     "symbol": "default"
                                   },
                                   "val": {
@@ -234,6 +242,18 @@
                                       },
                                       {
                                         "u64": "2592000"
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "key": {
+                                    "symbol": "holidays"
+                                  },
+                                  "val": {
+                                    "vec": [
+                                      {
+                                        "symbol": "None"
                                       }
                                     ]
                                   }

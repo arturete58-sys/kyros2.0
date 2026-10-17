@@ -48,7 +48,16 @@
         "title": "Receita Federal: IRPF 2026 deadline 29 May",
         "url": "https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/marco/receita-comeca-a-receber-declaracoes-do-irpf-no-dia-23-de-marco-prazo-de-entrega-se-encerra-em-29-de-maio"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

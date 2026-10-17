@@ -1097,6 +1097,7 @@ dependencies = [
 name = "kyros-rate-registry"
 version = "0.1.0"
 dependencies = [
+ "kyros-types",
  "soroban-sdk",
 ]
 

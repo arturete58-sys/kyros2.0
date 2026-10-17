@@ -242,3 +242,36 @@ fn civil_dates_round_trip() {
 }
 
 use std::string::ToString;
+
+#[test]
+fn due_days_move_past_closed_days_and_holidays_like_an_independent_calendar() {
+    let v = vectors();
+    let cases = v["workdays"].as_array().unwrap();
+    assert!(cases.len() >= 300);
+    let mut moved = 0;
+    for c in cases {
+        let end: u64 = c["end"].as_str().unwrap().parse().unwrap();
+        let hol: std::vec::Vec<u32> = c["holidays"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| d.as_u64().unwrap() as u32)
+            .collect();
+        let got = next_open(end, c["closed"].as_u64().unwrap() as u32, |d| {
+            hol.contains(&d)
+        });
+        assert_eq!(got.to_string(), c["want"].as_str().unwrap(), "{c}");
+        if got != end {
+            moved += 1;
+        }
+    }
+    assert!(moved > 100);
+    // 1970-01-01 was a Thursday; 2027-01-30 a Saturday.
+    assert_eq!(weekday(0), 3);
+    assert_eq!(weekday(20_848), 5);
+    // Sub-day offsets (seconds-based dues) keep their time of day.
+    assert_eq!(
+        next_open(5 * 86_400 + 60, 0b111_1111 & !1, |_| false),
+        11 * 86_400 + 60
+    );
+}

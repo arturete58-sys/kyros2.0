@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { type Deadline, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
+import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
 import { convertNow, expectPayment, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
+import { Deadlines, NoticeReader, ScheduledList, deadlineLabel } from './Taxes';
 import { Button, LangPicker, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
 import { activityText, clientText } from './Start';
 import { fmtDate as fmtDay, fmtDateTime, fmtTime, locale, t, type Key } from '../i18n';
@@ -309,12 +310,7 @@ export function periodText(kind: PeriodKind | null, id: number): string {
 }
 
 const dueDay = (secs: bigint) => fmtDay(new Date(Number(secs - 1n) * 1000));
-
-function deadlineText(d: Deadline): string {
-  if (d.kind === 'prepayment') return d.what;
-  if (d.kind === 'vat') return t('dlVat');
-  return t('dlIncome', { what: d.what });
-}
+const deadlineText = deadlineLabel;
 
 export function Pay() {
   const { vault, snap, chain, wallet, run, go, refresh } = useApp();
@@ -326,7 +322,6 @@ export function Pay() {
   const vatRows = held.filter((h) => h.bucket === 'vat');
   const key = (h: Held) => `${h.period}|${h.bucket}|${h.token}`;
   const cur = (h: Held) => (h.which === 'eur' ? 'EURC' : 'USDC');
-  const soon = (snap?.deadlines ?? []).filter((d) => new Date(`${d.date}T00:00:00Z`).getTime() - Date.now() < 120 * 86_400_000).slice(0, 5);
   const payOne = (h: Held) =>
     run(t('paying'), async (step) => {
       const raw = amounts[key(h)];
@@ -342,18 +337,9 @@ export function Pay() {
         <Top onBack={() => go('home')} />
         <h1>{t('payTaxes')}</h1>
         <p className="muted">{t('paySub')}</p>
-        {soon.length > 0 && (
-          <div className="card" data-testid="deadlines">
-            <p style={{ fontWeight: 600 }}>{t('nextDeadlines')}</p>
-            {soon.map((d) => (
-              <div className="row spread small" key={`${d.date}${d.kind}${d.bucket ?? ''}${d.what}`}>
-                <span>{deadlineText(d)}</span>
-                <b>{fmtDay(new Date(`${d.date}T12:00:00Z`))}</b>
-              </div>
-            ))}
-            <p className="tiny muted">{t('weekendNote')}</p>
-          </div>
-        )}
+        <Deadlines />
+        <NoticeReader />
+        <ScheduledList />
         <div className="card">
           <p style={{ fontWeight: 600 }}>{t('setAsideByTax')}</p>
           {held.length === 0 && <p className="small muted">{t('nothingYet')}</p>}
@@ -369,7 +355,9 @@ export function Pay() {
                     {money(h.amount)} {cur(h)}
                   </b>
                 </div>
-                <span className={`tiny ${past ? '' : 'muted'}`}>{h.dueAt > 0n ? (past ? t('pastDue', { date: dueDay(h.dueAt) }) : t('dueOn', { date: dueDay(h.dueAt) })) : ''}</span>
+                <span className={`tiny ${past ? '' : 'muted'}`}>
+                  {h.dueAt > 0n ? (past ? t('pastDue', { date: dueDay(h.dueAt) }) : `${t('payBefore', { date: dueDay(h.payBy) })}${h.payBy !== h.dueAt ? ` · ${t('lockOn', { date: dueDay(h.dueAt) })}` : ''}`) : ''}
+                </span>
                 <div className="row">
                   <input
                     className="input"

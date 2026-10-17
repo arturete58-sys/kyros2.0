@@ -2,7 +2,8 @@
  * Sets up what the Kyros web app uses on Stellar testnet, and writes it to
  * app/public/testnet.json:
  *   - the uploaded contract code (vault, inbox) and a shared Router;
- *   - a Rate Registry seeded with every rule pack's standard VAT rate;
+ *   - a Rate Registry seeded with every rule pack's standard VAT rate and
+ *     each country's public holidays for this year and the next;
  *   - two test tokens, KUSD and KEUR, whose issuer secret is published on
  *     purpose (testnet only, no value) so the app can give test money to a
  *     simulated client;
@@ -21,7 +22,8 @@ import { Asset, BASE_FEE, Contract, Keypair, Networks, Operation, scValToNative,
 import { KyrosClient } from '../client.js';
 import { REFLECTOR, SOROSWAP_ROUTER, STABLECOINS, stablecoinContract } from '../assets.js';
 import { STELLAR_CCTP } from '../cctp.js';
-import { listRulePacks, loadRulePack } from '../rulepacks.js';
+import { listRulePacks, loadHolidays, loadRulePack } from '../rulepacks.js';
+import { registryHolidays } from '../workdays.js';
 import { registrySyncPlan } from '../registry.js';
 import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
 import { parseAmount } from '../split.js';
@@ -112,6 +114,20 @@ async function main(): Promise<void> {
     }
   }
   log(`registry: ${seeded} entries`);
+
+  // Public holidays for this year and the next, so vaults move due dates past them.
+  const year = new Date().getUTCFullYear();
+  const published = new Set<string>();
+  for (const id of listRulePacks()) {
+    const data = loadHolidays(id);
+    if (!data || published.has(data.country)) continue;
+    published.add(data.country);
+    for (const y of [year, year + 1]) {
+      const days = registryHolidays(data, y);
+      if (days.length) await c.send(k.deployer, c.setHolidaysOp(registry.contractId, data.country, y, days));
+    }
+  }
+  log(`registry: holidays of ${published.size} countries`);
 
   log('Soroswap pool at Reflector\'s EUR/USD price, and the swapper');
   let swapper: string | null = null;

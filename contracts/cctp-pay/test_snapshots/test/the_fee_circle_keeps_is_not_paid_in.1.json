@@ -290,10 +290,26 @@
                   },
                   {
                     "key": {
+                      "symbol": "income"
+                    },
+                    "val": {
+                      "i128": "999917355"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "paid"
                     },
                     "val": {
                       "i128": "0"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "paid_buckets"
+                    },
+                    "val": {
+                      "map": []
                     }
                   },
                   {
@@ -310,6 +326,14 @@
                     },
                     "val": {
                       "i128": "409966116"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "withheld"
+                    },
+                    "val": {
+                      "i128": "0"
                     }
                   }
                 ]
@@ -361,6 +385,14 @@
                                 },
                                 {
                                   "key": {
+                                    "symbol": "closed"
+                                  },
+                                  "val": {
+                                    "u32": 0
+                                  }
+                                },
+                                {
+                                  "key": {
                                     "symbol": "default"
                                   },
                                   "val": {
@@ -370,6 +402,18 @@
                                       },
                                       {
                                         "u64": "0"
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "key": {
+                                    "symbol": "holidays"
+                                  },
+                                  "val": {
+                                    "vec": [
+                                      {
+                                        "symbol": "None"
                                       }
                                     ]
                                   }

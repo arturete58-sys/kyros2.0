@@ -64,7 +64,16 @@
         "title": "Viet An Law: business household tax 2026",
         "url": "https://vietanlaw.com/calculating-business-household-tax-in-vietnam-2026/"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

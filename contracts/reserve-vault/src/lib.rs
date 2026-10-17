@@ -8,6 +8,16 @@
 //! What the contract enforces:
 //! - **Lock.** A period's reserve cannot go back to the owner before the
 //!   period's due date (`release`).
+//!   Each tax (bucket) has its own due date from the country's calendar,
+//!   moved past weekends and public holidays to the next day the tax office
+//!   is open, so the lock never opens before the legal deadline.
+//! - **Dates set by the tax office.** Where the final payment date comes
+//!   from the tax office's notice, the owner can set it (`set_due`): a later
+//!   date applies at once, an earlier one only after the notice period.
+//! - **Scheduled payments.** The owner can schedule a payment of a bucket to
+//!   the tax destination on a date (`schedule`); anyone can then run it on
+//!   or after that date (`run_scheduled`), so instalments go out on time
+//!   without the owner online. The money can only go to the destination.
 //! - **Destination.** Before that date reserve can only leave for the
 //!   registered tax-payment destination (`pay_tax`), e.g. the owner's anchor
 //!   account used to pay the tax in euros.
@@ -35,13 +45,13 @@
 //! is a new contract the owner moves to by choice.
 #![no_std]
 use kyros_types::{
-    due_at, period_of, split, split_withheld, valid_due, valid_period, validate,
-    validate_withholding, vat_symbol, Asset, Due, OracleClient, PeriodKind, RegistryClient, Rule,
-    Split, SwapClient, YieldClient, BPS,
+    civil_from_days, due_at, next_open, period_end, period_of, split, split_withheld, valid_due,
+    valid_period, validate, validate_withholding, vat_symbol, Asset, Due, OracleClient, PeriodKind,
+    RegistryClient, Rule, Split, SwapClient, YieldClient, BPS, MAX_SHIFT_DAYS,
 };
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, token, Address, BytesN,
-    Env, Map, MuxedAddress, Symbol, Vec,
+    Env, Map, MuxedAddress, String, Symbol, Vec,
 };
 
 const DAY_IN_LEDGERS: u32 = 17_280;
@@ -108,7 +118,19 @@ pub enum VaultError {
     InvalidPeriod = 28,
     /// A due rule that cannot be used (a month or day out of range).
     InvalidDue = 29,
+    /// An earlier due date must still be at least the notice period away.
+    DueTooSoon = 30,
+    UnknownPayment = 31,
+    /// A scheduled payment's date has not come yet.
+    NotYet = 32,
+    /// Too many payments or periods in one call.
+    TooMany = 33,
 }
+
+/// Most periods `set_due` changes at once, and most items in one scheduled payment.
+pub const MAX_BATCH: u32 = 24;
+/// Most scheduled payments open at once.
+pub const MAX_SCHEDULED: u32 = 40;
 
 /// How the payments of one invoice are split (shared with the CCTP receiver, which predicts the split).
 pub use kyros_types::InvoiceTerms;
@@ -151,6 +173,46 @@ pub struct Config {
 pub struct Dues {
     pub default: Due,
     pub buckets: Map<Symbol, Due>,
+    /// Weekdays the tax office is closed, as a bitmask (bit 0 Monday … bit 6
+    /// Sunday): a due date on one of them moves to the next open day.
+    pub closed: u32,
+    /// Where the country's public holidays are published, if anywhere.
+    pub holidays: Holidays,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Holidays {
+    None,
+    Registry(HolidaySource),
+}
+
+/// A Kyros Rate Registry and the country whose holidays it lists.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HolidaySource {
+    pub registry: Address,
+    pub country: Symbol,
+}
+
+/// One item of a scheduled payment: `amount` of a period's bucket in `token`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Payment {
+    pub period: u32,
+    pub token: Address,
+    pub bucket: Symbol,
+    pub amount: i128,
+}
+
+/// A payment to the tax destination that anyone can run from `at` on.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Scheduled {
+    pub at: u64,
+    pub payments: Vec<Payment>,
+    /// The destination as a strkey: the account, or a muxed account carrying the anchor's memo.
+    pub to: String,
 }
 
 /// Dues with one fixed delay after the period for every bucket (tests, simple regimes).
@@ -158,6 +220,8 @@ pub fn dues_after(e: &Env, secs: u64) -> Dues {
     Dues {
         default: Due::After(secs),
         buckets: Map::new(e),
+        closed: 0,
+        holidays: Holidays::None,
     }
 }
 
@@ -166,6 +230,9 @@ fn bucket_due(d: &Dues, bucket: &Symbol) -> Due {
 }
 
 fn check_dues(d: &Dues) -> Result<(), VaultError> {
+    if d.closed >= 0b111_1111 {
+        return Err(VaultError::InvalidDue);
+    }
     if !valid_due(&d.default) {
         return Err(VaultError::InvalidDue);
     }
@@ -209,6 +276,12 @@ pub struct PeriodState {
     pub released: i128,
     /// Total swapped out of this token into the reserve currency.
     pub converted: i128,
+    /// Taxable income booked to the period (the base of every payment).
+    pub income: i128,
+    /// Income tax the clients withheld and paid themselves (invoices with withholding).
+    pub withheld: i128,
+    /// What has been paid to the tax destination from each bucket.
+    pub paid_buckets: Map<Symbol, i128>,
 }
 
 /// How reserve received in `from_token` is turned into `to_token`.
@@ -283,6 +356,10 @@ enum Key {
     PendingStrategy,
     Held(Address),
     Invoice(BytesN<32>),
+    DueSet(u32, Symbol),
+    Scheduled(u32),
+    ScheduledIds,
+    NextScheduled,
 }
 
 #[contractevent(topics = ["kyros_vault", "received"])]
@@ -313,6 +390,41 @@ pub struct TaxPaid {
     pub destination: Address,
     /// The muxed id (anchor memo) the payment carried, if any.
     pub memo: Option<u64>,
+}
+
+#[contractevent(topics = ["kyros_vault", "due_set"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DueSet {
+    #[topic]
+    pub bucket: Symbol,
+    pub from_period: u32,
+    pub to_period: u32,
+    /// The due day as a day number (days since 1970-01-01).
+    pub day: u32,
+}
+
+#[contractevent(topics = ["kyros_vault", "payment_scheduled"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PaymentScheduled {
+    #[topic]
+    pub id: u32,
+    pub at: u64,
+    pub payments: Vec<Payment>,
+}
+
+#[contractevent(topics = ["kyros_vault", "scheduled_run"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ScheduledRun {
+    #[topic]
+    pub id: u32,
+    pub paid: i128,
+}
+
+#[contractevent(topics = ["kyros_vault", "scheduled_cancelled"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ScheduledCancelled {
+    #[topic]
+    pub id: u32,
 }
 
 #[contractevent(topics = ["kyros_vault", "invoice_expected"])]
@@ -512,6 +624,9 @@ fn load_period(e: &Env, id: u32, token: &Address) -> PeriodState {
             paid: 0,
             released: 0,
             converted: 0,
+            income: 0,
+            withheld: 0,
+            paid_buckets: Map::new(e),
         })
 }
 
@@ -616,6 +731,47 @@ fn check_rule(e: &Env, rule: &Rule) -> Result<(), VaultError> {
     validate(e, rule).map_err(|_| VaultError::InvalidRule)
 }
 
+/// The day number containing the last second before `end`.
+fn day_before(end: u64) -> u32 {
+    ((end - 1) / 86_400) as u32
+}
+
+/// `end` moved past closed weekdays and published holidays.
+fn open_day(e: &Env, d: &Dues, end: u64) -> u64 {
+    let mut lists: Vec<u32> = Vec::new(e);
+    if let Holidays::Registry(h) = &d.holidays {
+        let r = RegistryClient::new(e, &h.registry);
+        let first = civil_from_days(day_before(end) as i64).0 as u32;
+        let last = civil_from_days((day_before(end) + MAX_SHIFT_DAYS) as i64).0 as u32;
+        for y in first..=last {
+            // A registry that cannot answer moves nothing (weekends still apply).
+            if let Ok(Ok(v)) = r.try_holidays(&h.country, &y) {
+                lists.append(&v);
+            }
+        }
+    }
+    next_open(end, d.closed, |day| lists.contains(day))
+}
+
+/// The moment `bucket` of `period` stops being locked: the due date from the
+/// rule pack (or the one the owner set from the tax office's notice), moved
+/// to the next day the tax office is open.
+fn lock_at(e: &Env, c: &Config, period: u32, bucket: &Symbol) -> u64 {
+    let set: Option<u64> = e
+        .storage()
+        .persistent()
+        .get(&Key::DueSet(period, bucket.clone()));
+    let end = set.unwrap_or_else(|| due_at(&c.period, period, &bucket_due(&c.dues, bucket)));
+    open_day(e, &c.dues, end)
+}
+
+fn scheduled_ids(e: &Env) -> Vec<u32> {
+    e.storage()
+        .instance()
+        .get(&Key::ScheduledIds)
+        .unwrap_or(Vec::new(e))
+}
+
 #[contract]
 pub struct ReserveVault;
 
@@ -699,9 +855,9 @@ impl ReserveVault {
     /// the owner: the latest due date among its buckets.
     pub fn due_date(e: Env, period: u32) -> u64 {
         let c = stored_config(&e);
-        let mut latest = due_at(&c.period, period, &c.dues.default);
-        for (_, d) in c.dues.buckets.iter() {
-            latest = latest.max(due_at(&c.period, period, &d));
+        let mut latest = 0;
+        for b in Self::bucket_names(&e, &c).iter() {
+            latest = latest.max(lock_at(&e, &c, period, &b));
         }
         latest
     }
@@ -710,7 +866,7 @@ impl ReserveVault {
     /// date (e.g. `vat`, or `irpf` for the Spanish income-tax reserve).
     pub fn bucket_due_date(e: Env, period: u32, bucket: Symbol) -> u64 {
         let c = stored_config(&e);
-        due_at(&c.period, period, &bucket_due(&c.dues, &bucket))
+        lock_at(&e, &c, period, &bucket)
     }
 
     pub fn period(e: Env, period: u32, token: Address) -> PeriodState {
@@ -771,6 +927,8 @@ impl ReserveVault {
                 .set(b.name.clone(), p.buckets.get(b.name).unwrap_or(0) + part);
         }
         p.reserved += s.reserve;
+        p.income += s.base;
+        p.withheld += s.base + s.vat - s.gross;
         save_period(&e, id, &token, &p);
         add_held(&e, &token, s.reserve);
         bump_instance(&e);
@@ -841,7 +999,7 @@ impl ReserveVault {
         let mut held_back: i128 = 0;
         let mut after = Map::new(&e);
         for (k, v) in p.buckets.iter() {
-            if t >= due_at(&c.period, period, &bucket_due(&c.dues, &k)) {
+            if v > 0 && t >= lock_at(&e, &c, period, &k) {
                 total += v;
                 after.set(k, 0i128);
             } else {
@@ -869,6 +1027,160 @@ impl ReserveVault {
         }
         .publish(&e);
         Ok(total)
+    }
+
+    // ---- Dates set by the tax office ----
+
+    /// Sets the due date of `bucket` for periods `from_period..=to_period` to
+    /// the day number `day` (e.g. the payment date on the tax office's
+    /// assessment notice). It still moves past closed days and holidays. A
+    /// date later than the current one applies at once; an earlier one must
+    /// be at least the notice period away, so the lock can never be opened
+    /// sooner than that.
+    pub fn set_due(
+        e: Env,
+        bucket: Symbol,
+        from_period: u32,
+        to_period: u32,
+        day: u32,
+    ) -> Result<(), VaultError> {
+        let c = active(&e);
+        c.owner.require_auth();
+        if to_period < from_period || to_period - from_period >= MAX_BATCH {
+            return Err(VaultError::TooMany);
+        }
+        let end = (day as u64 + 1) * 86_400;
+        // At most ten years after the last period: a typo should not lock money for ever.
+        if end > period_end(&c.period, to_period) + 3_660 * 86_400 {
+            return Err(VaultError::InvalidDue);
+        }
+        let new_lock = open_day(&e, &c.dues, end);
+        for p in from_period..=to_period {
+            if new_lock < lock_at(&e, &c, p, &bucket) && new_lock < now(&e) + c.notice_secs {
+                return Err(VaultError::DueTooSoon);
+            }
+        }
+        for p in from_period..=to_period {
+            let k = Key::DueSet(p, bucket.clone());
+            e.storage().persistent().set(&k, &end);
+            e.storage()
+                .persistent()
+                .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+        }
+        bump_instance(&e);
+        DueSet {
+            bucket,
+            from_period,
+            to_period,
+            day,
+        }
+        .publish(&e);
+        Ok(())
+    }
+
+    // ---- Scheduled payments ----
+
+    /// Schedules a payment to the tax destination: from `at` on, anyone can
+    /// run it. `to` is the destination, or the destination as a muxed
+    /// account with the anchor's memo. Each item pays at most what its
+    /// bucket holds when it runs.
+    pub fn schedule(
+        e: Env,
+        at: u64,
+        payments: Vec<Payment>,
+        to: MuxedAddress,
+    ) -> Result<u32, VaultError> {
+        let c = active(&e);
+        c.owner.require_auth();
+        if to.address() != c.tax_destination {
+            return Err(VaultError::WrongDestination);
+        }
+        if payments.is_empty() || payments.len() > MAX_BATCH {
+            return Err(VaultError::TooMany);
+        }
+        for p in payments.iter() {
+            if p.amount <= 0 {
+                return Err(VaultError::InvalidAmount);
+            }
+            if !c.tokens.contains(&p.token) {
+                return Err(VaultError::TokenNotAccepted);
+            }
+        }
+        let mut ids = scheduled_ids(&e);
+        if ids.len() >= MAX_SCHEDULED {
+            return Err(VaultError::TooMany);
+        }
+        let id: u32 = e.storage().instance().get(&Key::NextScheduled).unwrap_or(1);
+        e.storage().instance().set(&Key::NextScheduled, &(id + 1));
+        let k = Key::Scheduled(id);
+        e.storage().persistent().set(
+            &k,
+            &Scheduled {
+                at,
+                payments: payments.clone(),
+                to: to.to_strkey(),
+            },
+        );
+        e.storage()
+            .persistent()
+            .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+        ids.push_back(id);
+        e.storage().instance().set(&Key::ScheduledIds, &ids);
+        bump_instance(&e);
+        PaymentScheduled { id, at, payments }.publish(&e);
+        Ok(id)
+    }
+
+    pub fn scheduled(e: Env, id: u32) -> Option<Scheduled> {
+        e.storage().persistent().get(&Key::Scheduled(id))
+    }
+
+    /// Scheduled payments not run or cancelled yet.
+    pub fn scheduled_ids(e: Env) -> Vec<u32> {
+        scheduled_ids(&e)
+    }
+
+    /// Runs a scheduled payment whose date has come. Anyone can call it (a
+    /// keeper does); the money only goes to the tax destination.
+    pub fn run_scheduled(e: Env, id: u32) -> Result<i128, VaultError> {
+        let c = active(&e);
+        let s: Scheduled = e
+            .storage()
+            .persistent()
+            .get(&Key::Scheduled(id))
+            .ok_or(VaultError::UnknownPayment)?;
+        if now(&e) < s.at {
+            return Err(VaultError::NotYet);
+        }
+        let to = MuxedAddress::from_string(&s.to);
+        if to.address() != c.tax_destination {
+            return Err(VaultError::WrongDestination);
+        }
+        let mut paid: i128 = 0;
+        for p in s.payments.iter() {
+            let held_now = load_period(&e, p.period, &p.token)
+                .buckets
+                .get(p.bucket.clone())
+                .unwrap_or(0);
+            let amount = p.amount.min(held_now);
+            if amount > 0 {
+                Self::pay_out(&e, &c, p.period, p.token, p.bucket, amount, to.clone())?;
+                paid += amount;
+            }
+        }
+        Self::drop_scheduled(&e, id);
+        ScheduledRun { id, paid }.publish(&e);
+        Ok(paid)
+    }
+
+    pub fn cancel_scheduled(e: Env, id: u32) -> Result<(), VaultError> {
+        stored_config(&e).owner.require_auth();
+        if !e.storage().persistent().has(&Key::Scheduled(id)) {
+            return Err(VaultError::UnknownPayment);
+        }
+        Self::drop_scheduled(&e, id);
+        ScheduledCancelled { id }.publish(&e);
+        Ok(())
     }
 
     // ---- Changes, with notice ----
@@ -1329,6 +1641,19 @@ impl ReserveVault {
         to: MuxedAddress,
     ) -> Result<(), VaultError> {
         c.owner.require_auth();
+        Self::pay_out(e, c, period, token, bucket, amount, to)
+    }
+
+    /// Pays `amount` of a bucket to `to` (the destination, maybe muxed). No auth: callers check.
+    fn pay_out(
+        e: &Env,
+        c: &Config,
+        period: u32,
+        token: Address,
+        bucket: Symbol,
+        amount: i128,
+        to: MuxedAddress,
+    ) -> Result<(), VaultError> {
         if amount <= 0 {
             return Err(VaultError::InvalidAmount);
         }
@@ -1342,6 +1667,10 @@ impl ReserveVault {
         }
         p.buckets.set(bucket.clone(), held_now - amount);
         p.paid += amount;
+        p.paid_buckets.set(
+            bucket.clone(),
+            p.paid_buckets.get(bucket.clone()).unwrap_or(0) + amount,
+        );
         save_period(e, period, &token, &p);
         add_held(e, &token, -amount);
         ensure_liquid(e, &token, amount)?;
@@ -1357,6 +1686,33 @@ impl ReserveVault {
         }
         .publish(e);
         Ok(())
+    }
+
+    fn drop_scheduled(e: &Env, id: u32) {
+        e.storage().persistent().remove(&Key::Scheduled(id));
+        let mut ids = scheduled_ids(e);
+        if let Some(i) = ids.first_index_of(id) {
+            ids.remove(i);
+        }
+        e.storage().instance().set(&Key::ScheduledIds, &ids);
+        bump_instance(e);
+    }
+
+    /// `vat` and the rule's buckets, plus any bucket with its own due date.
+    fn bucket_names(e: &Env, c: &Config) -> Vec<Symbol> {
+        let mut v = Vec::new(e);
+        v.push_back(vat_symbol(e));
+        for b in c.rule.buckets.iter() {
+            if !v.contains(&b.name) {
+                v.push_back(b.name);
+            }
+        }
+        for (k, _) in c.dues.buckets.iter() {
+            if !v.contains(&k) {
+                v.push_back(k);
+            }
+        }
+        v
     }
 
     /// Moves a conversion or strategy whose notice has passed into place.

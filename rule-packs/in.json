@@ -66,19 +66,35 @@
     "prepayments": [
       {
         "date": "06-15",
-        "what": "Advance tax (15%)"
+        "what": "Advance tax (15%)",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.15
+        }
       },
       {
         "date": "09-15",
-        "what": "Advance tax (45%)"
+        "what": "Advance tax (45%)",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.45
+        }
       },
       {
         "date": "12-15",
-        "what": "Advance tax (75%)"
+        "what": "Advance tax (75%)",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.75
+        }
       },
       {
         "date": "03-15",
-        "what": "Advance tax (100%)"
+        "what": "Advance tax (100%)",
+        "amount": {
+          "kind": "annualized",
+          "share": 1.0
+        }
       }
     ],
     "note": "Small GST payers under QRMP file GSTR-3B on the 22nd or 24th of the month after each quarter (by state; the vault uses the 24th), monthly filers on the 20th. The financial year runs April to March; returns not needing an audit are due on 31 July, with advance tax on 15 June, September, December and March.",
@@ -91,7 +107,16 @@
         "title": "Income Tax Department",
         "url": "https://www.incometax.gov.in"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

@@ -19,6 +19,7 @@ import {
   xdr,
 } from '@stellar/stellar-sdk';
 import type { Dues, PeriodKind } from './periods.js';
+import type { ScheduledItem } from './scval.js';
 import {
   addr,
   bytes32,
@@ -30,6 +31,7 @@ import {
   periodKindFromNative,
   duesFromNative,
   duesToScVal,
+  scheduledItemsToScVal,
   periodKindToScVal,
   ruleFromNative,
   ruleToScVal,
@@ -69,6 +71,21 @@ export interface PeriodState {
   released: bigint;
   /** Swapped out of this token into the reserve currency. */
   converted: bigint;
+  /** Taxable income booked to the period (the base of every payment). */
+  income: bigint;
+  /** Income tax the clients withheld and paid themselves. */
+  withheld: bigint;
+  /** Paid to the tax destination, per bucket. */
+  paidBuckets: Record<string, bigint>;
+}
+
+/** A payment to the tax destination that anyone can run from `at` on. */
+export interface ScheduledPayment {
+  id: number;
+  at: bigint;
+  payments: ScheduledItem[];
+  /** The destination strkey (M... when it carries an anchor memo). */
+  to: string;
 }
 
 /** A vault's yield strategy. */
@@ -234,6 +251,37 @@ export class KyrosClient {
     return new Contract(vault).call('pay_tax_to', u32(p.period), addr(p.token), xdr.ScVal.scvSymbol(p.bucket), i128(p.amount), addr(p.to));
   }
 
+  /**
+   * Sets a bucket's due date for a range of periods to `day` (days since
+   * 1970-01-01), e.g. from the tax office's notice. Later applies at once;
+   * earlier must still be the vault's notice away.
+   */
+  setDueOp(vault: string, p: { bucket: string; fromPeriod: number; toPeriod: number; day: number }): xdr.Operation {
+    return new Contract(vault).call('set_due', xdr.ScVal.scvSymbol(p.bucket), u32(p.fromPeriod), u32(p.toPeriod), u32(p.day));
+  }
+
+  /** Schedules a payment to the destination `to` (or its muxed M... form) that anyone can run from `at`. */
+  scheduleOp(vault: string, p: { at: bigint; payments: ScheduledItem[]; to: string }): xdr.Operation {
+    return new Contract(vault).call('schedule', u64(p.at), scheduledItemsToScVal(p.payments), addr(p.to));
+  }
+
+  runScheduledOp(vault: string, id: number): xdr.Operation {
+    return new Contract(vault).call('run_scheduled', u32(id));
+  }
+
+  cancelScheduledOp(vault: string, id: number): xdr.Operation {
+    return new Contract(vault).call('cancel_scheduled', u32(id));
+  }
+
+  /** Publishes a country's holidays for a year to a Rate Registry (its admin signs). */
+  setHolidaysOp(registry: string, country: string, year: number, days: number[]): xdr.Operation {
+    return new Contract(registry).call('set_holidays', xdr.ScVal.scvSymbol(country), u32(year), xdr.ScVal.scvVec(days.map((d) => u32(d))));
+  }
+
+  async holidays(registry: string, country: string, year: number): Promise<number[]> {
+    return (scValToNative(await this.read(registry, 'holidays', xdr.ScVal.scvSymbol(country), u32(year))) as number[]).map(Number);
+  }
+
   releaseOp(vault: string, period: number, token: string): xdr.Operation {
     return new Contract(vault).call('release', u32(period), addr(token));
   }
@@ -386,15 +434,32 @@ export class KyrosClient {
 
   async period(vault: string, period: number, token: string): Promise<PeriodState> {
     const n = scValToNative(await this.read(vault, 'period', u32(period), addr(token))) as Record<string, unknown>;
-    const buckets: Record<string, bigint> = {};
-    for (const [k, v] of Object.entries((n.buckets ?? {}) as Record<string, bigint>)) buckets[k] = BigInt(v);
+    const map = (x: unknown) => {
+      const out: Record<string, bigint> = {};
+      for (const [k, v] of Object.entries((x ?? {}) as Record<string, bigint>)) out[k] = BigInt(v);
+      return out;
+    };
     return {
-      buckets,
+      buckets: map(n.buckets),
       reserved: BigInt(n.reserved as bigint),
       paid: BigInt(n.paid as bigint),
       released: BigInt(n.released as bigint),
       converted: BigInt((n.converted as bigint | undefined) ?? 0n),
+      income: BigInt((n.income as bigint | undefined) ?? 0n),
+      withheld: BigInt((n.withheld as bigint | undefined) ?? 0n),
+      paidBuckets: map(n.paid_buckets),
     };
+  }
+
+  /** Open scheduled payments of a vault. */
+  async scheduledPayments(vault: string): Promise<ScheduledPayment[]> {
+    const ids = (scValToNative(await this.read(vault, 'scheduled_ids')) as number[]).map(Number);
+    const out: ScheduledPayment[] = [];
+    for (const id of ids) {
+      const s = scValToNative(await this.read(vault, 'scheduled', u32(id))) as { at: bigint; payments: { period: number; token: string; bucket: string; amount: bigint }[]; to: string } | null;
+      if (s) out.push({ id, at: BigInt(s.at), to: String(s.to), payments: s.payments.map((p) => ({ period: Number(p.period), token: String(p.token), bucket: String(p.bucket), amount: BigInt(p.amount) })) });
+    }
+    return out;
   }
 
   /** The conversion in force, or null. */

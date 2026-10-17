@@ -62,6 +62,25 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await page.getByTestId('pay-taxes').click();
   await settle(page);
   await expect(page.getByText('Ver en el explorador →').first()).toBeVisible();
+
+  // The deadlines say how weekends and holidays move them.
+  await expect(page.getByTestId('workdays-note').first()).toBeVisible();
+
+  // A letter from the tax office: the app reads it, the vault takes its date (set_due, signed with
+  // the passkey) and the payment is scheduled to go out by itself; then it is cancelled.
+  const y = new Date().getUTCFullYear();
+  await page.getByTestId('notice-text').fill(`Liquidación provisional. Fecha de emisión: 02/05/${y}. Importe a ingresar: 20,00 euros. Plazo de ingreso: hasta el 22 de junio de ${y + 2}.`);
+  await page.getByTestId('notice-read').click();
+  await expect(page.getByTestId('notice-date')).toHaveValue(`${y + 2}-06-22`);
+  await expect(page.getByTestId('notice-amount')).toHaveValue('20.00');
+  await page.getByTestId('notice-year').selectOption({ label: String(y) });
+  await page.getByTestId('notice-apply').click();
+  await settle(page);
+  await expect(page.getByTestId('notice-done')).toBeVisible();
+  await expect(page.getByTestId('scheduled')).toBeVisible();
+  await page.getByTestId('scheduled').getByRole('button', { name: 'Cancelar' }).click();
+  await settle(page);
+  await expect(page.getByTestId('scheduled')).toHaveCount(0);
 });
 
 test('the user picks the language and it is remembered', async ({ page }) => {

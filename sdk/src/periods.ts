@@ -20,6 +20,10 @@ export type Due =
 export interface Dues {
   default: Due;
   buckets: Record<string, Due>;
+  /** Weekdays the tax office is closed (bit 0 Monday … bit 6 Sunday): due dates move past them. */
+  closed: number;
+  /** The Rate Registry and country whose published holidays move due dates, or null. */
+  holidays: { registry: string; country: string } | null;
 }
 
 const DAY = 86_400n;
@@ -145,7 +149,7 @@ export function dueDate(kind: PeriodKind, id: number, dues: Dues): bigint {
 }
 
 /** One fixed delay after the period for every bucket. */
-export const duesAfter = (secs: bigint): Dues => ({ default: { after: secs }, buckets: {} });
+export const duesAfter = (secs: bigint): Dues => ({ default: { after: secs }, buckets: {}, closed: 0, holidays: null });
 
 /** "2027-Q1", "2027-02", "2027", "2027-B1" (n-month periods) or "#29504" for fixed-length periods. */
 export function periodLabel(kind: PeriodKind, id: number): string {

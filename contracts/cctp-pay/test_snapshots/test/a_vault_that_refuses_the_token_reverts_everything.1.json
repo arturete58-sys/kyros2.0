@@ -289,6 +289,14 @@
                                 },
                                 {
                                   "key": {
+                                    "symbol": "closed"
+                                  },
+                                  "val": {
+                                    "u32": 0
+                                  }
+                                },
+                                {
+                                  "key": {
                                     "symbol": "default"
                                   },
                                   "val": {
@@ -298,6 +306,18 @@
                                       },
                                       {
                                         "u64": "0"
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "key": {
+                                    "symbol": "holidays"
+                                  },
+                                  "val": {
+                                    "vec": [
+                                      {
+                                        "symbol": "None"
                                       }
                                     ]
                                   }
@@ -500,6 +520,14 @@
                                 },
                                 {
                                   "key": {
+                                    "symbol": "closed"
+                                  },
+                                  "val": {
+                                    "u32": 0
+                                  }
+                                },
+                                {
+                                  "key": {
                                     "symbol": "default"
                                   },
                                   "val": {
@@ -509,6 +537,18 @@
                                       },
                                       {
                                         "u64": "0"
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "key": {
+                                    "symbol": "holidays"
+                                  },
+                                  "val": {
+                                    "vec": [
+                                      {
+                                        "symbol": "None"
                                       }
                                     ]
                                   }

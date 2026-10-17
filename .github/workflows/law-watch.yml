@@ -4,8 +4,11 @@ name: Law watch
 #  1. EU packs against the European Commission's official VAT database (TEDB);
 #  2. EU and UK packs against an independent maintained dataset;
 #  3. national income-tax scales against the OECD Tax Database (reported by governments);
-#  4. every official page the packs cite, for changed percentages or amounts; pages that
-#     refuse plain requests are read with a real browser, or from the Internet Archive.
+#  4. every official page the packs cite, for changed percentages or amounts (and, on the
+#     tax-calendar pages, changed dates); pages that refuse plain requests are read with a
+#     real browser, or from the Internet Archive;
+#  5. the public holidays behind the deadlines, against the newest release of the
+#     `holidays` package (a new or moved holiday changes rule-packs/holidays).
 # Anything that needs a look opens (or updates) one issue. A maintainer reviews,
 # updates the pack, and syncs the on-chain rate registry from it; vaults that
 # follow the registry then change on the legal date with no action from users.
@@ -15,7 +18,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['rule-packs/*.json', 'sdk/scripts/check-*.mjs', 'sdk/scripts/watch-sources.mjs', '.github/workflows/law-watch.yml']
+    paths: ['rule-packs/*.json', 'rule-packs/holidays/**', 'sdk/scripts/check-*.mjs', 'sdk/scripts/watch-sources.mjs', '.github/workflows/law-watch.yml']
 
 permissions:
   contents: write
@@ -53,11 +56,20 @@ jobs:
         id: pages
         continue-on-error: true
         run: node sdk/scripts/watch-sources.mjs --out pages.md
+      - name: Public holidays against the newest holidays release
+        id: holidays
+        continue-on-error: true
+        run: |
+          pip install --quiet --upgrade holidays
+          if ! python rule-packs/holidays/generate.py --check > holidays.txt 2>&1; then
+            { echo "## Public holidays"; echo; echo "The newest release of the \`holidays\` package differs from rule-packs/holidays. $(grep -v Warning holidays.txt | tail -1)"; echo; echo "Run \`python rule-packs/holidays/generate.py\`, review the diff, commit it, then publish to the registry with \`node sdk/scripts/sync-holidays.mjs\`."; } > holidays.md
+            exit 1
+          fi
       - name: Report
         if: always()
         run: |
           : > report.md
-          for f in tedb.md dataset.md oecd.md pages.md; do if [ -f "$f" ]; then cat "$f" >> report.md; echo >> report.md; fi; done
+          for f in tedb.md dataset.md oecd.md pages.md holidays.md; do if [ -f "$f" ]; then cat "$f" >> report.md; echo >> report.md; fi; done
           cat report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Save the official snapshots (pages, OECD figures)
         if: always()
@@ -70,7 +82,7 @@ jobs:
             git pull --rebase origin main && git push
           fi
       - name: Open or update an issue
-        if: steps.tedb.outcome == 'failure' || steps.dataset.outcome == 'failure' || steps.oecd.outcome == 'failure' || steps.pages.outcome == 'failure'
+        if: steps.tedb.outcome == 'failure' || steps.dataset.outcome == 'failure' || steps.oecd.outcome == 'failure' || steps.pages.outcome == 'failure' || steps.holidays.outcome == 'failure'
         uses: actions/github-script@v7
         with:
           script: |

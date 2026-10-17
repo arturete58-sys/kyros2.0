@@ -81,7 +81,22 @@
         "title": "DJP: PPh final UMKM",
         "url": "https://www.pajak.go.id/en/node/113050"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "A payment deadline on a holiday (weekends and national holidays, including collective leave days) can be met on the next working day.",
+      "sources": [
+        {
+          "title": "PMK 242/PMK.03/2014, Pasal 9 ayat (1)",
+          "url": "https://news.ddtc.co.id/berita/nasional/1801104/jatuh-pada-hari-libur-batas-akhir-penyetoran-pph-masa-februari-mundur"
+        }
+      ]
+    }
   },
   "presets": [
     {

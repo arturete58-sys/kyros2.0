@@ -26,7 +26,11 @@ const dueText = (d, fy) => {
   const ex = d.except ? `; ${d.except.day} of +${d.except.monthsAfter} for periods ending in month ${d.except.periodEndMonth}` : '';
   return `day ${d.day} of month +${d.monthsAfter}${ex}`;
 };
-const calText = (c) => [`${c.period}`, c.vat ? `VAT: ${dueText(c.vat, c.fiscalYearStart)}` : '', `income: ${dueText(c.income, c.fiscalYearStart)}`].filter(Boolean).join('; ');
+const WD = { next: 'weekend/holiday: next working day', previous: 'weekend/holiday: working day before', none: 'weekend/holiday: no move (shown: working day before)' };
+const calText = (c) =>
+  [`${c.period}`, c.vat ? `VAT: ${dueText(c.vat, c.fiscalYearStart)}` : '', `income: ${dueText(c.income, c.fiscalYearStart)}`, c.workdays ? `${WD[c.workdays.rule]}${c.workdays.verified ? '' : ' (not verified)'}` : '']
+    .filter(Boolean)
+    .join('; ');
 
 const rows = packs.map((p) => {
   const rates = Object.values(inForce(p)).filter((v) => v > 0).sort((a, b) => b - a);

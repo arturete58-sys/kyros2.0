@@ -52,19 +52,36 @@
     "prepayments": [
       {
         "date": "04-15",
-        "what": "Estimated tax (Jan-Mar)"
+        "what": "Estimated tax (Jan-Mar)",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.25
+        }
       },
       {
         "date": "06-15",
-        "what": "Estimated tax (Apr-May)"
+        "what": "Estimated tax (Apr-May)",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.5
+        }
       },
       {
         "date": "09-15",
-        "what": "Estimated tax (Jun-Aug)"
+        "what": "Estimated tax (Jun-Aug)",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.75
+        }
       },
       {
         "date": "01-15",
-        "what": "Estimated tax (Sep-Dec)"
+        "what": "Estimated tax (Sep-Dec)",
+        "amount": {
+          "kind": "annualized",
+          "share": 1.0,
+          "taxYear": -1
+        }
       }
     ],
     "note": "Federal estimated tax is paid on 15 April, 15 June, 15 September and 15 January; the annual return and balance are due on 15 April. State sales tax, where it applies, is usually filed monthly or quarterly around the 20th (the vault uses the 20th of the month after the quarter).",
@@ -77,7 +94,25 @@
         "title": "IRS: When to file",
         "url": "https://www.irs.gov/filing/individuals/when-to-file"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "holidays": {
+        "subdiv": "DC"
+      },
+      "verified": true,
+      "note": "A deadline on a Saturday, Sunday or legal holiday in the District of Columbia (Emancipation Day, 16 April, included) moves to the next business day. A statewide holiday where you file can add a day.",
+      "sources": [
+        {
+          "title": "26 U.S.C. § 7503",
+          "url": "https://www.law.cornell.edu/uscode/text/26/7503"
+        }
+      ]
+    }
   },
   "presets": [
     {

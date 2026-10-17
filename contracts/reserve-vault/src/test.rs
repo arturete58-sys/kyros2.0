@@ -831,6 +831,9 @@ fn spanish_dues(e: &Env) -> Dues {
             years_after: 1,
         }),
         buckets,
+        // Saturdays and Sundays; no holiday list.
+        closed: 0b110_0000,
+        holidays: Holidays::None,
     }
 }
 
@@ -918,6 +921,8 @@ fn unusable_periods_and_due_rules_are_refused() {
             years_after: 1,
         }),
         buckets: Map::new(&w.e),
+        closed: 0,
+        holidays: Holidays::None,
     };
     assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         w.e.register(
@@ -949,4 +954,206 @@ fn unusable_periods_and_due_rules_are_refused() {
         )
     }))
     .is_err());
+}
+
+fn vault_with(w: &W, dues: Dues) -> ReserveVaultClient<'static> {
+    ReserveVaultClient::new(
+        &w.e,
+        &w.e.register(
+            ReserveVault,
+            (
+                w.owner.clone(),
+                spain(&w.e),
+                w.tax.clone(),
+                NOTICE,
+                PeriodKind::Quarter,
+                dues,
+                vec![&w.e, w.token.clone()],
+            ),
+        ),
+    )
+}
+
+fn registry_with(w: &W, country: &str, year: u32, days: soroban_sdk::Vec<u32>) -> Address {
+    let id = w.e.register(
+        kyros_rate_registry::RateRegistry,
+        (Address::generate(&w.e), NOTICE),
+    );
+    kyros_rate_registry::RateRegistryClient::new(&w.e, &id).set_holidays(
+        &Symbol::new(&w.e, country),
+        &year,
+        &days,
+    );
+    id
+}
+
+/// 2026-11-10 12:00 UTC: inside Q4 2026.
+const NOV_10_2026: u64 = 1_794_312_000;
+/// 2027-04-20 as a day number (a Tuesday).
+const APR_20_2027_DAY: u32 = 20_928;
+const APR_21_2027: u64 = 1_808_265_600;
+
+#[test]
+fn a_deadline_on_a_weekend_or_holiday_moves_to_the_next_open_day() {
+    let w = world();
+    // Q4 2026 VAT is due on 30 January 2027, a Saturday: the lock lasts until Monday 1 February.
+    w.e.ledger().set_timestamp(NOV_10_2026);
+    let v = vault_with(&w, spanish_dues(&w.e));
+    v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    let q4 = v.current_period();
+    const FEB_2_2027: u64 = 1_801_526_400;
+    assert_eq!(v.bucket_due_date(&q4, &symbol_short!("vat")), FEB_2_2027);
+    w.e.ledger().set_timestamp(1_801_353_600); // the end of Sunday 31 January
+    assert_eq!(v.try_release(&q4, &w.token), Err(Ok(VaultError::NotDue)));
+    w.e.ledger().set_timestamp(FEB_2_2027);
+    assert_eq!(v.release(&q4, &w.token), 210 * UNIT);
+
+    // A public holiday published in the registry moves Q1 VAT (20 April 2027) to the 21st.
+    w.e.ledger().set_timestamp(FEB_10_2027);
+    let mut dues = spanish_dues(&w.e);
+    dues.holidays = Holidays::Registry(HolidaySource {
+        registry: registry_with(&w, "ES", 2027, vec![&w.e, APR_20_2027_DAY]),
+        country: Symbol::new(&w.e, "ES"),
+    });
+    let v = vault_with(&w, dues);
+    let q1 = v.current_period();
+    assert_eq!(
+        v.bucket_due_date(&q1, &symbol_short!("vat")),
+        APR_21_2027 + 86_400
+    );
+
+    // A registry cannot keep a reserve locked more than two weeks past the legal date.
+    let mut long: soroban_sdk::Vec<u32> = Vec::new(&w.e);
+    for d in 0..20 {
+        long.push_back(APR_20_2027_DAY + d);
+    }
+    let mut dues = spanish_dues(&w.e);
+    dues.holidays = Holidays::Registry(HolidaySource {
+        registry: registry_with(&w, "ES", 2027, long),
+        country: Symbol::new(&w.e, "ES"),
+    });
+    let v = vault_with(&w, dues);
+    assert_eq!(
+        v.bucket_due_date(&q1, &symbol_short!("vat")),
+        APR_21_2027 + 14 * 86_400
+    );
+}
+
+#[test]
+fn the_tax_office_date_can_be_set_later_at_once_and_earlier_only_with_notice() {
+    let w = world();
+    let v = vault_with(&w, spanish_dues(&w.e));
+    v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    let q1 = v.current_period();
+    let irpf = symbol_short!("irpf");
+    const JUL_1_2028: u64 = 1_846_022_400;
+    assert_eq!(v.bucket_due_date(&q1, &irpf), JUL_1_2028);
+    // The notice says 1 September 2028: later, so it applies at once.
+    v.set_due(&irpf, &q1, &(q1 + 3), &21_428);
+    assert_eq!(v.bucket_due_date(&q1, &irpf), 1_851_465_600);
+    assert_eq!(v.bucket_due_date(&(q1 + 3), &irpf), 1_851_465_600);
+    // VAT keeps its own date.
+    assert_eq!(v.bucket_due_date(&q1, &symbol_short!("vat")), APR_21_2027);
+    // Close to the date, an earlier one would open the lock within the notice: refused.
+    w.e.ledger().set_timestamp(1_835_395_200); // 2028-02-28
+    assert_eq!(
+        v.try_set_due(&irpf, &q1, &q1, &21_244), // 1 March 2028
+        Err(Ok(VaultError::DueTooSoon))
+    );
+    // One at least the notice away is fine (Friday 10 March 2028).
+    v.set_due(&irpf, &q1, &q1, &21_253);
+    assert_eq!(v.bucket_due_date(&q1, &irpf), 1_836_345_600);
+    // Ranges are bounded and a date decades away is refused.
+    assert_eq!(
+        v.try_set_due(&irpf, &q1, &(q1 + 40), &21_428),
+        Err(Ok(VaultError::TooMany))
+    );
+    assert_eq!(
+        v.try_set_due(&irpf, &q1, &q1, &40_000),
+        Err(Ok(VaultError::InvalidDue))
+    );
+}
+
+#[test]
+fn a_scheduled_payment_goes_out_on_its_date_and_only_to_the_destination() {
+    let w = world();
+    let v = vault_with(&w, spanish_dues(&w.e));
+    v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    let q1 = v.current_period();
+    let at = APR_21_2027 - 5 * 86_400;
+    let items = vec![
+        &w.e,
+        Payment {
+            period: q1,
+            token: w.token.clone(),
+            bucket: symbol_short!("vat"),
+            amount: 210 * UNIT,
+        },
+        Payment {
+            period: q1,
+            token: w.token.clone(),
+            bucket: symbol_short!("irpf"),
+            amount: 500 * UNIT, // more than the bucket holds: pays what it holds
+        },
+    ];
+    // Only to the tax destination.
+    assert_eq!(
+        v.try_schedule(&at, &items, &MuxedAddress::from(&w.owner)),
+        Err(Ok(VaultError::WrongDestination))
+    );
+    let id = v.schedule(&at, &items, &MuxedAddress::from(&w.tax));
+    assert_eq!(v.scheduled_ids(), vec![&w.e, id]);
+    assert_eq!(v.try_run_scheduled(&id), Err(Ok(VaultError::NotYet)));
+    // Anyone can run it once the date comes (here, no owner signature is mocked for it).
+    w.e.ledger().set_timestamp(at);
+    w.e.set_auths(&[]);
+    assert_eq!(v.run_scheduled(&id), 410 * UNIT);
+    let t = TokenClient::new(&w.e, &w.token);
+    assert_eq!(t.balance(&w.tax), 410 * UNIT);
+    let p = v.period(&q1, &w.token);
+    assert_eq!(
+        p.paid_buckets.get(symbol_short!("irpf")).unwrap(),
+        200 * UNIT
+    );
+    assert!(v.scheduled_ids().is_empty());
+    assert_eq!(
+        v.try_run_scheduled(&id),
+        Err(Ok(VaultError::UnknownPayment))
+    );
+    // A payment can be cancelled by the owner before it runs.
+    w.e.mock_all_auths();
+    let id2 = v.schedule(&(at + 86_400), &items, &MuxedAddress::from(&w.tax));
+    v.cancel_scheduled(&id2);
+    assert!(v.scheduled(&id2).is_none());
+}
+
+#[test]
+fn periods_record_income_and_what_clients_withheld() {
+    let w = world();
+    let v = vault_with(&w, spanish_dues(&w.e));
+    v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    let q1 = v.current_period();
+    let p = v.period(&q1, &w.token);
+    assert_eq!(p.income, 1_000 * UNIT);
+    assert_eq!(p.withheld, 0);
+    // An invoice of 1,000 + 21% VAT with 15% IRPF withheld: the client pays 1,060.
+    let inv = BytesN::from_array(&w.e, &[9; 32]);
+    v.expect_invoice(
+        &inv,
+        &InvoiceTerms {
+            vat_bps: 2100,
+            withholding_bps: 1500,
+            buckets: vec![
+                &w.e,
+                Bucket {
+                    name: symbol_short!("irpf"),
+                    bps: 500,
+                },
+            ],
+        },
+    );
+    v.receive(&w.payer, &w.token, &(1_060 * UNIT), &inv);
+    let p = v.period(&q1, &w.token);
+    assert_eq!(p.income, 2_000 * UNIT);
+    assert_eq!(p.withheld, 150 * UNIT);
 }

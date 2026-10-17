@@ -51,15 +51,27 @@
     "prepayments": [
       {
         "date": "04-25",
-        "what": "VAT preliminary notice"
+        "what": "VAT preliminary notice",
+        "amount": {
+          "kind": "notice",
+          "bucket": "vat"
+        }
       },
       {
         "date": "10-25",
-        "what": "VAT preliminary notice"
+        "what": "VAT preliminary notice",
+        "amount": {
+          "kind": "notice",
+          "bucket": "vat"
+        }
       },
       {
         "date": "11-30",
-        "what": "Interim income tax prepayment"
+        "what": "Interim income tax prepayment",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.5
+        }
       }
     ],
     "note": "Individual businesses file VAT for each half year by 25 July and 25 January, with preliminary notices paid by 25 April and 25 October. The comprehensive income tax return and payment are due on 31 May (30 June for faithful-reporting filers), with an interim prepayment on 30 November.",
@@ -72,7 +84,25 @@
         "title": "NTS: Comprehensive income tax",
         "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2223&cntntsId=7665"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "extra": [
+        "05-01"
+      ],
+      "verified": true,
+      "note": "A filing or payment deadline on a Saturday, public holiday or Workers' Day (1 May) moves to the next day.",
+      "sources": [
+        {
+          "title": "국세기본법 제5조 (기한의 특례)",
+          "url": "https://www.law.go.kr/법령/국세기본법/제5조"
+        }
+      ]
+    }
   },
   "presets": [
     {

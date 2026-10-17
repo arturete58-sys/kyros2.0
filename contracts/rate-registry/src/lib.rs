@@ -14,13 +14,22 @@
 //!   or withdrawn; only future entries can be corrected.
 //! - **Everything is an event,** so apps and keepers alert users ahead.
 //!
+//! It also publishes each country's public holidays, per year, so vaults can
+//! move a due date that falls on a holiday to the next day the tax office
+//! is open. A year's list can be replaced until the year starts (or seeded
+//! once if the registry has none); after that holidays can only be added for
+//! days still to come, which can only keep a reserve locked longer, and by
+//! at most `MAX_SHIFT_DAYS` per due date.
+//!
 //! The registry never holds or moves money.
 #![no_std]
+use kyros_types::{civil_from_days, days_from_civil};
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, Address, Env, Symbol, Vec,
 };
 
 const DAY_IN_LEDGERS: u32 = 17_280;
+const DAY: u64 = 86_400;
 const TTL: u32 = 365 * DAY_IN_LEDGERS;
 /// Most dated entries kept per rate.
 const MAX_ENTRIES: u32 = 64;
@@ -39,7 +48,14 @@ pub enum RegistryError {
     /// The rate already has entries: use `publish`.
     AlreadySeeded = 5,
     TooManyEntries = 6,
+    /// A day outside the year, or more than `MAX_HOLIDAYS` in a year.
+    InvalidHolidays = 7,
+    /// The year has started and its list exists: only future days can be added.
+    YearStarted = 8,
 }
+
+/// Most holidays kept for one country and year.
+pub const MAX_HOLIDAYS: u32 = 120;
 
 /// A rate and the moment it applies from.
 #[contracttype]
@@ -55,6 +71,7 @@ enum Key {
     Admin,
     MinNotice,
     Rate(Symbol, Symbol),
+    Holidays(Symbol, u32),
 }
 
 #[contractevent(topics = ["kyros_registry", "published"])]
@@ -76,6 +93,23 @@ pub struct Withdrawn {
     #[topic]
     pub name: Symbol,
     pub from: u64,
+}
+
+#[contractevent(topics = ["kyros_registry", "holidays_set"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HolidaysSet {
+    #[topic]
+    pub country: Symbol,
+    pub year: u32,
+    pub days: Vec<u32>,
+}
+
+#[contractevent(topics = ["kyros_registry", "holiday_added"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HolidayAdded {
+    #[topic]
+    pub country: Symbol,
+    pub day: u32,
 }
 
 #[contractevent(topics = ["kyros_registry", "admin_changed"])]
@@ -120,6 +154,26 @@ fn at(v: &Vec<Entry>, t: u64) -> Option<u32> {
         }
     }
     found
+}
+
+/// First and last day number of a calendar year.
+fn year_days(year: u32) -> (u32, u32) {
+    let first = days_from_civil(year as i64, 1, 1) as u32;
+    let last = days_from_civil(year as i64 + 1, 1, 1) as u32 - 1;
+    (first, last)
+}
+
+fn holiday_list(e: &Env, country: &Symbol, year: u32) -> Option<Vec<u32>> {
+    e.storage()
+        .persistent()
+        .get(&Key::Holidays(country.clone(), year))
+}
+
+fn save_holidays(e: &Env, country: &Symbol, year: u32, v: &Vec<u32>) {
+    let k = Key::Holidays(country.clone(), year);
+    e.storage().persistent().set(&k, v);
+    e.storage().persistent().extend_ttl(&k, TTL / 2, TTL);
+    e.storage().instance().extend_ttl(TTL / 2, TTL);
 }
 
 #[contract]
@@ -256,6 +310,61 @@ impl RateRegistry {
             from,
         }
         .publish(&e);
+        Ok(())
+    }
+
+    // ---- Public holidays ----
+
+    /// The public holidays of `country` in `year`, as day numbers (days
+    /// since 1970-01-01); empty if none are published.
+    pub fn holidays(e: Env, country: Symbol, year: u32) -> Vec<u32> {
+        holiday_list(&e, &country, year).unwrap_or(Vec::new(&e))
+    }
+
+    /// Sets the holidays of `country` in `year`: allowed before the year
+    /// starts, or once for a year the registry has no list for yet.
+    pub fn set_holidays(
+        e: Env,
+        country: Symbol,
+        year: u32,
+        days: Vec<u32>,
+    ) -> Result<(), RegistryError> {
+        admin(&e).require_auth();
+        let (first, last) = year_days(year);
+        if days.len() > MAX_HOLIDAYS || days.iter().any(|d| d < first || d > last) {
+            return Err(RegistryError::InvalidHolidays);
+        }
+        if holiday_list(&e, &country, year).is_some() && now(&e) >= first as u64 * DAY {
+            return Err(RegistryError::YearStarted);
+        }
+        save_holidays(&e, &country, year, &days);
+        HolidaysSet {
+            country,
+            year,
+            days,
+        }
+        .publish(&e);
+        Ok(())
+    }
+
+    /// Adds one holiday that has not started yet (e.g. one declared during
+    /// the year). It can only make a due date later.
+    pub fn add_holiday(e: Env, country: Symbol, day: u32) -> Result<(), RegistryError> {
+        admin(&e).require_auth();
+        if (day as u64) * DAY <= now(&e) {
+            return Err(RegistryError::AlreadyInForce);
+        }
+        let (y, _, _) = civil_from_days(day as i64);
+        let year = y as u32;
+        let mut v = holiday_list(&e, &country, year).unwrap_or(Vec::new(&e));
+        if !v.contains(day) {
+            if v.len() >= MAX_HOLIDAYS {
+                return Err(RegistryError::InvalidHolidays);
+            }
+            v.push_back(day);
+            save_holidays(&e, &country, year, &v);
+        }
+        HolidayAdded { country, day }.publish(&e);
         Ok(())
     }
 

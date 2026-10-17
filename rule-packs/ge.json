@@ -61,7 +61,16 @@
         "title": "Tax Code of Georgia",
         "url": "https://www.rs.ge/Media/Default/%E1%83%99%E1%83%90%E1%83%9C%E1%83%9D%E1%83%9C%E1%83%9B%E1%83%93%E1%83%94%E1%83%91%E1%83%9A%E1%83%9D%E1%83%91%E1%83%90/%E1%83%99%E1%83%90%E1%83%9C%E1%83%9D%E1%83%9C%E1%83%94%E1%83%91%E1%83%98/tax%20code.pdf"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

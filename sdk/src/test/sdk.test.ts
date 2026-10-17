@@ -438,8 +438,10 @@ test('activity and client set the VAT, the regime and the reserve automatically'
 test('upcoming deadlines: Spain in mid-October 2026', () => {
   const ds = upcomingDeadlines(loadRulePack('es'), 'general', new Date('2026-10-17T00:00:00Z'), 300);
   const first = ds.slice(0, 3).map((d) => `${d.date} ${d.kind}${d.bucket ? `:${d.bucket}` : ''}`);
-  // Q3 VAT and the 3T modelo 130 on 20 October, then Q4 VAT on 30 January; the 2026 Renta on 30 June 2027.
-  assert.deepEqual(first, ['2026-10-20 vat:vat', '2026-10-20 prepayment', '2027-01-30 vat:vat']);
+  // Q3 VAT and the 3T modelo 130 on 20 October, then Q4 VAT: due 30 January 2027, a Saturday, so Monday 1 February.
+  assert.deepEqual(first, ['2026-10-20 vat:vat', '2026-10-20 prepayment', '2027-02-01 vat:vat']);
+  assert.equal(ds[2].legal, '2027-01-30');
+  assert.equal(ds[2].lock, '2027-02-01');
   assert.ok(ds.some((d) => d.date === '2027-06-30' && d.kind === 'income'));
 });
 

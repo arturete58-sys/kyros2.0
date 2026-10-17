@@ -29,19 +29,36 @@
     "prepayments": [
       {
         "date": "04-15",
-        "what": "US estimated tax"
+        "what": "US estimated tax",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.25
+        }
       },
       {
         "date": "06-15",
-        "what": "US estimated tax"
+        "what": "US estimated tax",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.5
+        }
       },
       {
         "date": "09-15",
-        "what": "US estimated tax"
+        "what": "US estimated tax",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.75
+        }
       },
       {
         "date": "01-15",
-        "what": "US estimated tax"
+        "what": "US estimated tax",
+        "amount": {
+          "kind": "annualized",
+          "share": 1.0,
+          "taxYear": -1
+        }
       }
     ],
     "note": "The Cayman Islands have no income tax or VAT. For US persons living there, estimated tax is due on 15 April, June, September and January, and the annual return on 15 June (automatic extension for those abroad; interest runs from 15 April).",
@@ -54,7 +71,26 @@
         "title": "Cayman Islands Government",
         "url": "https://gov.ky/finance-economy"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "holidays": {
+        "country": "US",
+        "subdiv": "DC"
+      },
+      "verified": true,
+      "note": "The deadlines are the IRS's, so US rules apply: Saturdays, Sundays and DC legal holidays move them to the next business day.",
+      "sources": [
+        {
+          "title": "26 U.S.C. § 7503",
+          "url": "https://www.law.cornell.edu/uscode/text/26/7503"
+        }
+      ]
+    }
   },
   "presets": [
     {

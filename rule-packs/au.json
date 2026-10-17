@@ -56,19 +56,31 @@
     "prepayments": [
       {
         "date": "10-28",
-        "what": "PAYG instalment (Q1 BAS)"
+        "what": "PAYG instalment (Q1 BAS)",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "02-28",
-        "what": "PAYG instalment (Q2 BAS)"
+        "what": "PAYG instalment (Q2 BAS)",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "04-28",
-        "what": "PAYG instalment (Q3 BAS)"
+        "what": "PAYG instalment (Q3 BAS)",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "07-28",
-        "what": "PAYG instalment (Q4 BAS)"
+        "what": "PAYG instalment (Q4 BAS)",
+        "amount": {
+          "kind": "notice"
+        }
       }
     ],
     "note": "Quarterly BAS (GST and PAYG instalments) is due on the 28th of the month after the quarter, except the October-December quarter, due 28 February. The financial year runs July to June; self-lodged returns are due on 31 October (later through a tax agent).",
@@ -81,7 +93,23 @@
         "title": "ATO: Preparing your tax return",
         "url": "https://www.ato.gov.au/individuals-and-families/your-tax-return/before-you-prepare-your-tax-return/preparing-your-tax-return"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "holidays": "union",
+      "verified": true,
+      "note": "If a due date is not a business day you can lodge and pay on the next one. A public holiday for the whole of any state or territory counts for everyone.",
+      "sources": [
+        {
+          "title": "ATO: Lodgment and payment dates on weekends or public holidays",
+          "url": "https://www.ato.gov.au/tax-professionals/prepare-and-lodge/tax-agent-lodgment-program/lodgment-and-payment-dates-on-weekends-or-public-holidays"
+        }
+      ]
+    }
   },
   "presets": [
     {

@@ -90,3 +90,38 @@ fn only_the_publisher_writes() {
         .try_seed(&symbol_short!("ES"), &symbol_short!("standard"), &2100)
         .is_err());
 }
+
+// 2026-12-25 and 2027-01-01, as day numbers.
+const XMAS_2026: u32 = 20_812;
+const NY_2027: u32 = 20_819;
+
+#[test]
+fn holidays_are_set_before_their_year_and_only_added_after() {
+    let (e, c) = setup();
+    let es = symbol_short!("ES");
+    // T0 is in 2026: 2026 has no list yet, so it can be seeded once.
+    c.set_holidays(&es, &2026, &vec![&e, XMAS_2026]);
+    assert_eq!(c.holidays(&es, &2026), vec![&e, XMAS_2026]);
+    assert_eq!(
+        c.try_set_holidays(&es, &2026, &vec![&e]),
+        Err(Ok(RegistryError::YearStarted))
+    );
+    // 2027 can be replaced until it starts.
+    c.set_holidays(&es, &2027, &vec![&e, NY_2027]);
+    c.set_holidays(&es, &2027, &vec![&e, NY_2027, NY_2027 + 5]);
+    assert_eq!(c.holidays(&es, &2027).len(), 2);
+    // A day outside the year is refused.
+    assert_eq!(
+        c.try_set_holidays(&es, &2027, &vec![&e, XMAS_2026]),
+        Err(Ok(RegistryError::InvalidHolidays))
+    );
+    // A holiday declared during the year can be added, never a past one.
+    let today = (T0 / 86_400) as u32;
+    c.add_holiday(&es, &(today + 3));
+    assert!(c.holidays(&es, &2026).contains(today + 3));
+    assert_eq!(
+        c.try_add_holiday(&es, &today),
+        Err(Ok(RegistryError::AlreadyInForce))
+    );
+    assert!(c.holidays(&symbol_short!("PT"), &2026).is_empty());
+}

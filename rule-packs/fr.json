@@ -63,7 +63,22 @@
         "title": "economie.gouv.fr: obligations du micro-entrepreneur",
         "url": "https://www.economie.gouv.fr/entreprises/gerer-sa-micro-entreprise/micro-entrepreneur-auto-entrepreneur-quelles-sont-vos-obligations"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "A tax deadline on a Saturday, Sunday or public holiday is, in principle, extended to the next working day.",
+      "sources": [
+        {
+          "title": "WebLex: échéances fiscales un samedi, dimanche ou jour férié",
+          "url": "https://www.weblex.fr/agenda/tva-367"
+        }
+      ]
+    }
   },
   "presets": [
     {

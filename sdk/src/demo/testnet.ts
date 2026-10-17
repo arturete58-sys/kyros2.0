@@ -40,6 +40,7 @@ import { Keeper } from '../keeper.js';
 import { periodLabel } from '../periods.js';
 import { loadRulePack, periodKindOf, termsFromPack, vatUpdatePlan } from '../rulepacks.js';
 import { duesAfter } from '../periods.js';
+import { nextOpen } from '../workdays.js';
 import { changeCountryPlan, registrySyncPlan } from '../registry.js';
 import { formatAmount, parseAmount } from '../split.js';
 
@@ -229,6 +230,22 @@ async function main(): Promise<void> {
     detail: `${formatAmount(vat)} KUSD to ${anchorTo.slice(0, 12)}…`,
   });
 
+  log('an instalment scheduled by the owner, run by the keeper on its date');
+  const instalment = parseAmount('50');
+  const taxBefore = await c.balance(token, k.taxAccount.publicKey());
+  const schedAt = BigInt(Math.floor(Date.now() / 1000)) + 20n;
+  const sched = await c.send(k.freelancer, c.scheduleOp(vault.contractId, { at: schedAt, payments: [{ period: pid, token, bucket: 'irpf', amount: instalment }], to: k.taxAccount.publicKey() }));
+  const tooEarly = await expectRefusal(() => c.send(k.keeper, c.runScheduledOp(vault.contractId, 1)), 'NotYet');
+  steps.push({ step: 'Freelancer schedules a 50 KUSD income-tax instalment to the tax destination; running it before its time is refused', ok: true, tx: sched.hash, detail: `refused by the contract: ${tooEarly}` });
+  await sleep(Math.max(0, Number(schedAt) * 1000 - Date.now()) + 8_000);
+  const [ran] = await new Keeper(c, k.keeper, [], () => {}, [vault.contractId]).runDue();
+  steps.push({
+    step: 'On its date the keeper runs it (no owner signature): the instalment goes only to the tax destination',
+    ok: !ran?.error && (await c.balance(token, k.taxAccount.publicKey())) - taxBefore === instalment && (await c.scheduledPayments(vault.contractId)).length === 0,
+    tx: ran?.hash,
+    detail: ran?.error ?? `${formatAmount(instalment)} KUSD to the tax destination`,
+  });
+
   log('early release must be refused');
   const early = await expectRefusal(() => c.send(k.freelancer, c.releaseOp(vault.contractId, pid, token)), 'NotDue');
   steps.push({ step: 'Release before the due date is refused', ok: true, detail: `refused by the contract: ${early}` });
@@ -354,6 +371,22 @@ async function main(): Promise<void> {
   });
   const moved = await c.send(k.freelancer, c.proposeVaultOp(inbox.contractId, deVault.contractId));
   const movedAt = Date.now();
+  // Germany: the final payment date comes in the tax office's notice. The owner sets it in the new vault.
+  const dePeriod = await c.currentPeriod(deVault.contractId);
+  const today = Math.floor(Date.now() / 86_400_000);
+  const noticeDay = today + 400;
+  const deIncome = move.rule.buckets[0].name;
+  const set = await c.send(k.freelancer, c.setDueOp(deVault.contractId, { bucket: deIncome, fromPeriod: dePeriod, toPeriod: dePeriod, day: noticeDay }));
+  const lockNow = await c.bucketDueDate(deVault.contractId, dePeriod, deIncome);
+  const wantLock = nextOpen((BigInt(noticeDay) + 1n) * 86_400n, move.dues.closed, new Set());
+  steps.push({
+    step: 'Germany: the owner sets the income-tax due date from the tax office\'s notice (set_due); a later date applies at once, moved past the weekend',
+    ok: lockNow === wantLock,
+    tx: set.hash,
+    detail: `due ${new Date(noticeDay * 86_400_000).toISOString().slice(0, 10)}, lock opens ${new Date(Number(lockNow) * 1000).toISOString().slice(0, 10)}`,
+  });
+  const sooner = await expectRefusal(() => c.send(k.freelancer, c.setDueOp(deVault.contractId, { bucket: deIncome, fromPeriod: dePeriod, toPeriod: dePeriod, day: today - 20 })), 'DueTooSoon');
+  steps.push({ step: 'An earlier date that would open the lock within the notice period is refused', ok: true, detail: `refused by the contract: ${sooner}` });
   steps.push({
     step: 'The owner moves to Germany: a vault from the German pack, and propose_vault on the same inbox (2-minute notice)',
     ok: !move.sameVault && (await c.inboxVault(inbox.contractId)) === vault.contractId,
@@ -370,7 +403,7 @@ async function main(): Promise<void> {
   const before = await c.balance(token, k.freelancer.publicKey());
   const rel = await c.send(k.freelancer, c.releaseOp(vault.contractId, pid, token));
   const back = (await c.balance(token, k.freelancer.publicKey())) - before;
-  steps.push({ step: 'After the due date the rest of the period is released to the freelancer', ok: back === state.buckets.irpf, tx: rel.hash, detail: `${formatAmount(back)} KUSD back to the freelancer` });
+  steps.push({ step: 'After the due date the rest of the period is released to the freelancer', ok: back === state.buckets.irpf - instalment, tx: rel.hash, detail: `${formatAmount(back)} KUSD back to the freelancer` });
 
   log('the same Router with vaults from other countries');
   for (const [pack, preset, amount, label] of [

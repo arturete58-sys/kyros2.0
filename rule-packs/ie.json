@@ -55,7 +55,11 @@
     "prepayments": [
       {
         "date": "10-31",
-        "what": "Preliminary tax for the current year (with the return for the last one)"
+        "what": "Preliminary tax for the current year (with the return for the last one)",
+        "amount": {
+          "kind": "previousYear",
+          "share": 1.0
+        }
       }
     ],
     "note": "Bi-monthly VAT returns and payment are due on the 19th of the month after each period (the 23rd through ROS; the vault uses the 23rd). Preliminary tax for a year and the balance for the year before are due on 31 October, extended to mid-November through ROS (the vault uses 30 November).",
@@ -68,7 +72,16 @@
         "title": "Revenue: What is preliminary tax",
         "url": "https://www.revenue.ie/en/self-assessment-and-self-employment/guide-to-self-assessment/preliminary-tax.aspx"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

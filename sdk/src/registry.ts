@@ -127,7 +127,9 @@ export function changeCountryPlan(
   validateRule(rule);
   const cal = calendarOf(next.pack, next.presetId);
   const period = cal.period;
-  const dues = duesOfCalendar(cal);
+  // The new vault reads holidays from the same registry as the current one, for the new country.
+  const country = typeof cal.workdays?.holidays === 'object' && cal.workdays.holidays.country ? cal.workdays.holidays.country : next.pack.country;
+  const dues = duesOfCalendar(cal, current.dues.holidays ? { registry: current.dues.holidays.registry, country } : null);
   const follow = p.vatRate ? { country: next.pack.country, rate: p.vatRate } : undefined;
   const same = (a: unknown, b: unknown) => JSON.stringify(a, (_, v) => (typeof v === 'bigint' ? String(v) : v)) === JSON.stringify(b, (_, v) => (typeof v === 'bigint' ? String(v) : v));
   const sameVault = current.period === period && same(current.dues, dues);

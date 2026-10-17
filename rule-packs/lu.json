@@ -57,19 +57,31 @@
     "prepayments": [
       {
         "date": "03-10",
-        "what": "Income tax advance"
+        "what": "Income tax advance",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "06-10",
-        "what": "Income tax advance"
+        "what": "Income tax advance",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "09-10",
-        "what": "Income tax advance"
+        "what": "Income tax advance",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "12-10",
-        "what": "Income tax advance"
+        "what": "Income tax advance",
+        "amount": {
+          "kind": "notice"
+        }
       }
     ],
     "note": "Below EUR 112,000 of turnover VAT is declared yearly, before 1 March of the next year (quarterly up to EUR 620,000, by the 15th of the month after the quarter). Income-tax advances are due quarterly on the 10th of March, June, September and December; the balance follows the assessment.",
@@ -82,7 +94,16 @@
         "title": "ACD: Avances d'impôt",
         "url": "https://impotsdirects.public.lu/fr/az/a/avan_impo.html"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

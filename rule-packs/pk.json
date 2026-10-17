@@ -52,19 +52,35 @@
     "prepayments": [
       {
         "date": "09-25",
-        "what": "Advance tax"
+        "what": "Advance tax",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       },
       {
         "date": "12-25",
-        "what": "Advance tax"
+        "what": "Advance tax",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       },
       {
         "date": "03-25",
-        "what": "Advance tax"
+        "what": "Advance tax",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       },
       {
         "date": "06-15",
-        "what": "Advance tax"
+        "what": "Advance tax",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       }
     ],
     "note": "Provincial sales tax on services is filed and paid monthly, around the 15th-18th of the following month (the vault uses the 18th). The tax year runs July to June; returns are due on 30 September, with advance tax in September, December, March and June. Final tax on export proceeds is withheld or paid as they arrive.",
@@ -73,7 +89,16 @@
         "title": "FBR",
         "url": "https://www.fbr.gov.pk"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

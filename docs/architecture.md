@@ -70,7 +70,28 @@ Periods come from the rule pack: the VAT filing period in UTC (months, quarters,
 - a date after the fiscal year (Spain's income-tax reserve: 30 June of the next year; the UK's: 31 January two years after the tax year starts on 6 April);
 - or a fixed delay.
 
-Before its due date a bucket can only be paid to the tax destination; after it, `release` returns what is left of that bucket, and the buckets not yet due stay locked. `due_date(period)` is the latest of them, `bucket_due_date(period, bucket)` one of them. If the legal date falls on a weekend or holiday the deadline moves to the next working day; the vault does not move it, so pay on or before the date shown.
+Before its due date a bucket can only be paid to the tax destination; after it, `release` returns what is left of that bucket, and the buckets not yet due stay locked. `due_date(period)` is the latest of them, `bucket_due_date(period, bucket)` one of them.
+
+### Weekends and public holidays
+
+A legal due date can fall on a day the tax office is closed. Each rule pack says what its country does (`calendar.workdays`, with sources): the deadline moves to the next working day (Spain, Germany, Italy, France, Portugal, the US, Canada, Australia, Japan, Korea, Mexico, Turkey, Indonesia), it must be met the working day before (the UK, South Africa), or it does not move (the Netherlands, for taxes paid on a return). Countries whose rule is not verified are treated as "does not move". Holidays come from `rule-packs/holidays/<cc>.json`, generated from the [`holidays`](https://github.com/vacanza/holidays) package for 2025-2035, in two sets per year: `pay` (the holidays that legally move the date: national ones, every state's in Australia, Washington DC's for the IRS) and `lock` (every holiday of the country and all its regions).
+
+Two dates come out of every deadline, and each errs on the safe side:
+
+- the **date to pay by**, shown by the app: never later than the real deadline. With "next working day" it moves forward over the `pay` holidays only; otherwise it moves back to the last working day before the legal date (banks do not move money on closed days);
+- the **lock**, enforced by the vault: never earlier than the real deadline, wherever the user lives. `next_open` (in `kyros_types`) moves the end of the due day forward past the vault's closed weekdays (`Dues.closed`, a bitmask; Saturday and Sunday at least) and past the holidays the Rate Registry publishes for the vault's country (`Dues.holidays`), at most `MAX_SHIFT_DAYS` (14). A registry that published wrong holidays could therefore keep a reserve locked two weeks longer at most, and never shorter. The same function runs in TypeScript and is checked against vectors from an independent Python calendar.
+
+The registry takes a year's list until the year starts (or once, if it has none), and after that only holidays still to come (`add_holiday`), which can only make dates later. `sdk/scripts/sync-holidays.mjs` publishes the generated files; the law watch reruns the generator weekly with the newest `holidays` release and opens an issue if anything changed.
+
+### Dates set by the tax office
+
+In some countries the final payment date (and amount) comes in the tax office's notice (Germany, Switzerland, the Netherlands, Luxembourg, Singapore, and every advance payment the office notifies). The app reads the notice the user picks (a PDF's text layer, or pasted text) in the browser with `readNotice` (dates and amounts in seven languages, scored by the words around them), shows what it found to check, and the owner signs `set_due(bucket, from_period, to_period, day)`. A date later than the current one applies at once; an earlier one must still be at least the vault's notice period away, so the lock can never be opened suddenly. Each period stores the date as a day number, and it still moves past weekends and holidays.
+
+### Prepayments and scheduled payments
+
+Prepayments (Spain's modelo 130, the UK's payments on account, US estimated tax...) are paid from the income-tax buckets before the annual date. Each pack says how the amount is worked out (`calendar.prepayments[].amount`, see `installments.ts`): Spain's modelo 130 exactly, from what the vault records per period (`income`, the base of every payment; `withheld`, what clients withheld; `paid_buckets`, what was paid from each bucket) and the expenses the user types; a share of last year's tax; a share of the year's tax estimated from the reserve so far; what the reserve holds so far; or the amount on the tax office's notice.
+
+`schedule(at, payments, to)` (owner) records a payment of one or more buckets to the tax destination (`to` may carry the anchor's memo as a muxed id). From `at` on anyone can call `run_scheduled(id)`: each item pays at most what its bucket holds, only to the destination in force, and the schedule is removed. `cancel_scheduled(id)` (owner) drops it. The app runs due payments with its fee payer when opened; the keeper does it with `--vault`. One signature can therefore pay several buckets now (schedule for now, then run) or later.
 
 ## Changes with notice
 
@@ -129,17 +150,19 @@ sequenceDiagram
 ## Storage
 
 - Instance: config (owner, rule, tax destination, notice, period kind, due rules per bucket, accepted tokens) and pending changes. Extended on every write.
-- Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination, released, converted. Extended on every write, to about 13 months.
+- Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination (in total and per bucket), released, converted, income booked and income tax withheld by clients. Extended on every write, to about 13 months.
+- Persistent: due dates set from a notice, per period and bucket, and scheduled payments; instance: the list of open scheduled payments (at most 40).
 - Instance: the conversion and the strategy, and their pending proposals.
 - Persistent: what the buckets hold per token across periods (for yield), and the terms of each registered invoice.
 
 ## Errors
 
-`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries` (registry).
+`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice`, `InvalidPeriod`, `InvalidDue`, `DueTooSoon`, `UnknownPayment`, `NotYet`, `TooMany` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries`, `InvalidHolidays`, `YearStarted` (registry).
 
 ## Security notes
 
-- No admin keys over money and no upgrade path. A new version is a new contract the owner moves to by choice. The Rate Registry has a publisher but holds no money; it can only change the VAT of vaults that chose to follow it, never sooner than its fixed notice, never above each owner's ceiling, and owners can stop following at any time.
+- No admin keys over money and no upgrade path. A new version is a new contract the owner moves to by choice. The Rate Registry has a publisher but holds no money; it can only change the VAT of vaults that chose to follow it, never sooner than its fixed notice, never above each owner's ceiling, and owners can stop following at any time. Its holidays can only delay a release, by 14 days at most.
+- Scheduled payments can be run by anyone but only pay the tax destination in force, at most what each bucket holds.
 - Integer arithmetic in 128 bits; every bucket rounds down and the remainder goes to the net amount, so the parts always add up to the gross. Shared test vectors check the same results in Rust and TypeScript.
 - Each vault accepts an allow-list of tokens (USDC and EURC Stellar Asset Contracts).
 - The swapper, the oracle and the yield strategy can each decide where reserve goes, so each one takes the vault's notice to set; stopping them applies at once. A conversion is refused below the oracle price minus the owner's tolerance or with a stale price; a strategy must name the vault as its only owner.

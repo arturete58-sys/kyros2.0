@@ -30,6 +30,9 @@ Every behaviour that matters is enforced by a contract:
 | Split in the payer's own transaction | Router `pay()`: one payer signature, net to the owner, reserve to the vault, or nothing at all |
 | Split payments from payers who know nothing about Kyros | Inbox: plain SEP-41 transfers, then a permissionless `sweep()` |
 | Reserve locked until the due date | Vault `release()` returns only the buckets whose own due date has passed (VAT on its return date, income tax on the annual date) |
+| Weekends and public holidays never open the lock early | The due date moves past closed weekdays and the country's holidays published in the Rate Registry (`next_open`, 14 days at most); the app shows the day to pay the country's way |
+| Dates the tax office sets | Vault `set_due()`: the owner sets the date from the notice (the app reads it); later applies at once, earlier only with the notice period |
+| Instalments that go out on their own | Vault `schedule()`/`run_scheduled()`: anyone can run a due payment, only to the tax destination; the app works out each prepayment (Spain's modelo 130 exactly) |
 | Before the due date, only to the tax account | Vault `pay_tax()` pays the registered destination only |
 | No instant redirection with a stolen key | New rule or destination waits for a notice period; both emit events |
 | Proof of reserve without personal data | Contract state and events; only addresses, amounts and an invoice-reference hash go onchain |
@@ -125,7 +128,7 @@ KEEPER_SECRET=S... npx kyros-keeper --network testnet --watch <inbox>:<token>
 
 ## Testnet
 
-The [testnet demo workflow](.github/workflows/testnet-demo.yml) deploys the contracts and runs the whole cycle with real transactions: a Router payment, an inbox payment swept by the keeper, an expected payment with IRPF withheld split by its own terms, a tax payment with an anchor-style memo, a refused early release, a refused early change of destination, the release after the due date, scheduled and registry-followed VAT changes, a move to another country, a reserve converted to euros through the Soroswap testnet router, and the CSV export. The latest results, with every transaction link, are in [docs/testnet](docs/testnet).
+The [testnet demo workflow](.github/workflows/testnet-demo.yml) deploys the contracts and runs the whole cycle with real transactions: a Router payment, an inbox payment swept by the keeper, an expected payment with IRPF withheld split by its own terms, a tax payment with an anchor-style memo, an income-tax instalment scheduled by the owner and run by the keeper on its date, a refused early release, a refused early change of destination, the release after the due date, scheduled and registry-followed VAT changes, a move to another country with the due date set from the tax office's notice (and an earlier one refused), a reserve converted to euros through the Soroswap testnet router, and the CSV export. The latest results, with every transaction link, are in [docs/testnet](docs/testnet).
 
 ## Web app
 

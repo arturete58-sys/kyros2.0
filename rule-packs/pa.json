@@ -50,15 +50,27 @@
     "prepayments": [
       {
         "date": "06-30",
-        "what": "Estimated income tax"
+        "what": "Estimated income tax",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.3333
+        }
       },
       {
         "date": "09-30",
-        "what": "Estimated income tax"
+        "what": "Estimated income tax",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.3333
+        }
       },
       {
         "date": "12-31",
-        "what": "Estimated income tax"
+        "what": "Estimated income tax",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.3333
+        }
       }
     ],
     "note": "ITBMS returns and payment are due by the 15th of the following month. The annual income tax return of individuals is due on 15 March, with estimated tax in three instalments.",
@@ -67,7 +79,16 @@
         "title": "DGI Panamá",
         "url": "https://dgi.mef.gob.pa"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

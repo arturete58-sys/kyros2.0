@@ -56,15 +56,27 @@
     "prepayments": [
       {
         "date": "04-30",
-        "what": "Provisional tax (20%)"
+        "what": "Provisional tax (20%)",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.2
+        }
       },
       {
         "date": "08-31",
-        "what": "Provisional tax (30%)"
+        "what": "Provisional tax (30%)",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.3
+        }
       },
       {
         "date": "12-21",
-        "what": "Provisional tax (50%)"
+        "what": "Provisional tax (50%)",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.5
+        }
       }
     ],
     "note": "Quarterly VAT returns and payment are due by the 15th of the second month after each quarter. Provisional tax is paid on 30 April, 31 August and 21 December; the annual return and balance are due on 30 June of the next year.",
@@ -77,7 +89,16 @@
         "title": "MTCA: Provisional tax booklet",
         "url": "https://mtca.gov.mt/docs/default-source/documents/personal-tax/individual/tax-return-cycle/pt-booklet730742a2-5244-4a68-81a5-6af28f61d15f.pdf?sfvrsn=b6a5c20c_1"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

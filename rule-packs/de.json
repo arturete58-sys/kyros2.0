@@ -62,19 +62,31 @@
     "prepayments": [
       {
         "date": "03-10",
-        "what": "Einkommensteuer-Vorauszahlung"
+        "what": "Einkommensteuer-Vorauszahlung",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "06-10",
-        "what": "Einkommensteuer-Vorauszahlung"
+        "what": "Einkommensteuer-Vorauszahlung",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "09-10",
-        "what": "Einkommensteuer-Vorauszahlung"
+        "what": "Einkommensteuer-Vorauszahlung",
+        "amount": {
+          "kind": "notice"
+        }
       },
       {
         "date": "12-10",
-        "what": "Einkommensteuer-Vorauszahlung"
+        "what": "Einkommensteuer-Vorauszahlung",
+        "amount": {
+          "kind": "notice"
+        }
       }
     ],
     "note": "The Umsatzsteuer-Voranmeldung and payment are due on the 10th day after each quarter (monthly if last year's VAT exceeded EUR 9,000; one month later with Dauerfristverlängerung). Income tax prepayments fall on 10 March, June, September and December; the balance is due one month after the assessment notice, so the vault keeps the reserve until the end of the following year.",
@@ -87,7 +99,22 @@
         "title": "§ 37 EStG",
         "url": "https://www.gesetze-im-internet.de/estg/__37.html"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "A deadline on a Saturday, Sunday or public holiday ends on the next working day (§ 108 AO). Holidays of the Länder count where they apply; Kyros shows the date with nationwide holidays and locks with every Land's.",
+      "sources": [
+        {
+          "title": "§ 108 Abs. 3 AO",
+          "url": "https://www.gesetze-im-internet.de/ao_1977/__108.html"
+        }
+      ]
+    }
   },
   "presets": [
     {

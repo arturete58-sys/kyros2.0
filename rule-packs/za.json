@@ -45,15 +45,28 @@
     "prepayments": [
       {
         "date": "08-31",
-        "what": "Provisional tax, first payment"
+        "what": "Provisional tax, first payment",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.5
+        }
       },
       {
         "date": "02-28",
-        "what": "Provisional tax, second payment"
+        "what": "Provisional tax, second payment",
+        "amount": {
+          "kind": "annualized",
+          "share": 1.0
+        }
       },
       {
         "date": "09-30",
-        "what": "Provisional tax, top-up"
+        "what": "Provisional tax, top-up",
+        "amount": {
+          "kind": "annualized",
+          "share": 1.0,
+          "taxYear": -1
+        }
       }
     ],
     "note": "Bimonthly VAT (category B) is due on the 25th of the month after each period, the last business day of that month on eFiling (the vault uses the last day). The tax year runs March to February; provisional tax is paid at the end of August and February with a top-up by the end of September, and provisional taxpayers file by January of the following year.",
@@ -66,7 +79,22 @@
         "title": "SARS: VAT",
         "url": "https://www.sars.gov.za/tax-types/value-added-tax/"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "previous",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "If a deadline falls on a Saturday, Sunday or public holiday, it must be met by the last business day before it.",
+      "sources": [
+        {
+          "title": "Tax Administration Act 2011, s. 244",
+          "url": "https://www.acts.co.za/tax-administration-act-2011/244__deadlines"
+        }
+      ]
+    }
   },
   "presets": [
     {

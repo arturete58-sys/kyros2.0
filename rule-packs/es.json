@@ -72,19 +72,36 @@
     "prepayments": [
       {
         "date": "04-20",
-        "what": "Modelo 130 (1T)"
+        "what": "Modelo 130 (1T)",
+        "amount": {
+          "kind": "es130",
+          "rate": 0.2
+        }
       },
       {
         "date": "07-20",
-        "what": "Modelo 130 (2T)"
+        "what": "Modelo 130 (2T)",
+        "amount": {
+          "kind": "es130",
+          "rate": 0.2
+        }
       },
       {
         "date": "10-20",
-        "what": "Modelo 130 (3T)"
+        "what": "Modelo 130 (3T)",
+        "amount": {
+          "kind": "es130",
+          "rate": 0.2
+        }
       },
       {
         "date": "01-30",
-        "what": "Modelo 130 (4T)"
+        "what": "Modelo 130 (4T)",
+        "amount": {
+          "kind": "es130",
+          "rate": 0.2,
+          "taxYear": -1
+        }
       }
     ],
     "note": "Modelo 303 (VAT) is filed and paid from the 1st to the 20th of April, July and October, and until 30 January for the fourth quarter. The modelo 130 income-tax prepayments share those dates. The annual Renta return is paid by 30 June of the next year, so the income-tax reserve stays until then.",
@@ -97,7 +114,26 @@
         "title": "AEAT: Pagos fraccionados (modelo 130)",
         "url": "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/folleto-actividades-economicas/3-impuesto-sobre-renta-personas-fisicas/3_7-pagos-fraccionados.html"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "Due dates on a Saturday, Sunday or national holiday move to the next business day. A regional or local holiday where you live can move it one more day; Kyros uses national holidays for the date it shows and every region's for the lock.",
+      "sources": [
+        {
+          "title": "Ley 58/2003 General Tributaria, art. 62.2",
+          "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2003-23186#a62"
+        },
+        {
+          "title": "Ley 39/2015, art. 30: Saturdays, Sundays and holidays are not business days",
+          "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2015-10565#a30"
+        }
+      ]
+    }
   },
   "presets": [
     {

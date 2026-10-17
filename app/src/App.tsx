@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chain } from './chain';
 import { loadConfig, type AppConfig } from './config';
-import { savedVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
+import { runDueScheduled, savedVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
 import { AppCtx, type Ctx, type Screen } from './ui';
 import { Activity, Alerts, Home, Pay, Request, Settings } from './screens/Main';
 import { Onboarding, Welcome } from './screens/Start';
@@ -62,12 +62,14 @@ export default function App() {
   const sweeping = useRef(false);
   const refresh = useCallback(async () => {
     if (!chain || !vault) return;
-    setSnap(await snapshot(chain, vault));
-    // Payments sent straight to the payment address are split here, by this browser's fee payer.
+    const s = await snapshot(chain, vault);
+    setSnap(s);
+    // Payments sent straight to the payment address are split here, by this browser's fee payer,
+    // and scheduled tax payments whose date has come are sent (anyone may run them).
     if (sweeping.current || location.hash === '#ui-test') return;
     sweeping.current = true;
     try {
-      if ((await sweepInbox(chain, vault)) > 0) setSnap(await snapshot(chain, vault));
+      if ((await sweepInbox(chain, vault)) + (await runDueScheduled(chain, s, vault)) > 0) setSnap(await snapshot(chain, vault));
     } catch (e) {
       console.error('sweep', e);
     } finally {

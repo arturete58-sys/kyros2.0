@@ -51,7 +51,16 @@
         "title": "NBR: When to file a VAT return",
         "url": "https://www.nbr.gov.bh/VAT/vat_return_filing/when_to_file"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "fri",
+        "sat"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

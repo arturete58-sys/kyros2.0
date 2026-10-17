@@ -1,8 +1,15 @@
 /** Rule packs bundled into the app (the same JSON the SDK and the contracts' docs use). */
-import { checkRulePack, type RulePack } from 'kyros-sdk';
+import { checkRulePack, type HolidayData, type RulePack } from 'kyros-sdk';
 import { getLang, locale } from './i18n';
 
 const files = import.meta.glob('../../rule-packs/[a-z][a-z].json', { import: 'default' }) as Record<string, () => Promise<unknown>>;
+const holidayFiles = import.meta.glob('../../rule-packs/holidays/[a-z][a-z].json', { import: 'default' }) as Record<string, () => Promise<unknown>>;
+
+/** The public holidays generated for a pack (rule-packs/holidays), if any. */
+export async function loadHolidays(id: string): Promise<HolidayData | undefined> {
+  const load = holidayFiles[`../../rule-packs/holidays/${id}.json`];
+  return load ? ((await load()) as HolidayData) : undefined;
+}
 
 const cache = new Map<string, Intl.DisplayNames>();
 function names(): Intl.DisplayNames {

@@ -58,19 +58,35 @@
     "prepayments": [
       {
         "date": "03-15",
-        "what": "Income tax instalment"
+        "what": "Income tax instalment",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       },
       {
         "date": "06-15",
-        "what": "Income tax instalment"
+        "what": "Income tax instalment",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       },
       {
         "date": "09-15",
-        "what": "Income tax instalment"
+        "what": "Income tax instalment",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       },
       {
         "date": "12-15",
-        "what": "Income tax instalment"
+        "what": "Income tax instalment",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.25
+        }
       }
     ],
     "note": "Self-employed individuals pay any balance by 30 April (return by 15 June) and instalments on 15 March, June, September and December. Annual GST/HST filers with a 31 December year-end pay by 30 April; quarterly or monthly filers pay one month after each period.",
@@ -79,7 +95,22 @@
         "title": "CRA: Tax deadlines for businesses and self-employed individuals",
         "url": "https://www.canada.ca/en/services/taxes/resources-for-small-and-medium-businesses/2026-tax-deadlines-canadian-businesses-self-employed-individuals.html"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "A payment due on a Saturday, Sunday or public holiday recognised by the CRA is on time if received by the next business day. Some holidays depend on your province.",
+      "sources": [
+        {
+          "title": "CRA: Public holidays",
+          "url": "https://www.canada.ca/en/revenue-agency/services/tax/public-holidays.html"
+        }
+      ]
+    }
   },
   "presets": [
     {

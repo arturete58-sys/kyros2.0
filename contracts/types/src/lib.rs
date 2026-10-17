@@ -400,12 +400,38 @@ pub trait VaultApi {
 }
 
 /// What a vault reads from a Kyros Rate Registry.
+/// Most days a due date can move forward over closed days and holidays. A
+/// holiday list that claims more cannot keep a reserve locked longer.
+pub const MAX_SHIFT_DAYS: u32 = 14;
+
+/// Weekday of a day number (days since 1970-01-01): Monday 0 … Sunday 6.
+pub fn weekday(day: u32) -> u32 {
+    (day + 3) % 7
+}
+
+/// A due date (the end of the due day, as [`due_at`] gives it) moved by
+/// whole days until the due day is one the tax office is open: `closed` is
+/// a bitmask of weekdays (bit 0 Monday … bit 6 Sunday) and `is_holiday`
+/// says whether a day number is a holiday. Moves at most [`MAX_SHIFT_DAYS`].
+pub fn next_open(end: u64, closed: u32, is_holiday: impl Fn(u32) -> bool) -> u64 {
+    let day = ((end - 1) / DAY as u64) as u32;
+    let mut moved = 0;
+    while moved < MAX_SHIFT_DAYS
+        && (closed & (1 << weekday(day + moved)) != 0 || is_holiday(day + moved))
+    {
+        moved += 1;
+    }
+    end + moved as u64 * DAY as u64
+}
+
 #[contractclient(name = "RegistryClient")]
 pub trait RegistryApi {
     /// The rate `name` of `country` in force at `at` (Unix seconds), in bps.
     fn rate_at(e: Env, country: Symbol, name: Symbol, at: u64) -> Option<u32>;
     /// The least time between publishing a rate and the rate applying.
     fn min_notice(e: Env) -> u64;
+    /// The public holidays of `country` in `year`, as day numbers (days since 1970-01-01).
+    fn holidays(e: Env, country: Symbol, year: u32) -> Vec<u32>;
 }
 
 /// A yield strategy a vault can lend part of its reserve through. One

@@ -69,7 +69,30 @@ for kind, n in KIND_MONTHS.items():
         for name, r in rules.items():
             dues.append({'kind': kind, 'id': pid, 'rule': name, 'due': str(due(end, r))})
 
+# Working days: a due day moved past closed weekdays and holidays, at most 14 days.
+WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+EPOCH = dt.date(1970, 1, 1)
+workdays = []
+for cc in ['es', 'gb', 'us', 'jp', 'bh', 'tr', 'it']:
+    pack = json.load(open(f'../rule-packs/{cc}.json'))['calendar']['workdays']
+    hol = json.load(open(f'../rule-packs/holidays/{cc}.json'))['years']
+    closed = sum(1 << WEEKDAYS.index(d) for d in pack['closed'] + ['sat', 'sun'])
+    days = set()
+    for y, sets in hol.items():
+        for md in sets['lock']:
+            days.add((dt.date(int(y), int(md[:2]), int(md[3:])) - EPOCH).days)
+    for y in range(2026, 2031):
+        for m, dd in [(1, 1), (1, 30), (4, 20), (5, 1), (6, 30), (12, 25), (12, 31), (8, 15), (3, 31), (11, 1)]:
+            day = dt.date(y, m, dd)
+            n = (day - EPOCH).days
+            moved = 0
+            while moved < 14 and ((day + dt.timedelta(moved)).weekday() in [i for i in range(7) if closed >> i & 1] or n + moved in days):
+                moved += 1
+            near = sorted(d for d in days if n <= d <= n + 15)
+            workdays.append({'country': cc, 'end': str((n + 1) * 86400), 'closed': closed, 'holidays': near, 'want': str((n + 1 + moved) * 86400)})
+
 v = json.load(open('vectors.json'))
+v['workdays'] = workdays
 v['monthsPeriods'] = months_periods
 v['dueRules'] = rules
 v['dues'] = dues

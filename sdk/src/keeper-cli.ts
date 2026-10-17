@@ -3,7 +3,9 @@
  * kyros-keeper: sweep Kyros inboxes as payments arrive.
  *
  *   KEEPER_SECRET=S... kyros-keeper --rpc https://soroban-testnet.stellar.org \
- *     --network testnet --watch <inbox>:<token> [--watch ...] [--interval 5000]
+ *     --network testnet --watch <inbox>:<token> [--watch ...] [--vault <vault> ...] [--interval 5000]
+ *
+ * With --vault it also runs that vault's scheduled tax payments on their date.
  *
  * Finish a payment made from another chain (if the payer's page closed
  * before Circle's attestation arrived):
@@ -54,16 +56,19 @@ const watched = all('watch').map((w) => {
   if (!inbox || !token) throw new Error(`--watch takes <inbox>:<token>, got ${w}`);
   return { inbox, token };
 });
-if (watched.length === 0) {
-  console.error('nothing to watch: add --watch <inbox>:<token>');
+const vaults = all('vault');
+if (watched.length === 0 && vaults.length === 0) {
+  console.error('nothing to watch: add --watch <inbox>:<token> or --vault <vault>');
   process.exit(2);
 }
 const key = Keypair.fromSecret(secret);
 const client = new KyrosClient({ rpcUrl, networkPassphrase: passphrase, readAs: key.publicKey() });
 const keeper = new Keeper(client, key, watched, (r) =>
   console.log(new Date().toISOString(), r.error ? `error ${r.inbox}: ${r.error}` : `swept ${r.gross} from ${r.inbox} tx ${r.hash}`),
+  vaults,
+  (r) => console.log(new Date().toISOString(), r.error ? `error ${r.vault} #${r.id}: ${r.error}` : `paid scheduled #${r.id} of ${r.vault} tx ${r.hash}`),
 );
 process.on('SIGINT', () => keeper.stop());
 process.on('SIGTERM', () => keeper.stop());
-console.log(`kyros-keeper watching ${watched.length} inbox(es) on ${network}`);
+console.log(`kyros-keeper watching ${watched.length} inbox(es) and ${vaults.length} vault(s) on ${network}`);
 await keeper.run(Number(one('interval', '5000')));

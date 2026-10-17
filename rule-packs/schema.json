@@ -705,6 +705,94 @@
               },
               "what": {
                 "type": "string"
+              },
+              "amount": {
+                "description": "How Kyros suggests the amount: es130 (Spain's modelo 130 exactly), reservedSoFar (default), annualized (share of the year's estimated tax, minus what was paid), previousYear (share of last year's tax), notice (the tax office's notice)",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "rate"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "es130"
+                      },
+                      "rate": {
+                        "type": "number"
+                      },
+                      "taxYear": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "reservedSoFar"
+                      },
+                      "taxYear": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "share"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "annualized"
+                      },
+                      "share": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 1
+                      },
+                      "taxYear": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "share"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "previousYear"
+                      },
+                      "share": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "const": "notice"
+                      },
+                      "bucket": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
@@ -726,6 +814,92 @@
               },
               "url": {
                 "type": "string"
+              }
+            }
+          }
+        },
+        "workdays": {
+          "type": "object",
+          "required": [
+            "rule",
+            "closed",
+            "verified",
+            "note"
+          ],
+          "description": "What happens when a deadline falls on a weekend or public holiday",
+          "properties": {
+            "rule": {
+              "enum": [
+                "next",
+                "previous",
+                "none"
+              ],
+              "description": "next: moves to the next working day; previous: must be met the working day before; none: stays (Kyros shows the working day before)"
+            },
+            "closed": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "mon",
+                  "tue",
+                  "wed",
+                  "thu",
+                  "fri",
+                  "sat",
+                  "sun"
+                ]
+              }
+            },
+            "holidays": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "national",
+                    "union"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "country": {
+                      "type": "string"
+                    },
+                    "subdiv": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            },
+            "extra": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+              }
+            },
+            "verified": {
+              "type": "boolean"
+            },
+            "note": {
+              "type": "string"
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "url"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }

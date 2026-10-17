@@ -56,11 +56,19 @@
     "prepayments": [
       {
         "date": "07-31",
-        "what": "Provisional tax, first instalment"
+        "what": "Provisional tax, first instalment",
+        "amount": {
+          "kind": "annualized",
+          "share": 0.5
+        }
       },
       {
         "date": "12-31",
-        "what": "Provisional tax, second instalment"
+        "what": "Provisional tax, second instalment",
+        "amount": {
+          "kind": "annualized",
+          "share": 1.0
+        }
       }
     ],
     "note": "VAT returns and payment are due by the 10th day of the second month after each quarter. From tax year 2026 the self-employed who prepare accounts file and pay by 31 January of the second following year, with provisional tax on 31 July and 31 December.",
@@ -73,7 +81,16 @@
         "title": "Tax Department",
         "url": "https://www.mof.gov.cy"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": false,
+      "note": "Not verified whether deadlines here move off weekends and holidays. Kyros shows the last working day on or before the legal date, so paying on it is always in time, and keeps the reserve locked until the next working day after it."
+    }
   },
   "presets": [
     {

@@ -1,5 +1,7 @@
 /**
- * The Kyros keeper: watches inboxes and calls `sweep` when money arrives.
+ * The Kyros keeper: watches inboxes and calls `sweep` when money arrives,
+ * and runs the vaults' scheduled tax payments when their date comes
+ * (`run_scheduled`, which only pays the vault's tax destination).
  * It holds no user funds and no user keys; its key only pays network fees.
  * `sweep` is permissionless, so anyone can run a keeper, and if every keeper
  * stops the money waits safely in the inbox.
@@ -30,6 +32,13 @@ export interface SweepResult {
   followUps?: { call: 'convert' | 'invest'; hash?: string; error?: string }[];
 }
 
+export interface ScheduledResult {
+  vault: string;
+  id: number;
+  hash?: string;
+  error?: string;
+}
+
 export class Keeper {
   private stopped = false;
   constructor(
@@ -37,7 +46,33 @@ export class Keeper {
     readonly key: Keypair,
     readonly watched: Watched[],
     readonly onSweep: (r: SweepResult) => void = () => {},
+    /** Vaults whose scheduled payments this keeper runs. */
+    readonly vaults: string[] = [],
+    readonly onScheduled: (r: ScheduledResult) => void = () => {},
   ) {}
+
+  /** Runs every scheduled payment of the watched vaults whose date has come. */
+  async runDue(now = BigInt(Math.floor(Date.now() / 1000))): Promise<ScheduledResult[]> {
+    const out: ScheduledResult[] = [];
+    for (const vault of this.vaults) {
+      let due: { id: number }[] = [];
+      try {
+        due = (await this.client.scheduledPayments(vault)).filter((s) => s.at <= now);
+      } catch (e) {
+        out.push({ vault, id: 0, error: (e as Error).message });
+        continue;
+      }
+      for (const s of due) {
+        try {
+          out.push({ vault, id: s.id, hash: (await this.client.send(this.key, this.client.runScheduledOp(vault, s.id))).hash });
+        } catch (e) {
+          out.push({ vault, id: s.id, error: (e as Error).message });
+        }
+        this.onScheduled(out[out.length - 1]);
+      }
+    }
+    return out;
+  }
 
   /** Checks every watched inbox once and sweeps those holding money. */
   async tick(): Promise<SweepResult[]> {
@@ -83,8 +118,11 @@ export class Keeper {
 
   /** Runs until `stop()`, checking every `intervalMs` (default one ledger, 5 s). */
   async run(intervalMs = 5_000): Promise<void> {
+    let n = 0;
     while (!this.stopped) {
       await this.tick();
+      // Scheduled payments are checked about once a minute.
+      if (this.vaults.length && n++ % Math.max(1, Math.round(60_000 / intervalMs)) === 0) await this.runDue();
       await new Promise((r) => setTimeout(r, intervalMs));
     }
   }

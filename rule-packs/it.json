@@ -65,11 +65,19 @@
     "prepayments": [
       {
         "date": "06-30",
-        "what": "IRPEF saldo e primo acconto"
+        "what": "IRPEF saldo e primo acconto",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.4
+        }
       },
       {
         "date": "11-30",
-        "what": "IRPEF secondo acconto"
+        "what": "IRPEF secondo acconto",
+        "amount": {
+          "kind": "previousYear",
+          "share": 0.6
+        }
       }
     ],
     "note": "Quarterly VAT payers pay by the 16th of the second month after each quarter (20 August for the second quarter; the vault uses the 20th) and the fourth quarter with the annual balance by 16 March. IRPEF balance and first advance are due on 30 June (later for ISA taxpayers; the vault uses 31 July), the second advance on 30 November.",
@@ -82,7 +90,22 @@
         "title": "Agenzia Entrate: F24 IVA periodica",
         "url": "https://www.agenziaentrate.gov.it/portale/schede/pagamenti/f24ivap10/come-e-quando-si-versa"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "next",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "Tax deadlines falling on a Saturday or a public holiday move to the next working day.",
+      "sources": [
+        {
+          "title": "DL 70/2011, art. 7, c. 2, lett. l): deadlines on Saturdays or holidays move to the next working day",
+          "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legge:2011-05-13;70"
+        }
+      ]
+    }
   },
   "presets": [
     {

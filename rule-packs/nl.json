@@ -58,7 +58,22 @@
         "title": "Belastingdienst: aangifte inkomstenbelasting",
         "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/belastingaangifte/content/wanneer-moet-ik-aangifte-doen"
       }
-    ]
+    ],
+    "workdays": {
+      "rule": "none",
+      "closed": [
+        "sat",
+        "sun"
+      ],
+      "verified": true,
+      "note": "Taxes paid on a return (VAT, income tax) do not get the weekend extension: the date stays. Kyros shows the last working day before it, so the transfer arrives in time.",
+      "sources": [
+        {
+          "title": "Rijksoverheid: Algemene termijnenwet does not apply to taxes paid on a return",
+          "url": "https://www.rijksoverheid.nl/vraag-en-antwoord/bescherming-van-consumenten/zijn-feestdagen-van-invloed-op-een-termijn-waarbinnen-ik-moet-reageren-of-betalen"
+        }
+      ]
+    }
   },
   "presets": [
     {
