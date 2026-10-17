@@ -7,6 +7,10 @@
  *     CSV file with your data").
  *   - CoinTracking: its custom CSV import layout; CoinTracking's importer also
  *     lets the user map columns if its layout changes.
+ *   - Crypto Tax Calculator (Summ): its custom CSV (help.summ.com, "Custom
+ *     CSV import").
+ *   - CoinLedger: its universal manual import template (help.coinledger.io,
+ *     "Universal manual import template guide").
  *   - Generic: `toCsv` in events.ts, one line per event, for an accountant.
  *
  * Each payment becomes its taxable base (tagged as income) and, separately,
@@ -19,7 +23,15 @@
 import { formatAmount } from './split.js';
 import type { VaultEventRow } from './events.js';
 
-export type TaxTool = 'koinly' | 'cointracking';
+export type TaxTool = 'koinly' | 'cointracking' | 'ctc' | 'coinledger';
+
+/** The tax tools Kyros exports for, by name. */
+export const TAX_TOOLS: { id: TaxTool; name: string }[] = [
+  { id: 'koinly', name: 'Koinly' },
+  { id: 'cointracking', name: 'CoinTracking' },
+  { id: 'ctc', name: 'Crypto Tax Calculator' },
+  { id: 'coinledger', name: 'CoinLedger' },
+];
 
 const cell = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
 /** `YYYY-MM-DD HH:mm:ss`, UTC. */
@@ -76,6 +88,28 @@ export function taxToolCsv(tool: TaxTool, rows: VaultEventRow[], symbol: (token:
     const head = ['Date', 'Sent Amount', 'Sent Currency', 'Received Amount', 'Received Currency', 'Fee Amount', 'Fee Currency', 'Net Worth Amount', 'Net Worth Currency', 'Tag', 'Description', 'TxHash'];
     const tag: Record<Line['kind'], string> = { income: 'other income', 'vat-in': '', 'tax-out': '', trade: '', interest: 'lending interest' };
     const body = ls.map((l) => [l.date, opt(l.outAmount), l.outCurrency ?? '', opt(l.inAmount), l.inCurrency ?? '', '', '', '', '', tag[l.kind], l.description, l.tx].map(cell).join(','));
+    return [head.join(','), ...body].join('\n') + '\n';
+  }
+  if (tool === 'ctc') {
+    const head = ['Timestamp (UTC)', 'Type', 'Base Currency', 'Base Amount', 'Quote Currency (Optional)', 'Quote Amount (Optional)', 'Fee Currency (Optional)', 'Fee Amount (Optional)', 'From (Optional)', 'To (Optional)', 'Blockchain (Optional)', 'Stock Market (Optional)', 'ID (Optional)', 'Reference Price Per Unit (Optional)', 'Reference Price Currency (Optional)'];
+    const body = ls.map((l) => {
+      // A conversion sells the reserve currency (base) for the other (quote).
+      const [type, baseCur, baseAmt, quoteCur, quoteAmt] =
+        l.kind === 'trade'
+          ? ['sell', l.outCurrency, l.outAmount, l.inCurrency, l.inAmount]
+          : l.kind === 'tax-out'
+            ? ['send', l.outCurrency, l.outAmount, '', undefined]
+            : [l.kind === 'income' ? 'income' : l.kind === 'interest' ? 'interest' : 'receive', l.inCurrency, l.inAmount, '', undefined];
+      return [l.date, type, baseCur ?? '', opt(baseAmt), quoteCur ?? '', opt(quoteAmt), '', '', '', '', 'Stellar', '', l.tx, '', ''].map(cell).join(',');
+    });
+    return [head.join(','), ...body].join('\n') + '\n';
+  }
+  if (tool === 'coinledger') {
+    const head = ['Date (UTC)', 'Platform (Optional)', 'Asset Sent', 'Amount Sent', 'Asset Received', 'Amount Received', 'Fee Currency (Optional)', 'Fee Amount (Optional)', 'Type', 'Description (Optional)', 'TxHash (Optional)'];
+    // mm/dd/yyyy hh:mm:ss, UTC.
+    const us = (d: string) => `${d.slice(5, 7)}/${d.slice(8, 10)}/${d.slice(0, 4)} ${d.slice(11)}`;
+    const type: Record<Line['kind'], string> = { income: 'Income', 'vat-in': 'Deposit', 'tax-out': 'Withdrawal', trade: '', interest: 'Interest' };
+    const body = ls.map((l) => [us(l.date), 'Kyros', l.outCurrency ?? '', opt(l.outAmount), l.inCurrency ?? '', opt(l.inAmount), '', '', type[l.kind], l.description, l.tx].map(cell).join(','));
     return [head.join(','), ...body].join('\n') + '\n';
   }
   const head = ['Type', 'Buy Amount', 'Buy Currency', 'Sell Amount', 'Sell Currency', 'Fee', 'Fee Currency', 'Exchange', 'Trade-Group', 'Comment', 'Date', 'Tx-ID'];

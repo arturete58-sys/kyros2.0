@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatAmount, payableUnits, requestTotals, taxToolCsv, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
+import { formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
 import { convertNow, expectPayment, followLaw, money, payTaxes, proposeEuroReserve, simulateClientPayment } from '../kyros';
 import { countryName } from '../packs';
 import { Button, LangPicker, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
@@ -507,12 +507,11 @@ export function Activity() {
             <p style={{ fontWeight: 600 }}>{t('exportTitle')}</p>
             <p className="small muted">{t('exportSub')}</p>
             <div className="row" style={{ flexWrap: 'wrap' }}>
-              <Button small kind="secondary" onClick={() => exportFor('koinly')}>
-                Koinly
-              </Button>
-              <Button small kind="secondary" onClick={() => exportFor('cointracking')}>
-                CoinTracking
-              </Button>
+              {TAX_TOOLS.map((x) => (
+                <Button key={x.id} small kind="secondary" onClick={() => exportFor(x.id)}>
+                  {x.name}
+                </Button>
+              ))}
               <Button small kind="secondary" onClick={() => exportFor('generic')}>
                 {t('exportGeneric')}
               </Button>

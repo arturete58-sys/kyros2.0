@@ -162,4 +162,13 @@ test('tax tool exports: the base is income, the VAT is held apart, tax paid leav
   assert.equal(c[0], 'Type,Buy Amount,Buy Currency,Sell Amount,Sell Currency,Fee,Fee Currency,Exchange,Trade-Group,Comment,Date,Tx-ID');
   assert.match(c[1], /^Income,1000,USDC,,,,,Kyros,,/);
   assert.match(c[3], /^Withdrawal,,,210,USDC,/);
+  const x = taxToolCsv('ctc', rows, () => 'USDC').trim().split('\n');
+  assert.ok(x[0].startsWith('Timestamp (UTC),Type,Base Currency,Base Amount,Quote Currency (Optional)'));
+  assert.match(x[1], /^2026-10-17 10:00:00,income,USDC,1000,/);
+  assert.match(x[2], /^2026-10-17 10:00:00,receive,USDC,210,/);
+  assert.match(x[3], /^2026-10-18 10:00:00,send,USDC,210,/);
+  const l = taxToolCsv('coinledger', rows, () => 'USDC').trim().split('\n');
+  assert.equal(l[0], 'Date (UTC),Platform (Optional),Asset Sent,Amount Sent,Asset Received,Amount Received,Fee Currency (Optional),Fee Amount (Optional),Type,Description (Optional),TxHash (Optional)');
+  assert.match(l[1], /^10\/17\/2026 10:00:00,Kyros,,,USDC,1000,,,Income,/);
+  assert.match(l[3], /^10\/18\/2026 10:00:00,Kyros,USDC,210,,,,,Withdrawal,/);
 });

@@ -48,4 +48,4 @@ Bounty hunters, DAO contributors and grant recipients often get paid in USDC wit
 
 ## Tax software
 
-Kyros sets the money aside; the user's tax software files the return. The app exports the vault's events for Koinly (its universal CSV) and CoinTracking (its CSV import), and as a plain CSV for an accountant: each payment's base is income, its VAT is held apart, tax paid leaves as a withdrawal, conversions are trades. See [`sdk/src/tax-exports.ts`](../sdk/src/tax-exports.ts).
+Kyros sets the money aside; the user's tax software files the return. The app exports the vault's events for Koinly (its universal CSV), CoinTracking, Crypto Tax Calculator and CoinLedger (their CSV imports), and as a plain CSV for an accountant: each payment's base is income, its VAT is held apart, tax paid leaves as a withdrawal, conversions are trades. See [`sdk/src/tax-exports.ts`](../sdk/src/tax-exports.ts).
