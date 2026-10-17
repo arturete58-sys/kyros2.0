@@ -10,7 +10,7 @@
  * Totals use exact decimals (cents, bigint) and the usual rounding: each
  * line to the cent, then VAT per rate, then the withholding.
  */
-import { createHash } from 'node:crypto';
+import { hash } from '@stellar/stellar-sdk';
 import { BPS, type Bucket } from './split.js';
 
 export interface PaymentRequest {
@@ -83,7 +83,7 @@ export function requestTotals(r: PaymentRequest): RequestTotals {
 
 /** The 32-byte reference the payment carries: sha256 of the invoice number (same as `invoiceReference`). */
 export function requestRef(r: PaymentRequest): Uint8Array {
-  return createHash('sha256').update(r.invoiceNumber, 'utf8').digest();
+  return new Uint8Array(hash(Buffer.from(r.invoiceNumber, 'utf8')));
 }
 
 /**

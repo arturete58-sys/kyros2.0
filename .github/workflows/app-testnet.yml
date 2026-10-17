@@ -1,0 +1,56 @@
+name: App on testnet
+
+# Deploys what the web app uses on Stellar testnet (contract code, Router,
+# Rate Registry, test tokens, Soroswap pool, swapper) and commits
+# app/public/testnet.json. Run it again after a testnet reset.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['contracts/**/src/**', 'contracts/**/Cargo.toml', 'sdk/src/deploy/**', '.github/workflows/app-testnet.yml']
+
+concurrency:
+  group: app-testnet
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - name: Install the Stellar CLI
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://github.com/stellar/stellar-cli/releases/download/v28.1.0/stellar-cli-28.1.0-x86_64-unknown-linux-gnu.tar.gz | tar xz -C "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - name: Build the contracts
+        working-directory: contracts
+        run: stellar contract build --meta source_repo=github:${{ github.repository }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: Deploy on testnet
+        working-directory: sdk
+        run: bash ../scripts/run-and-annotate.sh "app testnet deployment" node dist/deploy/app-testnet.js --wasm-dir ../contracts/target/wasm32v1-none/release --out ../app/public/testnet.json
+      - name: Commit the deployment
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/public/testnet.json
+          git commit -q -m "App testnet deployment" || exit 0
+          git pull --rebase origin main && git push origin HEAD:main

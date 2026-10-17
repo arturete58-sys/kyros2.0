@@ -1,0 +1,4 @@
+e2e-report/
+test-results/
+dist/
+node_modules/

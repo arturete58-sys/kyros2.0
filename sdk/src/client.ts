@@ -4,12 +4,12 @@
  * transaction the right party signs (the payer for `pay`, the owner for money
  * out); `send` signs and submits with a Keypair for scripts and services.
  */
-import { createHash, randomBytes } from 'node:crypto';
 import {
   Account,
   Address,
   BASE_FEE,
   Contract,
+  hash,
   Keypair,
   Operation,
   rpc,
@@ -143,11 +143,11 @@ export class KyrosClient {
   /** Uploads a contract wasm; returns its hash. */
   async upload(deployer: Keypair, wasm: Buffer): Promise<Buffer> {
     await this.send(deployer, Operation.uploadContractWasm({ wasm }));
-    return createHash('sha256').update(wasm).digest();
+    return hash(wasm);
   }
 
   private async create(deployer: Keypair, wasmHash: Buffer, args: xdr.ScVal[]): Promise<{ contractId: string; hash: string }> {
-    const op = Operation.createCustomContract({ address: new Address(deployer.publicKey()), wasmHash, salt: randomBytes(32), constructorArgs: args });
+    const op = Operation.createCustomContract({ address: new Address(deployer.publicKey()), wasmHash, salt: Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(32))), constructorArgs: args });
     const done = await this.send(deployer, op);
     return { contractId: scValToNative(done.returnValue!) as string, hash: done.hash };
   }
@@ -419,5 +419,5 @@ export class KyrosClient {
 
 /** A 32-byte invoice reference: sha256 of the invoice number (only the hash goes onchain). */
 export function invoiceReference(invoiceNumber: string): Uint8Array {
-  return createHash('sha256').update(invoiceNumber, 'utf8').digest();
+  return new Uint8Array(hash(Buffer.from(invoiceNumber, 'utf8')));
 }

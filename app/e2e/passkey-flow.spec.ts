@@ -1,0 +1,61 @@
+import { expect, test, type Page } from '@playwright/test';
+
+/** A platform authenticator that answers every passkey prompt, as Face ID would. */
+async function virtualFaceId(page: Page) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('WebAuthn.enable');
+  await cdp.send('WebAuthn.addVirtualAuthenticator', {
+    options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
+  });
+}
+
+async function settle(page: Page) {
+  await expect(page.getByTestId('busy')).toHaveCount(0, { timeout: 300_000 });
+  const err = page.getByTestId('error');
+  if (await err.count()) throw new Error(`app error: ${await err.textContent()}`);
+}
+
+const amountOf = async (page: Page, testid: string) => Number(((await page.getByTestId(testid).locator('.big, .amount').first().textContent()) ?? '0').replace(/[^\d,]/g, '').replace(',', '.'));
+
+test('a freelancer signs up with a passkey, gets paid, registers an expected payment and pays the tax', async ({ page }) => {
+  page.on('console', (m) => m.type() === 'error' && console.log('browser:', m.text()));
+  await virtualFaceId(page);
+  await page.goto('./');
+
+  await page.getByLabel('Tu nombre (para tu passkey)').fill('Prueba e2e');
+  await page.getByTestId('create-passkey').click();
+  await settle(page);
+  await expect(page.getByText('¿Dónde vives la mayor parte del año?')).toBeVisible();
+
+  await page.getByTestId('next-1').click();
+  await page.getByTestId('activity-software').click();
+  await page.getByTestId('next-2').click();
+  await page.getByTestId('client-business-local').click();
+  await page.getByTestId('next-3').click();
+  await expect(page.getByText('Tu plan está listo')).toBeVisible();
+  await page.getByTestId('create-vault').click();
+  await settle(page);
+  await expect(page.getByTestId('spendable')).toBeVisible();
+
+  // A test client pays 1,210: part arrives in the wallet, the rest stays in the vault.
+  await page.getByTestId('simulate-payment').click();
+  await settle(page);
+  await expect.poll(() => amountOf(page, 'spendable'), { timeout: 120_000 }).toBeGreaterThan(0);
+  const reserved = await amountOf(page, 'reserved');
+  expect(reserved).toBeGreaterThan(0);
+
+  // An expected payment with IRPF withheld: the passkey signs expect_invoice, then the client pays 1,060.
+  await page.getByTestId('request').click();
+  await page.getByTestId('register-request').click();
+  await settle(page);
+  await expect(page.getByText('Cobro registrado en tu bóveda')).toBeVisible();
+  await page.getByTestId('simulate-request-payment').click();
+  await settle(page);
+  await expect(page.getByTestId('spendable')).toBeVisible();
+
+  // Pay the tax from the vault: the passkey signs each payment.
+  await page.getByRole('button', { name: 'Pagar', exact: true }).click();
+  await page.getByTestId('pay-taxes').click();
+  await settle(page);
+  await expect(page.getByText('Ver en el explorador →').first()).toBeVisible();
+});

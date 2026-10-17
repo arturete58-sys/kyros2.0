@@ -1,0 +1,79 @@
+name: App
+
+# Builds the web app, tests it end to end on Stellar testnet with a virtual
+# passkey (Face ID) authenticator, and publishes it on GitHub Pages.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['app/**', 'sdk/src/**', 'rule-packs/**', '.github/workflows/app.yml']
+  workflow_run:
+    workflows: ['App on testnet']
+    types: [completed]
+
+concurrency:
+  group: app
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: |
+          (cd sdk && npm ci)
+          (cd app && npm ci)
+      - name: Build
+        working-directory: app
+        run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: |
+          (cd sdk && npm ci)
+          (cd app && npm ci && npx playwright install --with-deps chromium)
+      - name: Is the app deployed on testnet?
+        id: cfg
+        run: if grep -q '"router"' app/public/testnet.json; then echo "deployed=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Passkey sign-up, payment, expected payment and tax payment on testnet
+        if: steps.cfg.outputs.deployed == 'true'
+        working-directory: app
+        run: npm run build && npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-report
+          path: app/e2e-report
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
