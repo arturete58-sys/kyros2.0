@@ -36,8 +36,7 @@
 #![no_std]
 use kyros_types::{
     period_end, period_of, split, split_withheld, validate, validate_withholding, vat_symbol,
-    Asset, OracleClient, PeriodKind, RegistryClient, Rule, Split, SwapClient, YieldClient,
-    BPS,
+    Asset, OracleClient, PeriodKind, RegistryClient, Rule, Split, SwapClient, YieldClient, BPS,
 };
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, token, Address, BytesN,

@@ -117,3 +117,14 @@ export function periodKindFromNative(v: unknown): PeriodKind {
   if (tag === 'Month' || tag === 'Quarter' || tag === 'Year') return { kind: tag };
   throw new Error(`unknown period kind ${tag}`);
 }
+
+/** One payment of a Router batch (`pay_many`). */
+export interface Payout {
+  vault: string;
+  amount: bigint;
+  reference: Uint8Array;
+}
+
+export function payoutsToScVal(ps: Payout[]): xdr.ScVal {
+  return xdr.ScVal.scvVec(ps.map((p) => struct({ vault: addr(p.vault), gross: i128(p.amount), reference: bytes32(p.reference) })));
+}

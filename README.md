@@ -44,7 +44,7 @@ Every behaviour that matters is enforced by a contract:
 | --- | --- |
 | [`contracts/types`](contracts/types) | Shared types and pure functions: the split arithmetic and the UTC fiscal calendar |
 | [`contracts/reserve-vault`](contracts/reserve-vault) | Reserve Vault: one per user, owner = user, no admin |
-| [`contracts/router`](contracts/router) | Router: shared, stateless entry point for integrated payers |
+| [`contracts/router`](contracts/router) | Router: shared, stateless entry point for integrated payers; `pay_many` pays a whole payout run in one call |
 | [`contracts/inbox`](contracts/inbox) | Inbox: one per user, a payment address that needs no integration |
 | [`contracts/rate-registry`](contracts/rate-registry) | Rate Registry: dated VAT rates per country on-chain, published at least a fixed notice ahead; vaults can follow it |
 | [`contracts/swap-soroswap`](contracts/swap-soroswap) | Swapper over Soroswap, for the euro reserve (tested against the mainnet bytecode) |
@@ -54,7 +54,7 @@ Every behaviour that matters is enforced by a contract:
 | [`sdk`](sdk) | TypeScript SDK: client, split and calendar mirrors, VAT tables by date, reserve check with precision and objective targets, registry sync, country moves, SEP-7 links, event reader and CSV export, keeper; anchors (SEP-1/10/24/6); expected payments with their VAT and withholding |
 | [`rule-packs`](rule-packs) | Rule packs for 46 jurisdictions: dated VAT tables, presets, fiscal calendars and tax estimates, with their JSON schema |
 | [`test-vectors`](test-vectors) | Split and calendar cases checked by both the Rust and the SDK tests |
-| [`docs`](docs) | Architecture, Stellar integration, rule packs, [expected payments](docs/expected-payments.md), [euro reserve, yield and anchors](docs/euro-reserve-yield-anchors.md), [backlog](docs/backlog.md), latest testnet run |
+| [`docs`](docs) | Architecture, Stellar integration, [integrating Kyros](docs/integrations.md) (platforms, x402, tax software), rule packs, [expected payments](docs/expected-payments.md), [euro reserve, yield and anchors](docs/euro-reserve-yield-anchors.md), [backlog](docs/backlog.md), latest testnet run |
 
 ## The split
 

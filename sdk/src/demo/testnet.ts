@@ -415,6 +415,28 @@ async function main(): Promise<void> {
     detail: `1,100 KUSD: net ${formatAmount(thQuote.net)}, VAT ${formatAmount(thQuote.vat)}, income tax reserve ${formatAmount(thQuote.reserve - thQuote.vat)}`,
   });
 
+  // A platform's payout run: one signature pays two freelancers, each split by their own vault.
+  const runQuotes = [await c.quote(vault.contractId, parseAmount('121')), await c.quote(thVault.contractId, parseAmount('110'))];
+  const runHeld = [await c.balance(token, vault.contractId), await c.balance(token, thVault.contractId)];
+  const run = await c.send(
+    k.client,
+    c.payManyOp(router.contractId, {
+      from: k.client.publicKey(),
+      token,
+      payouts: [
+        { vault: vault.contractId, amount: parseAmount('121'), reference: invoiceReference('RUN-1-ES') },
+        { vault: thVault.contractId, amount: parseAmount('110'), reference: invoiceReference('RUN-1-TH') },
+      ],
+    }),
+  );
+  const runAfter = [await c.balance(token, vault.contractId), await c.balance(token, thVault.contractId)];
+  steps.push({
+    step: 'A platform pays two freelancers in one call (pay_many); each payment is split by its own vault',
+    ok: runAfter[0] - runHeld[0] === runQuotes[0].reserve && runAfter[1] - runHeld[1] === runQuotes[1].reserve,
+    tx: run.hash,
+    detail: `121 KUSD to the Spanish vault (reserve ${formatAmount(runQuotes[0].reserve)}), 110 KUSD to the Thai vault (reserve ${formatAmount(runQuotes[1].reserve)})`,
+  });
+
   const moveWait = Math.max(Number(lawDate) * 1000, movedAt + 120_000) - Date.now() + 10_000;
   if (moveWait > 0) {
     log(`waiting ${Math.ceil(moveWait / 1000)} s for the legal date and the inbox notice`);

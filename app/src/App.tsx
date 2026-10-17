@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chain } from './chain';
 import { loadConfig, type AppConfig } from './config';
-import { savedVault, snapshot, type Snapshot, type VaultInfo } from './kyros';
+import { savedVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
 import { AppCtx, type Ctx, type Screen } from './ui';
 import { Activity, Alerts, Home, Pay, Request, Settings } from './screens/Main';
 import { Onboarding, Welcome } from './screens/Start';
@@ -59,8 +59,20 @@ export default function App() {
       });
   }, [wallet]);
 
+  const sweeping = useRef(false);
   const refresh = useCallback(async () => {
-    if (chain && vault) setSnap(await snapshot(chain, vault));
+    if (!chain || !vault) return;
+    setSnap(await snapshot(chain, vault));
+    // Payments sent straight to the payment address are split here, by this browser's fee payer.
+    if (sweeping.current || location.hash === '#ui-test') return;
+    sweeping.current = true;
+    try {
+      if ((await sweepInbox(chain, vault)) > 0) setSnap(await snapshot(chain, vault));
+    } catch (e) {
+      console.error('sweep', e);
+    } finally {
+      sweeping.current = false;
+    }
   }, [chain, vault]);
 
   useEffect(() => {

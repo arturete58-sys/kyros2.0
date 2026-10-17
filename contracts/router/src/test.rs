@@ -261,3 +261,102 @@ fn a_move_can_be_cancelled_during_the_notice() {
         Err(Ok(InboxError::NoPendingMove))
     );
 }
+
+#[test]
+fn a_platform_pays_many_freelancers_in_one_call() {
+    let w = world();
+    let rule = Rule {
+        vat_bps: 0,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: Symbol::new(&w.e, "income"),
+                bps: 1500,
+            },
+        ],
+    };
+    let other_owner = Address::generate(&w.e);
+    let other = ReserveVaultClient::new(
+        &w.e,
+        &w.e.register(
+            ReserveVault,
+            (
+                other_owner.clone(),
+                rule,
+                Address::generate(&w.e),
+                86_400u64,
+                PeriodKind::Quarter,
+                0u64,
+                vec![&w.e, w.token.clone()],
+            ),
+        ),
+    );
+    let r = BytesN::from_array(&w.e, &[1; 32]);
+    let splits = w.router.pay_many(
+        &w.payer,
+        &w.token,
+        &vec![
+            &w.e,
+            Payout {
+                vault: w.vault.address.clone(),
+                gross: 1_210 * UNIT,
+                reference: r.clone(),
+            },
+            Payout {
+                vault: other.address.clone(),
+                gross: 1_000 * UNIT,
+                reference: r,
+            },
+        ],
+    );
+    // One authorization from the platform covers the whole run.
+    assert_eq!(w.e.auths().len(), 1);
+    assert_eq!(splits.len(), 2);
+    assert_eq!(bal(&w, &w.owner), 800 * UNIT);
+    assert_eq!(bal(&w, &other_owner), 850 * UNIT);
+    assert_eq!(bal(&w, &other.address), 150 * UNIT);
+    assert_eq!(bal(&w, &w.payer), (10_000 - 2_210) * UNIT);
+}
+
+#[test]
+fn a_batch_is_all_or_nothing() {
+    let w = world();
+    let stranger =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
+    let picky = w.e.register(
+        ReserveVault,
+        (
+            Address::generate(&w.e),
+            Rule {
+                vat_bps: 0,
+                buckets: vec![&w.e],
+            },
+            Address::generate(&w.e),
+            86_400u64,
+            PeriodKind::Quarter,
+            0u64,
+            vec![&w.e, stranger],
+        ),
+    );
+    let r = BytesN::from_array(&w.e, &[1; 32]);
+    let res = w.router.try_pay_many(
+        &w.payer,
+        &w.token,
+        &vec![
+            &w.e,
+            Payout {
+                vault: w.vault.address.clone(),
+                gross: 121 * UNIT,
+                reference: r.clone(),
+            },
+            Payout {
+                vault: picky,
+                gross: 100 * UNIT,
+                reference: r,
+            },
+        ],
+    );
+    assert!(res.is_err());
+    assert_eq!(bal(&w, &w.payer), 10_000 * UNIT);
+}

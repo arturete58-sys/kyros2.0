@@ -144,3 +144,22 @@ test('anchor: SEP-1, SEP-10 login, SEP-24 withdrawal, and a muxed payout only to
 
 // Silence the unused-import check for helpers used only as types above.
 void TransactionBuilder;
+
+test('tax tool exports: the base is income, the VAT is held apart, tax paid leaves', async () => {
+  const { taxToolCsv } = await import('../tax-exports.js');
+  const rows = [
+    { ledger: 1, closedAt: '2026-10-17T10:00:00Z', txHash: 'aa', kind: 'received' as const, token: 'C1', gross: 1_210n * UNIT, net: 800n * UNIT, vat: 210n * UNIT, reserve: 410n * UNIT, reference: '00'.repeat(32) },
+    { ledger: 2, closedAt: '2026-10-18T10:00:00.123Z', txHash: 'bb', kind: 'tax_paid' as const, token: 'C1', amount: 210n * UNIT, bucket: 'vat' },
+    { ledger: 3, closedAt: '2026-10-19T10:00:00Z', txHash: 'cc', kind: 'released' as const, token: 'C1', amount: 5n * UNIT },
+  ];
+  const k = taxToolCsv('koinly', rows, () => 'USDC').trim().split('\n');
+  assert.equal(k[0], 'Date,Sent Amount,Sent Currency,Received Amount,Received Currency,Fee Amount,Fee Currency,Net Worth Amount,Net Worth Currency,Tag,Description,TxHash');
+  assert.equal(k.length, 4);
+  assert.ok(k[1].startsWith('2026-10-17 10:00:00,,,1000,USDC,,,,,other income,"Payment received, excluding VAT; 200 set aside for income tax'), k[1]);
+  assert.ok(k[2].startsWith('2026-10-17 10:00:00,,,210,USDC,,,,,,"VAT collected'), k[2]);
+  assert.match(k[3], /^2026-10-18 10:00:00,210,USDC,,,,,,,,Tax paid from the Kyros vault \(VAT\),bb$/);
+  const c = taxToolCsv('cointracking', rows, () => 'USDC').trim().split('\n');
+  assert.equal(c[0], 'Type,Buy Amount,Buy Currency,Sell Amount,Sell Currency,Fee,Fee Currency,Exchange,Trade-Group,Comment,Date,Tx-ID');
+  assert.match(c[1], /^Income,1000,USDC,,,,,Kyros,,/);
+  assert.match(c[3], /^Withdrawal,,,210,USDC,/);
+});

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { formatAmount, payableUnits, requestTotals, money as cents, type PaymentRequest } from 'kyros-sdk';
+import { useEffect, useState } from 'react';
+import { formatAmount, payableUnits, requestTotals, taxToolCsv, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
 import { convertNow, expectPayment, followLaw, money, payTaxes, proposeEuroReserve, simulateClientPayment } from '../kyros';
 import { countryName } from '../packs';
 import { Button, LangPicker, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
@@ -9,6 +9,58 @@ import { fmtDate as fmtDay, fmtDateTime, fmtTime, t, type Key } from '../i18n';
 const UNIT = 10_000_000n;
 const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : 'bucketIncome');
 const fmtDate = (secs: bigint) => fmtDay(new Date(Number(secs) * 1000));
+
+/** The payment address: what the user shares so that every payment splits itself. */
+function PayAddress() {
+  const { vault, go } = useApp();
+  const [qr, setQr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!vault) return;
+    import('qrcode').then((q) => q.toDataURL(vault.inbox, { margin: 1, width: 240 }).then(setQr)).catch(() => setQr(null));
+  }, [vault?.inbox]);
+  if (!vault) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(vault.inbox);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* the address is selectable below */
+    }
+  };
+  const share = () => navigator.share?.({ title: 'Kyros', text: t('shareText', { address: vault.inbox }) }).catch(() => {});
+  return (
+    <div className="card" data-testid="pay-address">
+      <div className="row spread">
+        <span style={{ fontWeight: 600 }}>{t('payAddress')}</span>
+        <span className="badge ok">{t('automatic')}</span>
+      </div>
+      <p className="small muted">{t('payAddressSub')}</p>
+      <div className="row" style={{ alignItems: 'flex-start' }}>
+        {qr && <img src={qr} alt={t('payAddress')} width={112} height={112} style={{ borderRadius: 8, flex: 'none' }} />}
+        <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+          <span className="tiny mono" style={{ wordBreak: 'break-all' }}>
+            {vault.inbox}
+          </span>
+          <div className="row">
+            <Button small kind="secondary" onClick={copy}>
+              {copied ? t('copied') : t('copy')}
+            </Button>
+            {'share' in navigator && (
+              <Button small kind="secondary" onClick={share}>
+                {t('share')}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+      <button className="link small" data-testid="request" onClick={() => go('request')}>
+        {t('specialPayment')}
+      </button>
+    </div>
+  );
+}
 
 export function Home() {
   const { snap, vault, wallet, chain, run, refresh, go } = useApp();
@@ -25,13 +77,11 @@ export function Home() {
   return (
     <>
       <div className="content" style={{ paddingBottom: 90 }}>
-        <div className="row spread">
-          <div>
-            <h1 style={{ fontSize: 22 }}>{t('hello')}</h1>
-            <p className="small muted">
-              {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]} · {wallet.label}
-            </p>
-          </div>
+        <div>
+          <h1 style={{ fontSize: 22 }}>{t('hello')}</h1>
+          <p className="small muted">
+            {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]} · {wallet.label}
+          </p>
         </div>
         <div className="card hero" data-testid="spendable">
           <span className="label small">{t('canSpend')}</span>
@@ -41,7 +91,10 @@ export function Home() {
         </div>
         <div className="card" data-testid="reserved">
           <div className="row spread">
-            <span className="small muted">{t('setAside')}{reservedEur > 0n ? t('inEuros') : ''}</span>
+            <span className="small muted">
+              {t('setAside')}
+              {reservedEur > 0n ? t('inEuros') : ''}
+            </span>
             <span className="badge ok">{t('onTrack')}</span>
           </div>
           <span className="amount">
@@ -53,28 +106,36 @@ export function Home() {
             <span className="dot" style={{ background: 'var(--tax)' }} /> {t('vat')} {money((vat?.usd ?? 0n) + (vat?.eur ?? 0n))}
             <span className="dot" style={{ background: 'var(--warn)', marginLeft: 12 }} /> {t('incomeTax')} {money(otherUsd + otherEur)}
           </div>
-          <span className="tiny muted">{t('periodUntil', { date: s?.dueDate ? fmtDate(s.dueDate) : '…' })}</span>
-        </div>
-        <div className="card warn">
-          <div className="row">
-            <div className="grow">
-              <p className="small" style={{ fontWeight: 600, color: 'var(--warn)' }}>
-                {t('payTaxes')}
-              </p>
-              <p className="small">{t('payTaxesSub')}</p>
-            </div>
+          <div className="row spread" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+            <span className="small muted">{t('nextPayment', { date: s?.dueDate ? fmtDate(s.dueDate) : '…' })}</span>
             <Button small onClick={() => go('pay')}>
               {t('pay')}
             </Button>
           </div>
         </div>
-        <div className="card">
+        <PayAddress />
+        {received.length > 0 && (
+          <div className="list">
+            <h2>{t('lastPayments')}</h2>
+            {received.map((e) => (
+              <div className="item" key={e.txHash}>
+                <div className="grow">
+                  <div style={{ fontWeight: 500 }}>{t('paymentOf', { amount: formatAmount(e.gross ?? 0n) })}</div>
+                  <div className="small muted">{fmtDateTime(new Date(e.closedAt))}</div>
+                </div>
+                <b>+{money(e.net ?? 0n)}</b>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="card warn">
           <p className="small" style={{ fontWeight: 600 }}>
             {t('tryPayment')} <span className="badge warn">Testnet</span>
           </p>
           <p className="small muted">{t('tryPaymentSub')}</p>
           <Button
             kind="secondary"
+            small
             testid="simulate-payment"
             onClick={() =>
               run(t('clientPaying'), async (step) => {
@@ -90,24 +151,7 @@ export function Home() {
           </Button>
           {lastTx && <TxLink hash={lastTx} />}
         </div>
-        {received.length > 0 && (
-          <div className="list">
-            <h2>{t('lastPayments')}</h2>
-            {received.map((e) => (
-              <div className="item" key={e.txHash}>
-                <div className="grow">
-                  <div style={{ fontWeight: 500 }}>{t('paymentOf', { amount: formatAmount(e.gross ?? 0n) })}</div>
-                  <div className="small muted">{fmtDateTime(new Date(e.closedAt))}</div>
-                </div>
-                <b>+{money(e.net ?? 0n)}</b>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
-      <button className="fab" data-testid="request" onClick={() => go('request')}>
-        {t('requestPayment')}
-      </button>
       <Tabs current="home" />
     </>
   );
@@ -143,6 +187,7 @@ export function Request() {
       <div className="content">
         <Top onBack={() => go('home')} />
         <h1>{t('requestTitle')}</h1>
+        {!done && <p className="muted">{t('specialSub')}</p>}
         {!done ? (
           <>
             <div className="field">
@@ -435,14 +480,45 @@ export function Settings() {
 const KNOWN_EVENTS = ['received', 'tax_paid', 'released', 'converted', 'invested', 'harvested'];
 const eventText = (kind: string) => t((KNOWN_EVENTS.includes(kind) ? `ev_${kind}` : 'ev_change') as Key);
 
+function download(name: string, text: string) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 export function Activity() {
   const { snap, chain } = useApp();
   const ev = snap?.events ?? [];
+  const cfg = chain.cfg;
+  const symbol = (token: string) =>
+    token === cfg.tokens.usd.contract ? cfg.tokens.usd.code : token === cfg.tokens.eur.contract ? cfg.tokens.eur.code : token === cfg.cctp?.usdc.contract ? 'USDC' : token.slice(0, 6);
+  const day = new Date().toISOString().slice(0, 10);
+  const exportFor = (tool: TaxTool | 'generic') =>
+    download(`kyros-${tool}-${day}.csv`, tool === 'generic' ? toCsv(ev, chain.explorerTx.bind(chain)) : taxToolCsv(tool, ev, symbol));
   return (
     <>
       <div className="content">
         <h1>{t('movements')}</h1>
         {ev.length === 0 && <p className="muted">{t('noMovements')}</p>}
+        {ev.length > 0 && (
+          <div className="card" data-testid="exports">
+            <p style={{ fontWeight: 600 }}>{t('exportTitle')}</p>
+            <p className="small muted">{t('exportSub')}</p>
+            <div className="row" style={{ flexWrap: 'wrap' }}>
+              <Button small kind="secondary" onClick={() => exportFor('koinly')}>
+                Koinly
+              </Button>
+              <Button small kind="secondary" onClick={() => exportFor('cointracking')}>
+                CoinTracking
+              </Button>
+              <Button small kind="secondary" onClick={() => exportFor('generic')}>
+                {t('exportGeneric')}
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="list">
           {ev.map((e) => (
             <a className="item" key={e.txHash + e.kind} href={chain.explorerTx(e.txHash)} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>

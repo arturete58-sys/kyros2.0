@@ -90,3 +90,16 @@ test('Circle addresses are well formed', () => {
   for (const n of ['mainnet', 'testnet'] as const) for (const a of Object.values(STELLAR_CCTP[n])) assert.ok(StrKey.isValidContract(a), a);
   for (const c of EVM_TESTNETS) assert.match(c.usdc, /^0x[0-9a-fA-F]{40}$/);
 });
+
+test('a payout run is one pay_many call with each vault, amount and reference', async () => {
+  const { KyrosClient } = await import('../client.js');
+  const c = new KyrosClient({ rpcUrl: 'https://soroban-testnet.stellar.org', networkPassphrase: 'Test SDF Network ; September 2015' });
+  const router = StrKey.encodeContract(Buffer.alloc(32, 1));
+  const v1 = StrKey.encodeContract(Buffer.alloc(32, 2));
+  const v2 = StrKey.encodeContract(Buffer.alloc(32, 3));
+  const op = c.payManyOp(router, { from: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', token: v1, payouts: [{ vault: v1, amount: 5n, reference: new Uint8Array(32) }, { vault: v2, amount: 7n, reference: new Uint8Array(32).fill(9) }] });
+  const call = op.body().invokeHostFunctionOp().hostFunction().invokeContract();
+  assert.equal(call.functionName().toString(), 'pay_many');
+  const payouts = scValToNative(call.args()[2]) as { vault: string; gross: bigint; reference: Buffer }[];
+  assert.deepEqual(payouts.map((p) => [p.vault, p.gross, p.reference[0]]), [[v1, 5n, 0], [v2, 7n, 9]]);
+});

@@ -290,3 +290,24 @@ export async function finishCrossChain(chain: Chain, p: PendingCrossChain, onSte
 }
 
 export const formatUnits6 = (x: bigint) => fmtNumber(Number(x) / 1e6, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * Splits whatever has arrived at the user's payment address (the inbox):
+ * anyone may call `sweep`, so this browser's fee payer does it as soon as
+ * the app sees a balance there. Returns how many tokens were swept.
+ */
+export async function sweepInbox(chain: Chain, v: VaultInfo): Promise<number> {
+  let n = 0;
+  for (const token of [...chain.dollarTokens, chain.cfg.tokens.eur.contract]) {
+    let bal = 0n;
+    try {
+      bal = await chain.client.balance(token, v.inbox);
+    } catch {
+      continue;
+    }
+    if (bal <= 0n) continue;
+    await chain.sendAs(chain.feePayer, chain.client.sweepOp(v.inbox, token));
+    n++;
+  }
+  return n;
+}

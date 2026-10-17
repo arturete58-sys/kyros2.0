@@ -13,3 +13,4 @@ export * from './assets.js';
 export * from './anchor.js';
 export * from './payment-request.js';
 export * from './cctp.js';
+export * from './tax-exports.js';

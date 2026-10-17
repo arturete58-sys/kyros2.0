@@ -26,6 +26,7 @@ import {
   conversionToScVal,
   i128,
   invoiceTermsToScVal,
+  payoutsToScVal,
   periodKindFromNative,
   periodKindToScVal,
   ruleFromNative,
@@ -34,6 +35,7 @@ import {
   u32,
   u64,
   type Conversion,
+  type Payout,
 } from './scval.js';
 import type { Rule, Split } from './split.js';
 
@@ -201,6 +203,15 @@ export class KyrosClient {
   /** The Router payment the payer signs: split inside the payer's own transaction. */
   payOp(router: string, p: { from: string; vault: string; token: string; amount: bigint; reference: Uint8Array }): xdr.Operation {
     return new Contract(router).call('pay', addr(p.from), addr(p.vault), addr(p.token), i128(p.amount), bytes32(p.reference));
+  }
+
+  /**
+   * A platform's payout run (payroll, bounties, grants): one signature pays
+   * every vault, each split by its own rule. All or nothing. Keep a run to
+   * a few dozen payments so it fits one transaction's resource limits.
+   */
+  payManyOp(router: string, p: { from: string; token: string; payouts: Payout[] }): xdr.Operation {
+    return new Contract(router).call('pay_many', addr(p.from), addr(p.token), payoutsToScVal(p.payouts));
   }
 
   sweepOp(inbox: string, token: string): xdr.Operation {
