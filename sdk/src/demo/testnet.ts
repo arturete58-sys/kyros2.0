@@ -122,8 +122,8 @@ async function main(): Promise<void> {
   for (const kp of [k.freelancer, k.taxAccount]) await classic(c, kp, [Operation.changeTrust({ asset: eurAsset })]);
   await classic(c, k.lp, [Operation.changeTrust({ asset }), Operation.changeTrust({ asset: eurAsset })]);
   await classic(c, k.issuer, [
-    Operation.payment({ destination: k.lp.publicKey(), asset, amount: '100000' }),
-    Operation.payment({ destination: k.lp.publicKey(), asset: eurAsset, amount: '100000' }),
+    Operation.payment({ destination: k.lp.publicKey(), asset, amount: '2000000' }),
+    Operation.payment({ destination: k.lp.publicKey(), asset: eurAsset, amount: '2000000' }),
   ]);
   await c.send(k.issuer, Operation.createStellarAssetContract({ asset: eurAsset }));
   const eurToken = eurAsset.contractId(PASS);
@@ -250,8 +250,9 @@ async function main(): Promise<void> {
     const eurUsd = BigInt(p.price);
     const age = Math.floor(Date.now() / 1000) - Number(p.timestamp);
     if (age > 80_000) throw new Error(`Reflector testnet fiat oracle's EUR price is ${Math.round(age / 3600)} h old`);
-    // Pool: 11,600 KUSD against the KEUR that buys at the oracle's price.
-    const kusd = parseAmount('11600');
+    // Pool: 1,160,000 KUSD against the KEUR that buys at the oracle's price, deep enough that
+    // a 410 swap moves the price far less than the vault's 1% tolerance (a shallow pool is refused).
+    const kusd = parseAmount('1160000');
     const keur = (kusd * 10n ** 14n) / eurUsd;
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 600);
     await c.send(
@@ -287,7 +288,7 @@ async function main(): Promise<void> {
       step: 'Euro reserve: a vault taking KUSD and KEUR proposes converting its reserve to KEUR through the Soroswap testnet router (2-minute notice)',
       ok: true,
       tx: prop.hash,
-      detail: `Reflector testnet EUR = ${formatAmount(eurUsd / 10n ** 7n)} USD (price ${age}s old); pool 11,600 KUSD / ${formatAmount(keur)} KEUR; swapper ${swapper.contractId}; vault ${ev.contractId}`,
+      detail: `Reflector testnet EUR = ${formatAmount(eurUsd / 10n ** 7n)} USD (price ${age}s old); pool 1,160,000 KUSD / ${formatAmount(keur)} KEUR; swapper ${swapper.contractId}; vault ${ev.contractId}`,
     });
   } catch (e) {
     euroSkip = (e as Error).message.slice(0, 300);
