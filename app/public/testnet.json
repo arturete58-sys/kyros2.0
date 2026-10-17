@@ -1,3 +1,33 @@
 {
-  "note": "placeholder: the 'App on testnet' workflow overwrites this file with the real deployment"
+  "network": "testnet",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "deployedAt": "2026-10-17T08:54:07.610Z",
+  "noticeSecs": 120,
+  "wasm": {
+    "vault": "cb23e4334c9072859a07954a4a97753c48a0f5c9693d63c6b74171b3857fa26c",
+    "inbox": "992c7af0c7222d546da353d6bddb84d199c61b646748ae247d53e19fa722d867"
+  },
+  "router": "CBBYBW5YLNVBLYMQO5W6NTPVPAO55M4CCT7DNDGGUSSCXDGLYKCDCP43",
+  "registry": "CBSRZO6XJZXPPHJJAWQF6KLA3DCAECZKXZG7FSOUKOEOGFC3IJBW7V43",
+  "tokens": {
+    "usd": {
+      "code": "KUSD",
+      "issuer": "GAGVBTHX7YCGLN2WULYAKF4PGNMEBRKXVFQZ7G5HV2GCYGGP6VCMKNDJ",
+      "contract": "CCVM5G77DE3TXNGXT2G273SZ33MBCDSQ2ZE545FPUALGHOLMXGS3T6E5"
+    },
+    "eur": {
+      "code": "KEUR",
+      "issuer": "GAGVBTHX7YCGLN2WULYAKF4PGNMEBRKXVFQZ7G5HV2GCYGGP6VCMKNDJ",
+      "contract": "CDMVEJAUYDYU2Y5NAAYDGPVJHEO2M2GHHXJXIAQQXS7ASDHIFLGFXWN6"
+    }
+  },
+  "faucetSecret": "SD3ULZJL3Q3SK6RZS4XXX256VYFKF6BLOS3OPEAYUZX4I4POJB67KMIQ",
+  "taxAccount": "GC6QDYXU5ELJMOA6KJZK2IGXIL2F73Q3KINWGBQYBUXSKBZ4QHH5KKHK",
+  "conversion": {
+    "swapper": "CDK5OO3E2YU74WPHKZDNRDGIXAM6ZLOKNHLXLKH3JLQCI5NYBCLFLHBB",
+    "oracle": "CCSSOHTBL3LEWUCBBEB5NJFC2OKFRC74OWEIJIZLRJBGAAU4VMU5NV4W",
+    "eurUsdAtDeploy": "1.1245"
+  },
+  "passkeyWalletWasmHash": "97ce047884106b1c6c3bb40b8973cc48db1c4dad95c9e20462bf2c701daa764e"
 }
