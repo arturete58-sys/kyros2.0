@@ -4,7 +4,7 @@
   "country": "BH",
   "name": "Bahrain: self-employed and small businesses",
   "version": "2026.3",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "BHD",
   "vatName": "VAT",
   "vatRates": [
@@ -35,9 +35,24 @@
       "url": "https://taxsummaries.pwc.com/bahrain/individual/residence"
     }
   },
-  "period": "Quarter",
-  "dueOffsetDays": 31,
-  "dueNote": "Businesses below BHD 3 million file VAT quarterly, by the last day of the month after the quarter.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "income": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "note": "Businesses below BHD 3 million file VAT quarterly, by the last day of the month after the quarter. There is no personal income tax.",
+    "sources": [
+      {
+        "title": "NBR: When to file a VAT return",
+        "url": "https://www.nbr.gov.bh/VAT/vat_return_filing/when_to_file"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "vat-only",

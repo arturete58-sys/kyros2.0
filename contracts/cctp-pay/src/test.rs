@@ -113,7 +113,7 @@ fn world() -> W {
                 Address::generate(&e),
                 86_400u64,
                 PeriodKind::Quarter,
-                0u64,
+                kyros_reserve_vault::dues_after(&e, 0u64),
                 vec![&e, usdc.clone()],
             ),
         ),
@@ -360,7 +360,7 @@ fn a_vault_that_refuses_the_token_reverts_everything() {
             Address::generate(&w.e),
             86_400u64,
             PeriodKind::Quarter,
-            0u64,
+            kyros_reserve_vault::dues_after(&w.e, 0u64),
             vec![&w.e, other_token],
         ),
     );

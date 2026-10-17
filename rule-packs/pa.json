@@ -4,7 +4,7 @@
   "country": "PA",
   "name": "Panama: independent professionals",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "USD",
   "vatName": "ITBMS",
   "vatRates": [
@@ -37,9 +37,38 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 75,
-  "dueNote": "ITBMS returns are monthly. The annual income tax return of individuals is due on 15 March.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 15
+    },
+    "income": {
+      "date": "03-15",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "06-30",
+        "what": "Estimated income tax"
+      },
+      {
+        "date": "09-30",
+        "what": "Estimated income tax"
+      },
+      {
+        "date": "12-31",
+        "what": "Estimated income tax"
+      }
+    ],
+    "note": "ITBMS returns and payment are due by the 15th of the following month. The annual income tax return of individuals is due on 15 March, with estimated tax in three instalments.",
+    "sources": [
+      {
+        "title": "DGI Panamá",
+        "url": "https://dgi.mef.gob.pa"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "itbms",

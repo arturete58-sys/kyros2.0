@@ -4,7 +4,7 @@
   "country": "PR",
   "name": "Puerto Rico: Act 60 export services and local businesses",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "USD",
   "vatName": "IVU",
   "vatRates": [
@@ -39,9 +39,42 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 105,
-  "dueNote": "IVU returns are monthly, by the 20th. The annual income tax return is due on 15 April.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 20
+    },
+    "income": {
+      "date": "04-15",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "04-15",
+        "what": "Estimated tax"
+      },
+      {
+        "date": "06-15",
+        "what": "Estimated tax"
+      },
+      {
+        "date": "09-15",
+        "what": "Estimated tax"
+      },
+      {
+        "date": "01-15",
+        "what": "Estimated tax"
+      }
+    ],
+    "note": "IVU returns and payment are due by the 20th of the following month. The annual income tax return and balance are due on 15 April, with estimated tax in four instalments.",
+    "sources": [
+      {
+        "title": "Hacienda Puerto Rico",
+        "url": "https://hacienda.pr.gov"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "act-60-export-services",

@@ -4,7 +4,7 @@
   "country": "NG",
   "name": "Nigeria: freelancers and small businesses",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "NGN",
   "vatName": "VAT",
   "vatRates": [
@@ -31,9 +31,24 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 90,
-  "dueNote": "VAT returns are monthly, by the 21st. Annual income tax returns are due on 31 March; the rest of a year's reserve is released then.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 21
+    },
+    "income": {
+      "date": "03-31",
+      "yearsAfter": 1
+    },
+    "note": "VAT returns and payment are due by the 21st of the following month. Annual income tax returns of individuals and the balance are due on 31 March.",
+    "sources": [
+      {
+        "title": "PwC tax summaries: Nigeria",
+        "url": "https://taxsummaries.pwc.com/nigeria/individual"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "freelancer",

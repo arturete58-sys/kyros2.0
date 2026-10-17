@@ -4,7 +4,7 @@
   "country": "TR",
   "name": "Türkiye: self-employed (serbest meslek) and sole traders",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "TRY",
   "vatName": "KDV",
   "vatRates": [
@@ -33,9 +33,46 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 212,
-  "dueNote": "KDV returns are monthly, by the 28th. The annual income tax return is filed in March and the tax is paid in two instalments, in March and July; the rest of a year's reserve is released after 31 July.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 28
+    },
+    "income": {
+      "date": "07-31",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "03-31",
+        "what": "Annual income tax, first instalment"
+      },
+      {
+        "date": "05-17",
+        "what": "Geçici vergi (Q1)"
+      },
+      {
+        "date": "08-17",
+        "what": "Geçici vergi (Q2)"
+      },
+      {
+        "date": "11-17",
+        "what": "Geçici vergi (Q3)"
+      }
+    ],
+    "note": "KDV returns and payment are due by the 28th of the following month. The annual income tax return is filed in March and paid in two instalments, in March and July, with quarterly advance tax (geçici vergi) on 17 May, August and November.",
+    "sources": [
+      {
+        "title": "GİB: Vergi takvimi",
+        "url": "https://gib.gov.tr/vergi-takvimi"
+      },
+      {
+        "title": "GİB: Serbest meslek kazancı rehberi 2026",
+        "url": "https://cdn.gib.gov.tr/api/gibportal-file/file/getFileResources?objectKey=arsiv%2Ffileadmin%2Fbeyannamerehberi%2F2026%2F2026_Serbest_Meslek_Kazanci.pdf"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "kdv-standard",

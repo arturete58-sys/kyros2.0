@@ -4,7 +4,7 @@
   "country": "PT",
   "name": "Portugal: self-employed (trabalhadores independentes)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -42,9 +42,51 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 181,
-  "dueNote": "VAT returns are quarterly or monthly; the annual IRS return is filed from April to June. The rest of a year's reserve is released after 30 June.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 1,
+      "day": 25,
+      "except": {
+        "periodEndMonth": 6,
+        "monthsAfter": 2,
+        "day": 25
+      }
+    },
+    "income": {
+      "date": "08-31",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "07-20",
+        "what": "Pagamento por conta de IRS"
+      },
+      {
+        "date": "09-20",
+        "what": "Pagamento por conta de IRS"
+      },
+      {
+        "date": "12-20",
+        "what": "Pagamento por conta de IRS"
+      }
+    ],
+    "note": "Quarterly VAT returns are due by the 20th of the second month after the quarter (20 September for the second quarter) and payment by the 25th. The annual IRS return is filed from April to June and the tax paid by 31 August; category B payments on account fall on 20 July, September and December.",
+    "sources": [
+      {
+        "title": "CIVA art. 41",
+        "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva41.aspx"
+      },
+      {
+        "title": "CIRS art. 102: pagamentos por conta",
+        "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs102.aspx"
+      },
+      {
+        "title": "Portugal.gov: prazos do IRS",
+        "url": "https://www.oe.gov.pt/financas-a-lupa/artigos/ja-comecou-a-campanha-do-irs-saiba-quais-os-prazos-a-nao-esquecer/"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

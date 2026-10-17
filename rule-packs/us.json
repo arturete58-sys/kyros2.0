@@ -4,7 +4,7 @@
   "country": "US",
   "name": "United States: self-employed (federal)",
   "version": "2026.3",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "USD",
   "enforcement": {
     "level": "standard",
@@ -39,9 +39,46 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 105,
-  "dueNote": "Federal estimated tax is paid in four instalments (15 April, 15 June, 15 September, 15 January); pay them from the vault as they fall due. The rest of a year's reserve is released after 15 April, the deadline of the annual return.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 20
+    },
+    "income": {
+      "date": "04-15",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "04-15",
+        "what": "Estimated tax (Jan-Mar)"
+      },
+      {
+        "date": "06-15",
+        "what": "Estimated tax (Apr-May)"
+      },
+      {
+        "date": "09-15",
+        "what": "Estimated tax (Jun-Aug)"
+      },
+      {
+        "date": "01-15",
+        "what": "Estimated tax (Sep-Dec)"
+      }
+    ],
+    "note": "Federal estimated tax is paid on 15 April, 15 June, 15 September and 15 January; the annual return and balance are due on 15 April. State sales tax, where it applies, is usually filed monthly or quarterly around the 20th (the vault uses the 20th of the month after the quarter).",
+    "sources": [
+      {
+        "title": "IRS: When to pay estimated tax",
+        "url": "https://www.irs.gov/faqs/estimated-tax/individuals/individuals-2"
+      },
+      {
+        "title": "IRS: When to file",
+        "url": "https://www.irs.gov/filing/individuals/when-to-file"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "self-employed",

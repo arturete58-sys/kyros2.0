@@ -4,7 +4,7 @@
   "country": "ES",
   "name": "Spain: self-employed (autónomos) and small companies",
   "version": "2026.3",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -54,9 +54,51 @@
     },
     "inclusive": false
   },
-  "period": "Quarter",
-  "dueOffsetDays": 30,
-  "dueNote": "Quarterly VAT (modelo 303) and income-tax prepayment (modelo 130) are filed in the first 20 days after each quarter, and until 30 January for the fourth quarter. The vault uses 30 days for every quarter; paying the tax earlier is always allowed.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 20,
+      "except": {
+        "periodEndMonth": 12,
+        "monthsAfter": 0,
+        "day": 30
+      }
+    },
+    "income": {
+      "date": "06-30",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "04-20",
+        "what": "Modelo 130 (1T)"
+      },
+      {
+        "date": "07-20",
+        "what": "Modelo 130 (2T)"
+      },
+      {
+        "date": "10-20",
+        "what": "Modelo 130 (3T)"
+      },
+      {
+        "date": "01-30",
+        "what": "Modelo 130 (4T)"
+      }
+    ],
+    "note": "Modelo 303 (VAT) is filed and paid from the 1st to the 20th of April, July and October, and until 30 January for the fourth quarter. The modelo 130 income-tax prepayments share those dates. The annual Renta return is paid by 30 June of the next year, so the income-tax reserve stays until then.",
+    "sources": [
+      {
+        "title": "AEAT: Plazo de presentación del modelo 303",
+        "url": "https://sede.agenciatributaria.gob.es/Sede/iva/presentar-declaracion-iva-modelo-303/plazo-presentacion-modelo-303.html"
+      },
+      {
+        "title": "AEAT: Pagos fraccionados (modelo 130)",
+        "url": "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/folleto-actividades-economicas/3-impuesto-sobre-renta-personas-fisicas/3_7-pagos-fraccionados.html"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "general",

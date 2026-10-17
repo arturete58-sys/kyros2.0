@@ -4,7 +4,7 @@
   "country": "ZA",
   "name": "South Africa: sole proprietors",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "ZAR",
   "vatName": "VAT",
   "vatRates": [
@@ -31,9 +31,43 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 273,
-  "dueNote": "VAT returns are bimonthly. The tax year runs March to February; provisional tax is paid in August and February with a top-up by the end of September; a calendar year's reserve is released on 30 September of the next year.",
+  "calendar": {
+    "period": "Months2",
+    "fiscalYearStart": "03-01",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "income": {
+      "date": "01-31",
+      "yearsAfter": 2
+    },
+    "prepayments": [
+      {
+        "date": "08-31",
+        "what": "Provisional tax, first payment"
+      },
+      {
+        "date": "02-28",
+        "what": "Provisional tax, second payment"
+      },
+      {
+        "date": "09-30",
+        "what": "Provisional tax, top-up"
+      }
+    ],
+    "note": "Bimonthly VAT (category B) is due on the 25th of the month after each period, the last business day of that month on eFiling (the vault uses the last day). The tax year runs March to February; provisional tax is paid at the end of August and February with a top-up by the end of September, and provisional taxpayers file by January of the following year.",
+    "sources": [
+      {
+        "title": "SARS: Provisional tax",
+        "url": "https://www.sars.gov.za/types-of-tax/provisional-tax/"
+      },
+      {
+        "title": "SARS: VAT",
+        "url": "https://www.sars.gov.za/tax-types/value-added-tax/"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "vat",

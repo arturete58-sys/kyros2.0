@@ -60,11 +60,17 @@ stateDiagram-v2
   Accruing --> Accruing: receive() adds to the buckets
   Accruing --> Locked: period ends
   Locked --> Locked: pay_tax() to the tax destination (allowed any time)
-  Locked --> Releasable: due date = period end + due offset
+  Locked --> Releasable: each bucket's due date (VAT: its return date; income tax: the annual payment)
   Releasable --> [*]: release() returns what is left to the owner
 ```
 
-Periods come from the rule pack: calendar months, quarters or years in UTC (quarters for Spain, years where income tax is annual), or a fixed number of seconds (used by the testnet demo). The due date is the end of the period plus the pack's offset.
+Periods come from the rule pack: the VAT filing period in UTC (months, quarters, two-, four- or six-month periods, years), or a fixed number of seconds (used by the testnet demo). Each bucket has its own due date, from the country's official calendar ([rule packs](rule-packs.md)):
+
+- a day of a month after the period, with one exception by the period's last month (Spain's VAT: the 20th after each quarter, 30 January for the fourth);
+- a date after the fiscal year (Spain's income-tax reserve: 30 June of the next year; the UK's: 31 January two years after the tax year starts on 6 April);
+- or a fixed delay.
+
+Before its due date a bucket can only be paid to the tax destination; after it, `release` returns what is left of that bucket, and the buckets not yet due stay locked. `due_date(period)` is the latest of them, `bucket_due_date(period, bucket)` one of them. If the legal date falls on a weekend or holiday the deadline moves to the next working day; the vault does not move it, so pay on or before the date shown.
 
 ## Changes with notice
 
@@ -122,7 +128,7 @@ sequenceDiagram
 
 ## Storage
 
-- Instance: config (owner, rule, tax destination, notice, period kind, due offset, accepted tokens) and pending changes. Extended on every write.
+- Instance: config (owner, rule, tax destination, notice, period kind, due rules per bucket, accepted tokens) and pending changes. Extended on every write.
 - Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination, released, converted. Extended on every write, to about 13 months.
 - Instance: the conversion and the strategy, and their pending proposals.
 - Persistent: what the buckets hold per token across periods (for yield), and the terms of each registered invoice.

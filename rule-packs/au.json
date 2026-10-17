@@ -4,7 +4,7 @@
   "country": "AU",
   "name": "Australia: sole traders",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "AUD",
   "vatName": "GST",
   "vatRates": [
@@ -37,9 +37,52 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 304,
-  "dueNote": "BAS (GST and PAYG instalments) is lodged quarterly. The financial year runs July to June and self-lodged returns are due on 31 October; a calendar year's reserve is released on 31 October of the next year.",
+  "calendar": {
+    "period": "Quarter",
+    "fiscalYearStart": "07-01",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 28,
+      "except": {
+        "periodEndMonth": 12,
+        "monthsAfter": 1,
+        "day": 28
+      }
+    },
+    "income": {
+      "date": "10-31",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "10-28",
+        "what": "PAYG instalment (Q1 BAS)"
+      },
+      {
+        "date": "02-28",
+        "what": "PAYG instalment (Q2 BAS)"
+      },
+      {
+        "date": "04-28",
+        "what": "PAYG instalment (Q3 BAS)"
+      },
+      {
+        "date": "07-28",
+        "what": "PAYG instalment (Q4 BAS)"
+      }
+    ],
+    "note": "Quarterly BAS (GST and PAYG instalments) is due on the 28th of the month after the quarter, except the October-December quarter, due 28 February. The financial year runs July to June; self-lodged returns are due on 31 October (later through a tax agent).",
+    "sources": [
+      {
+        "title": "ATO: Due dates for lodging and paying your BAS",
+        "url": "https://www.ato.gov.au/businesses-and-organisations/preparing-lodging-and-paying/business-activity-statements-bas/due-dates-for-lodging-and-paying-your-bas"
+      },
+      {
+        "title": "ATO: Preparing your tax return",
+        "url": "https://www.ato.gov.au/individuals-and-families/your-tax-return/before-you-prepare-your-tax-return/preparing-your-tax-return"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "gst",

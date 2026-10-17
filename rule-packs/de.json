@@ -4,7 +4,7 @@
   "country": "DE",
   "name": "Germany: freelancers (Freiberufler) and sole traders",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "USt",
   "vatRates": [
@@ -49,9 +49,46 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 300,
-  "dueNote": "VAT returns (Umsatzsteuer-Voranmeldung) are due on the 10th day after each month or quarter, and income-tax prepayments on 10 March, June, September and December; pay them from the vault as they fall due. The rest of a year's reserve is released about ten months after the year ends, after the annual return and assessment.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 10
+    },
+    "income": {
+      "date": "12-31",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "03-10",
+        "what": "Einkommensteuer-Vorauszahlung"
+      },
+      {
+        "date": "06-10",
+        "what": "Einkommensteuer-Vorauszahlung"
+      },
+      {
+        "date": "09-10",
+        "what": "Einkommensteuer-Vorauszahlung"
+      },
+      {
+        "date": "12-10",
+        "what": "Einkommensteuer-Vorauszahlung"
+      }
+    ],
+    "note": "The Umsatzsteuer-Voranmeldung and payment are due on the 10th day after each quarter (monthly if last year's VAT exceeded EUR 9,000; one month later with Dauerfristverlängerung). Income tax prepayments fall on 10 March, June, September and December; the balance is due one month after the assessment notice, so the vault keeps the reserve until the end of the following year.",
+    "sources": [
+      {
+        "title": "§ 18 UStG",
+        "url": "https://www.gesetze-im-internet.de/ustg_1980/__18.html"
+      },
+      {
+        "title": "§ 37 EStG",
+        "url": "https://www.gesetze-im-internet.de/estg/__37.html"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

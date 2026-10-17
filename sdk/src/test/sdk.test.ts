@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Account, Keypair, Networks, scValToNative, nativeToScVal, TransactionBuilder, BASE_FEE, Contract, xdr } from '@stellar/stellar-sdk';
 import { split, validateRule, RuleError, formatAmount, parseAmount } from '../split.js';
-import { periodOf, periodStart, periodEnd, periodLabel, dueDate, civilFromDays, daysFromCivil, type PeriodKind } from '../periods.js';
-import { listRulePacks, loadRulePack, termsFromPack, vatRatesOn, presetVatBps, checkRuleVat, customRule, vatChanges, vatUpdatePlan } from '../rulepacks.js';
+import { periodOf, periodStart, periodEnd, periodLabel, dueDate, dueAt, duesAfter, validDue, civilFromDays, daysFromCivil, type Due, type PeriodKind } from '../periods.js';
+import { listRulePacks, loadRulePack, termsFromPack, vatRatesOn, presetVatBps, checkRuleVat, customRule, vatChanges, vatUpdatePlan, upcomingDeadlines, calendarOf } from '../rulepacks.js';
 import { checkReserve, estimateTaxes } from '../estimate.js';
 import { ruleToScVal, periodKindToScVal, splitFromScVal } from '../scval.js';
 import { sep7TxUri } from '../sep7.js';
@@ -63,11 +63,35 @@ test('periods match the shared calendar vectors', () => {
     }
   }
   assert.equal(periodLabel({ kind: 'Quarter' }, 2027 * 4), '2027-Q1');
-  // Q1 2027 ends on 1 April; Spain's pack adds 30 days.
-  assert.equal(dueDate({ kind: 'Quarter' }, 2027 * 4, 30n * 86_400n), BigInt(Date.UTC(2027, 4, 1) / 1000));
+  // Q1 2027 ends on 1 April; a fixed delay of 30 days.
+  assert.equal(dueDate({ kind: 'Quarter' }, 2027 * 4, duesAfter(30n * 86_400n)), BigInt(Date.UTC(2027, 4, 1) / 1000));
+  for (const p of vectors.monthsPeriods) {
+    for (const n of [2, 4, 6]) {
+      const k: PeriodKind = { kind: 'Months', months: n };
+      const id = periodOf(k, BigInt(p.ts));
+      assert.equal(id, p[`months${n}`].id);
+      assert.equal(periodStart(k, id).toString(), p[`months${n}`].start);
+      assert.equal(periodEnd(k, id).toString(), p[`months${n}`].end);
+    }
+  }
   for (let z = -800_000n; z < 800_000n; z += 9_973n) {
     const [y, m, d] = civilFromDays(z);
     assert.equal(daysFromCivil(y, m, d), z);
+  }
+});
+
+test('due dates match the shared calendar vectors (the contract checks the same ones)', () => {
+  const rule = (r: Record<string, Record<string, number>>): Due => {
+    if ('after' in r) return { after: BigInt(r.after as unknown as number) };
+    if ('monthDay' in r) return { monthDay: r.monthDay as never };
+    return { yearDate: r.yearDate as never };
+  };
+  const kindOf = (k: string): PeriodKind => (k.startsWith('Months') ? { kind: 'Months', months: Number(k.slice(6)) } : { kind: k as 'Month' });
+  assert.ok(vectors.dues.length >= 500);
+  for (const d of vectors.dues) {
+    const r = rule(vectors.dueRules[d.rule]);
+    assert.ok(validDue(r));
+    assert.equal(dueAt(kindOf(d.kind), d.id, r).toString(), d.due, `${d.kind} ${d.id} ${d.rule}`);
   }
 });
 
@@ -76,7 +100,12 @@ test('the Spain rule pack loads and gives valid vault terms', () => {
   const t = termsFromPack(pack, 'general');
   assert.deepEqual(t.rule, { vatBps: 2100, buckets: [{ name: 'irpf', bps: 2000 }] });
   assert.deepEqual(t.period, { kind: 'Quarter' });
-  assert.equal(t.dueOffsetSecs, 30n * 86_400n);
+  // VAT: the 20th after each quarter, 30 January for the fourth; the income-tax reserve: 30 June of the next year.
+  const q1 = 2027 * 4;
+  const at = (d: Due) => new Date(Number(dueAt(t.period, q1, d) - 1n) * 1000).toISOString().slice(0, 10);
+  assert.equal(at(t.dues.buckets.vat), '2027-04-20');
+  assert.equal(at(t.dues.default), '2028-06-30');
+  assert.equal(new Date(Number(dueAt(t.period, q1 + 3, t.dues.buckets.vat) - 1n) * 1000).toISOString().slice(0, 10), '2028-01-30');
   for (const p of pack.presets) termsFromPack(pack, p.id);
   assert.throws(() => termsFromPack(pack, 'nope'));
 });
@@ -100,10 +129,15 @@ test('every bundled rule pack is valid, and presets can override the calendar', 
       assert.equal(s.net + s.reserve, s.gross, `${id}/${p.id}`);
     }
   }
-  const ae = loadRulePack('ae');
-  assert.deepEqual(termsFromPack(ae, 'vat-only').period, { kind: 'Quarter' });
-  assert.deepEqual(termsFromPack(ae, 'vat-and-corporate-tax').period, { kind: 'Year' });
-  assert.equal(termsFromPack(ae, 'vat-and-corporate-tax').dueOffsetSecs, 273n * 86_400n);
+  // A preset without VAT has no VAT date; a preset can give a bucket its own date.
+  assert.equal(calendarOf(loadRulePack('es'), 'no-vat').vat, undefined);
+  assert.deepEqual(termsFromPack(loadRulePack('br'), 'pessoa-fisica').dues.buckets.irpf_inss, { yearDate: { fyStartMonth: 1, fyStartDay: 1, month: 5, day: 31, yearsAfter: 1 } });
+  // The UK: the 2026/27 tax year (from 6 April) is settled on 31 January 2028.
+  const gb = termsFromPack(loadRulePack('gb'), 'standard');
+  assert.equal(new Date(Number(dueAt(gb.period, 2026 * 4 + 2, gb.dues.default) - 1n) * 1000).toISOString().slice(0, 10), '2028-01-31');
+  // Australia: the October-December BAS is due on 28 February.
+  const au = termsFromPack(loadRulePack('au'), 'gst');
+  assert.equal(new Date(Number(dueAt(au.period, 2026 * 4 + 3, au.dues.buckets.vat) - 1n) * 1000).toISOString().slice(0, 10), '2027-02-28');
   // Germany, VAT 19% + 30%: 1,190 gross -> 190 VAT, 300 income tax, 700 net.
   const de = split(termsFromPack(loadRulePack('de'), 'standard').rule, parseAmount('1190'));
   assert.deepEqual([de.vat, de.parts[0], de.net].map((x) => formatAmount(x)), ['190', '300', '700']);
@@ -308,21 +342,23 @@ test('the registry plan publishes enacted changes ahead and never proposals', as
 
 test('moving country: same calendar keeps the vault, a new calendar moves the inbox', async () => {
   const { changeCountryPlan } = await import('../registry.js');
-  // Spain (quarterly + 30 days) to France (quarterly + 31 days): different due offset, new vault.
-  const toFr = changeCountryPlan({ period: 'Quarter', dueOffsetSecs: 30n * 86_400n }, { pack: loadRulePack('fr'), presetId: 'micro-bnc-vat' }, '2026-10-16');
+  // Spain to France: other due dates, new vault.
+  const es = termsFromPack(loadRulePack('es'), 'general');
+  const toFr = changeCountryPlan({ period: 'Quarter', dues: es.dues }, { pack: loadRulePack('fr'), presetId: 'micro-bnc-vat' }, '2026-10-16');
   assert.equal(toFr.sameVault, false);
   assert.ok(toFr.steps.some((s) => s.startsWith('propose_vault')));
   // Germany to the Netherlands with the user's own 25% reserve.
   const de = loadRulePack('de');
   const toNl = changeCountryPlan(
-    { period: de.period, dueOffsetSecs: BigInt(de.dueOffsetDays) * 86_400n },
+    { period: de.calendar.period, dues: termsFromPack(de, 'standard').dues },
     { pack: loadRulePack('nl'), presetId: 'standard', reserves: [{ name: 'ib', bps: 2500 }] },
     '2026-10-16',
   );
   assert.deepEqual(toNl.rule, { vatBps: 2100, buckets: [{ name: 'ib', bps: 2500 }] });
   assert.deepEqual(toNl.follow, { country: 'NL', rate: 'standard' });
-  // Same calendar as Ireland? Year + 304 vs Year + 120: still a new vault. Same pack calendar: same vault.
-  const same = changeCountryPlan({ period: 'Year', dueOffsetSecs: 120n * 86_400n, following: true }, { pack: loadRulePack('nl'), presetId: 'standard' }, '2026-10-16');
+  // The same calendar keeps the vault.
+  const nl = termsFromPack(loadRulePack('nl'), 'standard');
+  const same = changeCountryPlan({ period: 'Quarter', dues: nl.dues, following: true }, { pack: loadRulePack('nl'), presetId: 'standard' }, '2026-10-16');
   assert.equal(same.sameVault, true);
   assert.equal(same.steps[0].startsWith('unfollow'), true);
 });
@@ -395,6 +431,32 @@ test('activity and client set the VAT, the regime and the reserve automatically'
     for (const a of Object.keys(ACTIVITIES)) for (const c of ['consumer-local', 'business-local', 'business-eu', 'abroad'] as const) {
       const r = suggestSetup(p, { activity: a as never, client: c, revenue: 60_000, date: '2026-10-16' });
       assert.ok(r.rule.vatBps >= 0 && r.reserveBps >= 0, `${id} ${a} ${c}`);
+    }
+  }
+});
+
+test('upcoming deadlines: Spain in mid-October 2026', () => {
+  const ds = upcomingDeadlines(loadRulePack('es'), 'general', new Date('2026-10-17T00:00:00Z'), 300);
+  const first = ds.slice(0, 3).map((d) => `${d.date} ${d.kind}${d.bucket ? `:${d.bucket}` : ''}`);
+  // Q3 VAT and the 3T modelo 130 on 20 October, then Q4 VAT on 30 January; the 2026 Renta on 30 June 2027.
+  assert.deepEqual(first, ['2026-10-20 vat:vat', '2026-10-20 prepayment', '2027-01-30 vat:vat']);
+  assert.ok(ds.some((d) => d.date === '2027-06-30' && d.kind === 'income'));
+});
+
+test('every pack calendar gives valid due rules and cites its sources', () => {
+  for (const id of listRulePacks()) {
+    const pack = loadRulePack(id);
+    assert.ok(pack.calendar.note.length > 20, id);
+    assert.ok((pack.calendar.sources ?? []).length > 0, `${id} calendar sources`);
+    for (const p of pack.presets) {
+      const t = termsFromPack(pack, p.id, pack.reviewed!);
+      for (const d of [t.dues.default, ...Object.values(t.dues.buckets)]) assert.ok(validDue(d), `${id}/${p.id}`);
+      // Nothing falls due before its period ends, nor more than three years after.
+      for (const d of [t.dues.default, ...Object.values(t.dues.buckets)]) {
+        const end = periodEnd(t.period, 2027 * 4);
+        const due = dueAt(t.period, periodOf(t.period, end - 1n), d);
+        assert.ok(due >= periodEnd(t.period, periodOf(t.period, end - 1n)) && due < end + 3n * 366n * 86_400n, `${id}/${p.id}`);
+      }
     }
   }
 });

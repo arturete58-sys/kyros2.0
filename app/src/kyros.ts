@@ -2,7 +2,8 @@
 import { Keypair, scValToNative } from '@stellar/stellar-sdk';
 import { fmtNumber, t } from './i18n';
 import { allowanceData, balanceOfData, burnCalls, fastFeeBps, fetchAttestation, mintAndPayOp, type EvmChain } from 'kyros-sdk';
-import { requestRef, requestTerms, suggestSetup, termsFromPack, vaultEvents, type ActivityId, type ClientKind, type PaymentRequest, type RulePack, type Rule, type Setup, type VaultEventRow } from 'kyros-sdk';
+import { dueAt, dueOf, periodOf, requestRef, requestTerms, suggestSetup, termsFromPack, upcomingDeadlines, vaultEvents, type ActivityId, type ClientKind, type Deadline, type Dues, type PaymentRequest, type PeriodKind, type RulePack, type Rule, type Setup, type VaultEventRow } from 'kyros-sdk';
+import { loadPack } from './packs';
 import { Chain, localKey, store } from './chain';
 import type { Wallet } from './wallet/types';
 import type { EvmWallet } from './wallet/evm';
@@ -33,6 +34,8 @@ export interface VaultInfo {
   owner: string;
   answers: Answers;
   rule: Rule;
+  /** The rule pack preset the vault was built from (its tax calendar). */
+  presetId: string;
   createdAt: string;
   deployedAt: string;
 }
@@ -60,7 +63,7 @@ export async function createVault(chain: Chain, wallet: Wallet, plan: Plan, answ
     taxDestination: cfg.taxAccount,
     noticeSecs: BigInt(cfg.noticeSecs),
     period: terms.period,
-    dueOffsetSecs: terms.dueOffsetSecs,
+    dues: terms.dues,
     tokens: [...chain.dollarTokens, cfg.tokens.eur.contract],
   });
   onStep(t('stepInbox'));
@@ -71,6 +74,7 @@ export async function createVault(chain: Chain, wallet: Wallet, plan: Plan, answ
     owner: wallet.address,
     answers,
     rule: plan.rule,
+    presetId: plan.setup.presetId,
     createdAt: new Date().toISOString(),
     deployedAt: cfg.deployedAt,
   };
@@ -105,17 +109,36 @@ export async function expectPayment(chain: Chain, wallet: Wallet, vault: string,
   return { hash, reference };
 }
 
+/** What one bucket of one period holds in one token, and when it falls due. */
+export interface Held {
+  period: number;
+  bucket: string;
+  token: string;
+  /** `usd` (KUSD or Circle's USDC) or `eur`. */
+  which: 'usd' | 'eur';
+  amount: bigint;
+  /** Unix seconds from which it is past its due day (and can be released if left over). */
+  dueAt: bigint;
+}
+
 export interface Snapshot {
   spendable: { usd: bigint; eur: bigint };
   reserved: { usd: bigint; eur: bigint };
+  /** Totals per bucket over every open period. */
   buckets: Record<string, { usd: bigint; eur: bigint }>;
+  /** Every non-empty bucket of every period, oldest due first. */
+  held: Held[];
   period: number;
-  dueDate: bigint;
+  periodKind: PeriodKind | null;
+  /** The next tax deadlines from the country's calendar. */
+  deadlines: Deadline[];
   conversion: Awaited<ReturnType<Chain['client']['conversion']>>;
   pendingConversionAt: bigint | null;
   feed: Awaited<ReturnType<Chain['client']['feed']>>;
   events: VaultEventRow[];
 }
+
+const configs = new Map<string, { period: PeriodKind; dues: Dues }>();
 
 export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const c = chain.client;
@@ -131,6 +154,11 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const dollars = chain.dollarTokens;
   const none = { held: 0n, liquid: 0n, invested: 0n, surplus: 0n };
   const sum = (xs: bigint[]) => xs.reduce((a, b) => a + b, 0n);
+  if (!configs.has(v.vault)) {
+    const cfg = await safe(() => c.config(v.vault), null);
+    if (cfg) configs.set(v.vault, { period: cfg.period, dues: cfg.dues });
+  }
+  const conf = configs.get(v.vault) ?? null;
   const [sUsds, sEur, pUsds, pEur, period] = await Promise.all([
     Promise.all(dollars.map((d) => safe(() => c.balance(d, v.owner), 0n))),
     safe(() => c.balance(eur.contract, v.owner), 0n),
@@ -138,30 +166,45 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     safe(() => c.position(v.vault, eur.contract), none),
     safe(() => c.currentPeriod(v.vault), 0),
   ]);
-  const sUsd = sum(sUsds);
-  const pUsd = { held: sum(pUsds.map((p) => p.held)) };
-  const [dueDate, perUsds, perEur, conversion, pending, feed] = await Promise.all([
-    safe(() => c.dueDate(v.vault, period), 0n),
-    Promise.all(dollars.map((d) => safe(() => c.period(v.vault, period, d), null))),
-    safe(() => c.period(v.vault, period, eur.contract), null),
+  // Every period since the vault was created can still hold reserve (the income tax is due long after).
+  const first = conf ? periodOf(conf.period, BigInt(Math.floor(new Date(v.createdAt).getTime() / 1000))) : period;
+  const ids: number[] = [];
+  for (let id = Math.max(first, period - 40); id <= period; id++) ids.push(id);
+  const tokens: [string, 'usd' | 'eur'][] = [...dollars.map((d): [string, 'usd'] => [d, 'usd']), [eur.contract, 'eur']];
+  const states = await Promise.all(ids.flatMap((id) => tokens.map(([tk, which]) => safe(async () => ({ id, tk, which, p: await c.period(v.vault, id, tk) }), null))));
+  const held: Held[] = [];
+  const buckets: Snapshot['buckets'] = {};
+  for (const st of states) {
+    if (!st) continue;
+    for (const [bucket, amount] of Object.entries(st.p.buckets)) {
+      if (amount <= 0n) continue;
+      const due = conf ? dueAt(conf.period, st.id, dueOf(conf.dues, bucket)) : 0n;
+      held.push({ period: st.id, bucket, token: st.tk, which: st.which, amount, dueAt: due });
+      (buckets[bucket] ??= { usd: 0n, eur: 0n })[st.which] += amount;
+    }
+  }
+  held.sort((a, b) => (a.dueAt < b.dueAt ? -1 : a.dueAt > b.dueAt ? 1 : a.period - b.period));
+  const pack = await safe(() => loadPack(v.answers.packId), null);
+  const deadlines = pack && v.presetId ? safe(async () => upcomingDeadlines(pack, v.presetId, new Date(), 400), [] as Deadline[]) : Promise.resolve([] as Deadline[]);
+  const [conversion, pending, feed, dl] = await Promise.all([
     safe(() => c.conversion(v.vault), null),
     safe(async () => {
       const n = scValToNative(await c.read(v.vault, 'pending_conversion')) as { ready_at: bigint } | null | undefined;
       return n ? BigInt(n.ready_at) : null;
     }, null),
     safe(() => c.feed(v.vault), null),
+    deadlines,
   ]);
-  const buckets: Snapshot['buckets'] = {};
-  for (const perUsd of perUsds) for (const [name, amt] of Object.entries(perUsd?.buckets ?? {})) (buckets[name] ??= { usd: 0n, eur: 0n }).usd += amt;
-  for (const [name, amt] of Object.entries(perEur?.buckets ?? {})) (buckets[name] ??= { usd: 0n, eur: 0n }).eur = amt;
   const latest = await safe(() => chain.server.getLatestLedger(), { sequence: 0 } as { sequence: number });
   const events = await safe(() => vaultEvents(chain.server, v.vault, Math.max(latest.sequence - 17_000, 1)), []);
   return {
-    spendable: { usd: sUsd, eur: sEur },
-    reserved: { usd: pUsd.held, eur: pEur.held },
+    spendable: { usd: sum(sUsds), eur: sEur },
+    reserved: { usd: sum(pUsds.map((p) => p.held)), eur: pEur.held },
     buckets,
+    held,
     period,
-    dueDate,
+    periodKind: conf?.period ?? null,
+    deadlines: dl,
     conversion,
     pendingConversionAt: pending,
     feed,
@@ -169,19 +212,14 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   };
 }
 
-/** Pays every bucket of the current period that holds something, in each token. Owner-signed, one call per bucket. */
-export async function payTaxes(chain: Chain, wallet: Wallet, v: VaultInfo, period: number, onStep: (s: string) => void): Promise<string[]> {
-  const hashes: string[] = [];
-  const tokens: [string, string][] = [...chain.dollarTokens.map((d, i): [string, string] => [i === 0 ? 'USD' : 'USDC', d]), ['EUR', chain.cfg.tokens.eur.contract]];
-  for (const [which, token] of tokens) {
-    const p = await chain.client.period(v.vault, period, token);
-    for (const [bucket, amount] of Object.entries(p.buckets)) {
-      if (amount <= 0n) continue;
-      onStep(t('payingBucket', { what: t(bucket === 'vat' ? 'bucketVat' : 'bucketIncome'), cur: which }));
-      hashes.push(await wallet.signAndSend(chain.client.payTaxOp(v.vault, { period, token, bucket, amount })));
-    }
-  }
-  return hashes;
+/** Owner: pays `amount` of one bucket of one period to the tax destination. */
+export function payBucket(chain: Chain, wallet: Wallet, v: VaultInfo, h: Pick<Held, 'period' | 'token' | 'bucket'>, amount: bigint): Promise<string> {
+  return wallet.signAndSend(chain.client.payTaxOp(v.vault, { period: h.period, token: h.token, bucket: h.bucket, amount }));
+}
+
+/** Owner: returns to the wallet what is left in the buckets of a period that are past their due date. */
+export function releaseDue(chain: Chain, wallet: Wallet, v: VaultInfo, h: Pick<Held, 'period' | 'token'>): Promise<string> {
+  return wallet.signAndSend(chain.client.releaseOp(v.vault, h.period, h.token));
 }
 
 /** Owner: keep the reserve in euros, through the deployment's swapper and Reflector's fiat oracle. */

@@ -4,7 +4,7 @@
   "country": "IN",
   "name": "India: freelancers, professionals and sole proprietors",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "INR",
   "vatName": "GST",
   "vatRates": [
@@ -52,9 +52,47 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 212,
-  "dueNote": "GST returns and payment are monthly, by the 20th; advance tax falls due on 15 June, 15 September, 15 December and 15 March; pay them from the vault. The financial year runs April to March and returns are due on 31 July, so a calendar year's reserve is released on 31 July of the next year, after the return for April to December.",
+  "calendar": {
+    "period": "Quarter",
+    "fiscalYearStart": "04-01",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 24
+    },
+    "income": {
+      "date": "07-31",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "06-15",
+        "what": "Advance tax (15%)"
+      },
+      {
+        "date": "09-15",
+        "what": "Advance tax (45%)"
+      },
+      {
+        "date": "12-15",
+        "what": "Advance tax (75%)"
+      },
+      {
+        "date": "03-15",
+        "what": "Advance tax (100%)"
+      }
+    ],
+    "note": "Small GST payers under QRMP file GSTR-3B on the 22nd or 24th of the month after each quarter (by state; the vault uses the 24th), monthly filers on the 20th. The financial year runs April to March; returns not needing an audit are due on 31 July, with advance tax on 15 June, September, December and March.",
+    "sources": [
+      {
+        "title": "GST portal: GSTR-3B FAQs",
+        "url": "https://tutorial.gst.gov.in/userguide/returns/GSTR3B.htm"
+      },
+      {
+        "title": "Income Tax Department",
+        "url": "https://www.incometax.gov.in"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "presumptive-gst",

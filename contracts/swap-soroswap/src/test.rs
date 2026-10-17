@@ -137,7 +137,7 @@ fn a_vault_keeps_its_reserve_in_euros_through_soroswap() {
                 Address::generate(e),
                 notice,
                 PeriodKind::Quarter,
-                30 * 86_400u64,
+                kyros_reserve_vault::dues_after(&e, 30 * 86_400u64),
                 soroban_sdk::vec![e, s.usdc.clone(), s.eurc.clone()],
             ),
         ),

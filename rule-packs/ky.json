@@ -4,7 +4,7 @@
   "country": "KY",
   "name": "Cayman Islands: residents",
   "version": "2026.3",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "KYD",
   "vatName": "VAT",
   "enforcement": {
@@ -20,9 +20,42 @@
       "url": "https://taxsummaries.pwc.com/cayman-islands/individual/residence"
     }
   },
-  "period": "Year",
-  "dueOffsetDays": 0,
-  "dueNote": "There is no income tax or VAT to reserve for; a vault is only useful for taxes owed elsewhere (e.g. US citizens, who are taxed on worldwide income).",
+  "calendar": {
+    "period": "Quarter",
+    "income": {
+      "date": "06-15",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "04-15",
+        "what": "US estimated tax"
+      },
+      {
+        "date": "06-15",
+        "what": "US estimated tax"
+      },
+      {
+        "date": "09-15",
+        "what": "US estimated tax"
+      },
+      {
+        "date": "01-15",
+        "what": "US estimated tax"
+      }
+    ],
+    "note": "The Cayman Islands have no income tax or VAT. For US persons living there, estimated tax is due on 15 April, June, September and January, and the annual return on 15 June (automatic extension for those abroad; interest runs from 15 April).",
+    "sources": [
+      {
+        "title": "IRS: When to pay estimated tax",
+        "url": "https://www.irs.gov/faqs/estimated-tax/individuals/individuals-2"
+      },
+      {
+        "title": "Cayman Islands Government",
+        "url": "https://gov.ky/finance-economy"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "no-tax",
@@ -45,8 +78,7 @@
       "covers": [
         "incomeTax",
         "social"
-      ],
-      "dueOffsetDays": 167
+      ]
     }
   ],
   "notes": [

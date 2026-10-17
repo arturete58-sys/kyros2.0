@@ -4,7 +4,7 @@
   "country": "IE",
   "name": "Ireland: sole traders",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "VAT",
   "vatRates": [
@@ -42,9 +42,34 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 304,
-  "dueNote": "VAT returns are usually bi-monthly, due on the 23rd of the following month. Preliminary tax and the balance for a year are due on 31 October of the following year; the rest of a year's reserve is released then.",
+  "calendar": {
+    "period": "Months2",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 23
+    },
+    "income": {
+      "date": "11-30",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "10-31",
+        "what": "Preliminary tax for the current year (with the return for the last one)"
+      }
+    ],
+    "note": "Bi-monthly VAT returns and payment are due on the 19th of the month after each period (the 23rd through ROS; the vault uses the 23rd). Preliminary tax for a year and the balance for the year before are due on 31 October, extended to mid-November through ROS (the vault uses 30 November).",
+    "sources": [
+      {
+        "title": "Revenue: When VAT becomes payable",
+        "url": "https://www.revenue.ie/en/vat/accounting-for-vat/how-to-account-for-value-added-tax/when-vat-becomes-payable.aspx"
+      },
+      {
+        "title": "Revenue: What is preliminary tax",
+        "url": "https://www.revenue.ie/en/self-assessment-and-self-employment/guide-to-self-assessment/preliminary-tax.aspx"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

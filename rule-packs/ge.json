@@ -4,7 +4,7 @@
   "country": "GE",
   "name": "Georgia: individual entrepreneurs with small business status",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "GEL",
   "vatName": "VAT",
   "vatRates": [
@@ -41,9 +41,28 @@
     },
     "inclusive": false
   },
-  "period": "Month",
-  "dueOffsetDays": 15,
-  "dueNote": "Small business status holders declare and pay 1% of turnover monthly, by the 15th of the following month.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 15
+    },
+    "income": {
+      "monthsAfter": 0,
+      "day": 15
+    },
+    "note": "Small business status holders declare and pay 1% of turnover by the 15th of the following month; VAT payers file and pay VAT by the 15th of the following month too.",
+    "sources": [
+      {
+        "title": "Revenue Service of Georgia",
+        "url": "https://www.rs.ge"
+      },
+      {
+        "title": "Tax Code of Georgia",
+        "url": "https://www.rs.ge/Media/Default/%E1%83%99%E1%83%90%E1%83%9C%E1%83%9D%E1%83%9C%E1%83%9B%E1%83%93%E1%83%94%E1%83%91%E1%83%9A%E1%83%9D%E1%83%91%E1%83%90/%E1%83%99%E1%83%90%E1%83%9C%E1%83%9D%E1%83%9C%E1%83%94%E1%83%91%E1%83%98/tax%20code.pdf"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "small-business",

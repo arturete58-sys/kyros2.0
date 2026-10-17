@@ -11,7 +11,8 @@
  */
 import type { Rule } from './split.js';
 import { validateRule } from './split.js';
-import { presetVatBps, type CalendarPeriod, type RulePack } from './rulepacks.js';
+import { calendarOf, duesOfCalendar, presetVatBps, type CalendarPeriod, type RulePack } from './rulepacks.js';
+import type { Dues } from './periods.js';
 
 export interface RegistryEntry {
   /** UNIX seconds the rate applies from. */
@@ -97,7 +98,8 @@ export interface CountryChangePlan {
   sameVault: boolean;
   rule: Rule;
   period: CalendarPeriod;
-  dueOffsetSecs: bigint;
+  /** When each tax falls due in the new country. */
+  dues: Dues;
   /** Rate to follow in the registry for the new country, when the preset charges a named VAT rate. */
   follow?: { country: string; rate: string };
   /** What the owner does, in order. */
@@ -112,7 +114,7 @@ export interface CountryChangePlan {
  * them on its own due dates, so no locked money is moved.
  */
 export function changeCountryPlan(
-  current: { period: CalendarPeriod | 'Seconds'; dueOffsetSecs: bigint; following?: boolean },
+  current: { period: CalendarPeriod | 'Seconds'; dues: Dues; following?: boolean },
   next: CountryChoice,
   date: Date | string = new Date(),
 ): CountryChangePlan {
@@ -123,10 +125,12 @@ export function changeCountryPlan(
     buckets: (next.reserves ?? p.buckets).map(({ name, bps }) => ({ name, bps })),
   };
   validateRule(rule);
-  const period = p.period ?? next.pack.period;
-  const dueOffsetSecs = BigInt(p.dueOffsetDays ?? next.pack.dueOffsetDays) * 86_400n;
+  const cal = calendarOf(next.pack, next.presetId);
+  const period = cal.period;
+  const dues = duesOfCalendar(cal);
   const follow = p.vatRate ? { country: next.pack.country, rate: p.vatRate } : undefined;
-  const sameVault = current.period === period && current.dueOffsetSecs === dueOffsetSecs;
+  const same = (a: unknown, b: unknown) => JSON.stringify(a, (_, v) => (typeof v === 'bigint' ? String(v) : v)) === JSON.stringify(b, (_, v) => (typeof v === 'bigint' ? String(v) : v));
+  const sameVault = current.period === period && same(current.dues, dues);
   const steps: string[] = [];
   if (sameVault) {
     if (current.following) steps.push('unfollow: keep the current VAT while the new rule waits for its notice');
@@ -134,11 +138,11 @@ export function changeCountryPlan(
     steps.push("propose_destination: the account that pays the new country's taxes");
     if (follow) steps.push(`after the rule applies, follow ${follow.country}/${follow.rate} in the registry`);
   } else {
-    steps.push(`deploy a new vault from the ${next.pack.id} pack (${period}, released ${Number(dueOffsetSecs / 86_400n)} days after each period)`);
+    steps.push(`deploy a new vault from the ${next.pack.id} pack (${period} periods, each tax released after its own due date: ${cal.note})`);
     if (follow) steps.push(`follow ${follow.country}/${follow.rate} in the registry from the new vault`);
     steps.push('propose_vault on the inbox: the same payment address pays into the new vault after the notice');
     steps.push('Router and SEP-7 payment links: use the new vault address');
     steps.push('the old vault keeps its reserves: pay the old country\'s taxes from it and release the rest on its due dates');
   }
-  return { sameVault, rule, period, dueOffsetSecs, follow, steps };
+  return { sameVault, rule, period, dues, follow, steps };
 }

@@ -1495,5 +1495,3875 @@
     "end": "4107542460"
    }
   }
+ ],
+ "monthsPeriods": [
+  {
+   "ts": "1767225600",
+   "months2": {
+    "id": 12156,
+    "start": "1767225600",
+    "end": "1772323200"
+   },
+   "months4": {
+    "id": 6078,
+    "start": "1767225600",
+    "end": "1777593600"
+   },
+   "months6": {
+    "id": 4052,
+    "start": "1767225600",
+    "end": "1782864000"
+   }
+  },
+  {
+   "ts": "1772323199",
+   "months2": {
+    "id": 12156,
+    "start": "1767225600",
+    "end": "1772323200"
+   },
+   "months4": {
+    "id": 6078,
+    "start": "1767225600",
+    "end": "1777593600"
+   },
+   "months6": {
+    "id": 4052,
+    "start": "1767225600",
+    "end": "1782864000"
+   }
+  },
+  {
+   "ts": "1774958400",
+   "months2": {
+    "id": 12157,
+    "start": "1772323200",
+    "end": "1777593600"
+   },
+   "months4": {
+    "id": 6078,
+    "start": "1767225600",
+    "end": "1777593600"
+   },
+   "months6": {
+    "id": 4052,
+    "start": "1767225600",
+    "end": "1782864000"
+   }
+  },
+  {
+   "ts": "1775430000",
+   "months2": {
+    "id": 12157,
+    "start": "1772323200",
+    "end": "1777593600"
+   },
+   "months4": {
+    "id": 6078,
+    "start": "1767225600",
+    "end": "1777593600"
+   },
+   "months6": {
+    "id": 4052,
+    "start": "1767225600",
+    "end": "1782864000"
+   }
+  },
+  {
+   "ts": "1775433600",
+   "months2": {
+    "id": 12157,
+    "start": "1772323200",
+    "end": "1777593600"
+   },
+   "months4": {
+    "id": 6078,
+    "start": "1767225600",
+    "end": "1777593600"
+   },
+   "months6": {
+    "id": 4052,
+    "start": "1767225600",
+    "end": "1782864000"
+   }
+  },
+  {
+   "ts": "1782863999",
+   "months2": {
+    "id": 12158,
+    "start": "1777593600",
+    "end": "1782864000"
+   },
+   "months4": {
+    "id": 6079,
+    "start": "1777593600",
+    "end": "1788220800"
+   },
+   "months6": {
+    "id": 4052,
+    "start": "1767225600",
+    "end": "1782864000"
+   }
+  },
+  {
+   "ts": "1782864000",
+   "months2": {
+    "id": 12159,
+    "start": "1782864000",
+    "end": "1788220800"
+   },
+   "months4": {
+    "id": 6079,
+    "start": "1777593600",
+    "end": "1788220800"
+   },
+   "months6": {
+    "id": 4053,
+    "start": "1782864000",
+    "end": "1798761600"
+   }
+  },
+  {
+   "ts": "1798761599",
+   "months2": {
+    "id": 12161,
+    "start": "1793491200",
+    "end": "1798761600"
+   },
+   "months4": {
+    "id": 6080,
+    "start": "1788220800",
+    "end": "1798761600"
+   },
+   "months6": {
+    "id": 4053,
+    "start": "1782864000",
+    "end": "1798761600"
+   }
+  },
+  {
+   "ts": "1798761600",
+   "months2": {
+    "id": 12162,
+    "start": "1798761600",
+    "end": "1803859200"
+   },
+   "months4": {
+    "id": 6081,
+    "start": "1798761600",
+    "end": "1809129600"
+   },
+   "months6": {
+    "id": 4054,
+    "start": "1798761600",
+    "end": "1814400000"
+   }
+  },
+  {
+   "ts": "1835431200",
+   "months2": {
+    "id": 12168,
+    "start": "1830297600",
+    "end": "1835481600"
+   },
+   "months4": {
+    "id": 6084,
+    "start": "1830297600",
+    "end": "1840752000"
+   },
+   "months6": {
+    "id": 4056,
+    "start": "1830297600",
+    "end": "1846022400"
+   }
+  }
+ ],
+ "dueRules": {
+  "es-vat": {
+   "monthDay": {
+    "months": 0,
+    "day": 20,
+    "exceptionMonth": 12,
+    "exceptionMonths": 0,
+    "exceptionDay": 30
+   }
+  },
+  "au-gst": {
+   "monthDay": {
+    "months": 0,
+    "day": 28,
+    "exceptionMonth": 12,
+    "exceptionMonths": 1,
+    "exceptionDay": 28
+   }
+  },
+  "pt-iva": {
+   "monthDay": {
+    "months": 1,
+    "day": 25,
+    "exceptionMonth": 6,
+    "exceptionMonths": 2,
+    "exceptionDay": 25
+   }
+  },
+  "gb-vat": {
+   "monthDay": {
+    "months": 1,
+    "day": 7,
+    "exceptionMonth": 0,
+    "exceptionMonths": 0,
+    "exceptionDay": 0
+   }
+  },
+  "last-day": {
+   "monthDay": {
+    "months": 0,
+    "day": 31,
+    "exceptionMonth": 0,
+    "exceptionMonths": 0,
+    "exceptionDay": 0
+   }
+  },
+  "es-renta": {
+   "yearDate": {
+    "fyStartMonth": 1,
+    "fyStartDay": 1,
+    "month": 6,
+    "day": 30,
+    "yearsAfter": 1
+   }
+  },
+  "gb-sa": {
+   "yearDate": {
+    "fyStartMonth": 4,
+    "fyStartDay": 6,
+    "month": 1,
+    "day": 31,
+    "yearsAfter": 2
+   }
+  },
+  "au-income": {
+   "yearDate": {
+    "fyStartMonth": 7,
+    "fyStartDay": 1,
+    "month": 10,
+    "day": 31,
+    "yearsAfter": 1
+   }
+  },
+  "feb-29": {
+   "yearDate": {
+    "fyStartMonth": 1,
+    "fyStartDay": 1,
+    "month": 2,
+    "day": 29,
+    "yearsAfter": 1
+   }
+  },
+  "after-60d": {
+   "after": 5184000
+  }
+ },
+ "dues": [
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "es-vat",
+   "due": "1771632000"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "au-gst",
+   "due": "1772323200"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "pt-iva",
+   "due": "1774483200"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "gb-vat",
+   "due": "1772928000"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "last-day",
+   "due": "1772323200"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24312,
+   "rule": "after-60d",
+   "due": "1775088000"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "es-vat",
+   "due": "1774051200"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "au-gst",
+   "due": "1774742400"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "pt-iva",
+   "due": "1777161600"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "gb-vat",
+   "due": "1775606400"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "last-day",
+   "due": "1775001600"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24313,
+   "rule": "after-60d",
+   "due": "1777507200"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "es-vat",
+   "due": "1776729600"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "au-gst",
+   "due": "1777420800"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "pt-iva",
+   "due": "1779753600"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "gb-vat",
+   "due": "1778198400"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "last-day",
+   "due": "1777593600"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24314,
+   "rule": "after-60d",
+   "due": "1780185600"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24315,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24317,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "es-vat",
+   "due": "1787270400"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "au-gst",
+   "due": "1787961600"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "gb-vat",
+   "due": "1788825600"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "last-day",
+   "due": "1788220800"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24318,
+   "rule": "after-60d",
+   "due": "1790726400"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24323,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "es-vat",
+   "due": "1803168000"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "pt-iva",
+   "due": "1806019200"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "gb-vat",
+   "due": "1804464000"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "last-day",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "es-renta",
+   "due": "1846022400"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "feb-29",
+   "due": "1835481600"
+  },
+  {
+   "kind": "Month",
+   "id": 24324,
+   "rule": "after-60d",
+   "due": "1806624000"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "es-vat",
+   "due": "1837209600"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "au-gst",
+   "due": "1837900800"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "pt-iva",
+   "due": "1840320000"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "gb-vat",
+   "due": "1838764800"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "last-day",
+   "due": "1838160000"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "es-renta",
+   "due": "1877558400"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "gb-sa",
+   "due": "1864598400"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "au-income",
+   "due": "1856649600"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "feb-29",
+   "due": "1867017600"
+  },
+  {
+   "kind": "Month",
+   "id": 24337,
+   "rule": "after-60d",
+   "due": "1840665600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "es-vat",
+   "due": "1776729600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "au-gst",
+   "due": "1777420800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "pt-iva",
+   "due": "1779753600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "gb-vat",
+   "due": "1778198400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "last-day",
+   "due": "1777593600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "after-60d",
+   "due": "1780185600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "es-vat",
+   "due": "1776729600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "au-gst",
+   "due": "1777420800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "pt-iva",
+   "due": "1779753600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "gb-vat",
+   "due": "1778198400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "last-day",
+   "due": "1777593600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "after-60d",
+   "due": "1780185600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "es-vat",
+   "due": "1776729600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "au-gst",
+   "due": "1777420800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "pt-iva",
+   "due": "1779753600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "gb-vat",
+   "due": "1778198400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "last-day",
+   "due": "1777593600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8104,
+   "rule": "after-60d",
+   "due": "1780185600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8105,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "es-vat",
+   "due": "1792540800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "au-gst",
+   "due": "1793232000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "pt-iva",
+   "due": "1795651200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "gb-vat",
+   "due": "1794096000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "last-day",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8106,
+   "rule": "after-60d",
+   "due": "1795996800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8107,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "es-vat",
+   "due": "1808265600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "au-gst",
+   "due": "1808956800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "pt-iva",
+   "due": "1811289600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "gb-vat",
+   "due": "1809734400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "last-day",
+   "due": "1809129600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "es-renta",
+   "due": "1846022400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "feb-29",
+   "due": "1835481600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8108,
+   "rule": "after-60d",
+   "due": "1811721600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "es-vat",
+   "due": "1839888000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "au-gst",
+   "due": "1840579200"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "pt-iva",
+   "due": "1842912000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "gb-vat",
+   "due": "1841356800"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "last-day",
+   "due": "1840752000"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "es-renta",
+   "due": "1877558400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "gb-sa",
+   "due": "1864598400"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "au-income",
+   "due": "1856649600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "feb-29",
+   "due": "1867017600"
+  },
+  {
+   "kind": "Quarter",
+   "id": 8112,
+   "rule": "after-60d",
+   "due": "1843344000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Year",
+   "id": 2026,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "es-vat",
+   "due": "1832889600"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "au-gst",
+   "due": "1835395200"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "pt-iva",
+   "due": "1835136000"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "gb-vat",
+   "due": "1833580800"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "last-day",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "es-renta",
+   "due": "1846022400"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "gb-sa",
+   "due": "1864598400"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "au-income",
+   "due": "1856649600"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "feb-29",
+   "due": "1835481600"
+  },
+  {
+   "kind": "Year",
+   "id": 2027,
+   "rule": "after-60d",
+   "due": "1835481600"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "es-vat",
+   "due": "1864512000"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "au-gst",
+   "due": "1867017600"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "pt-iva",
+   "due": "1866758400"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "gb-vat",
+   "due": "1865203200"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "last-day",
+   "due": "1864598400"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "es-renta",
+   "due": "1877558400"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "gb-sa",
+   "due": "1896134400"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "au-income",
+   "due": "1888185600"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "feb-29",
+   "due": "1867017600"
+  },
+  {
+   "kind": "Year",
+   "id": 2028,
+   "rule": "after-60d",
+   "due": "1867104000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "es-vat",
+   "due": "1774051200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "au-gst",
+   "due": "1774742400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "pt-iva",
+   "due": "1777161600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "gb-vat",
+   "due": "1775606400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "last-day",
+   "due": "1775001600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "after-60d",
+   "due": "1777507200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "es-vat",
+   "due": "1774051200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "au-gst",
+   "due": "1774742400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "pt-iva",
+   "due": "1777161600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "gb-vat",
+   "due": "1775606400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "last-day",
+   "due": "1775001600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "gb-sa",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12156,
+   "rule": "after-60d",
+   "due": "1777507200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12157,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12158,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "es-vat",
+   "due": "1789948800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "au-gst",
+   "due": "1790640000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "pt-iva",
+   "due": "1792972800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "gb-vat",
+   "due": "1791417600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "last-day",
+   "due": "1790812800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12159,
+   "rule": "after-60d",
+   "due": "1793404800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12161,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "es-vat",
+   "due": "1805587200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "au-gst",
+   "due": "1806278400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "pt-iva",
+   "due": "1808697600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "gb-vat",
+   "due": "1807142400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "last-day",
+   "due": "1806537600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "es-renta",
+   "due": "1846022400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "feb-29",
+   "due": "1835481600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12162,
+   "rule": "after-60d",
+   "due": "1809043200"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "es-vat",
+   "due": "1837209600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "au-gst",
+   "due": "1837900800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "pt-iva",
+   "due": "1840320000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "gb-vat",
+   "due": "1838764800"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "last-day",
+   "due": "1838160000"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "es-renta",
+   "due": "1877558400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "gb-sa",
+   "due": "1864598400"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "au-income",
+   "due": "1856649600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "feb-29",
+   "due": "1867017600"
+  },
+  {
+   "kind": "Months2",
+   "id": 12168,
+   "rule": "after-60d",
+   "due": "1840665600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-vat",
+   "due": "1779321600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-gst",
+   "due": "1780012800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "pt-iva",
+   "due": "1782432000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-vat",
+   "due": "1780876800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "last-day",
+   "due": "1780272000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6078,
+   "rule": "after-60d",
+   "due": "1782777600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "es-vat",
+   "due": "1789948800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "au-gst",
+   "due": "1790640000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "pt-iva",
+   "due": "1792972800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "gb-vat",
+   "due": "1791417600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "last-day",
+   "due": "1790812800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "after-60d",
+   "due": "1793404800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "es-vat",
+   "due": "1789948800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "au-gst",
+   "due": "1790640000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "pt-iva",
+   "due": "1792972800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "gb-vat",
+   "due": "1791417600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "last-day",
+   "due": "1790812800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6079,
+   "rule": "after-60d",
+   "due": "1793404800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6080,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "es-vat",
+   "due": "1810857600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "au-gst",
+   "due": "1811548800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "pt-iva",
+   "due": "1813968000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "gb-vat",
+   "due": "1812412800"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "last-day",
+   "due": "1811808000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "es-renta",
+   "due": "1846022400"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "gb-sa",
+   "due": "1864598400"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "feb-29",
+   "due": "1835481600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6081,
+   "rule": "after-60d",
+   "due": "1814313600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "es-vat",
+   "due": "1842480000"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "au-gst",
+   "due": "1843171200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "pt-iva",
+   "due": "1845590400"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "gb-vat",
+   "due": "1844035200"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "last-day",
+   "due": "1843430400"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "es-renta",
+   "due": "1877558400"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "gb-sa",
+   "due": "1896134400"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "au-income",
+   "due": "1856649600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "feb-29",
+   "due": "1867017600"
+  },
+  {
+   "kind": "Months4",
+   "id": 6084,
+   "rule": "after-60d",
+   "due": "1845936000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-vat",
+   "due": "1784592000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-gst",
+   "due": "1785283200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "pt-iva",
+   "due": "1790380800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-vat",
+   "due": "1786147200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "last-day",
+   "due": "1785542400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "au-income",
+   "due": "1793491200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4052,
+   "rule": "after-60d",
+   "due": "1788048000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "es-vat",
+   "due": "1801353600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "au-gst",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "pt-iva",
+   "due": "1803600000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "gb-vat",
+   "due": "1802044800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "last-day",
+   "due": "1801440000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "es-renta",
+   "due": "1814400000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "gb-sa",
+   "due": "1832976000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "feb-29",
+   "due": "1803859200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4053,
+   "rule": "after-60d",
+   "due": "1803945600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "es-vat",
+   "due": "1816128000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "au-gst",
+   "due": "1816819200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "pt-iva",
+   "due": "1821916800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "gb-vat",
+   "due": "1817683200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "last-day",
+   "due": "1817078400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "es-renta",
+   "due": "1846022400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "gb-sa",
+   "due": "1864598400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "au-income",
+   "due": "1825027200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "feb-29",
+   "due": "1835481600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4054,
+   "rule": "after-60d",
+   "due": "1819584000"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "es-vat",
+   "due": "1847750400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "au-gst",
+   "due": "1848441600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "pt-iva",
+   "due": "1853539200"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "gb-vat",
+   "due": "1849305600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "last-day",
+   "due": "1848700800"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "es-renta",
+   "due": "1877558400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "gb-sa",
+   "due": "1896134400"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "au-income",
+   "due": "1856649600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "feb-29",
+   "due": "1867017600"
+  },
+  {
+   "kind": "Months6",
+   "id": 4056,
+   "rule": "after-60d",
+   "due": "1851206400"
+  }
  ]
 }

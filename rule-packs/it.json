@@ -4,7 +4,7 @@
   "country": "IT",
   "name": "Italy: freelancers (partita IVA)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -47,9 +47,43 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 181,
-  "dueNote": "Income tax balances and first advances are due by 30 June, second advances by 30 November. The rest of a year's reserve is released after 30 June of the following year.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 1,
+      "day": 20,
+      "except": {
+        "periodEndMonth": 12,
+        "monthsAfter": 2,
+        "day": 16
+      }
+    },
+    "income": {
+      "date": "07-31",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "06-30",
+        "what": "IRPEF saldo e primo acconto"
+      },
+      {
+        "date": "11-30",
+        "what": "IRPEF secondo acconto"
+      }
+    ],
+    "note": "Quarterly VAT payers pay by the 16th of the second month after each quarter (20 August for the second quarter; the vault uses the 20th) and the fourth quarter with the annual balance by 16 March. IRPEF balance and first advance are due on 30 June (later for ISA taxpayers; the vault uses 31 July), the second advance on 30 November.",
+    "sources": [
+      {
+        "title": "Agenzia Entrate: IRPEF saldo e primo acconto 30 giugno 2026",
+        "url": "https://www1.agenziaentrate.gov.it/servizi/scadenzario/main.php?op=4&chi=3988&cosa=11508&come=514&entroil=30-06-2026"
+      },
+      {
+        "title": "Agenzia Entrate: F24 IVA periodica",
+        "url": "https://www.agenziaentrate.gov.it/portale/schede/pagamenti/f24ivap10/come-e-quando-si-versa"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "forfettario",

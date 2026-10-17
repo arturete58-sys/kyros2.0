@@ -4,7 +4,7 @@
   "country": "VN",
   "name": "Vietnam: business households and small companies",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "VND",
   "vatName": "VAT (GTGT)",
   "vatRates": [
@@ -42,9 +42,30 @@
     },
     "inclusive": true
   },
-  "period": "Quarter",
-  "dueOffsetDays": 30,
-  "dueNote": "Business households above the exemption threshold declare and pay quarterly, by the last day of the month after the quarter, with an annual settlement.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "income": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "buckets": {
+      "cit": {
+        "date": "03-31",
+        "yearsAfter": 1
+      }
+    },
+    "note": "Business households and quarterly VAT filers declare and pay by the last day of the first month after each quarter. Companies settle corporate income tax within 90 days after the year (31 March).",
+    "sources": [
+      {
+        "title": "Viet An Law: business household tax 2026",
+        "url": "https://vietanlaw.com/calculating-business-household-tax-in-vietnam-2026/"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "household-services",

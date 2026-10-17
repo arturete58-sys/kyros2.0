@@ -4,7 +4,7 @@
   "country": "CH",
   "name": "Switzerland: self-employed",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "CHF",
   "vatName": "MWST / TVA / IVA",
   "vatRates": [
@@ -57,9 +57,23 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 120,
-  "dueNote": "VAT (MWST/TVA) returns are quarterly, due 60 days after the quarter. Income tax is assessed yearly by the canton; the rest of a year's reserve is released after 30 April.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "days": 60
+    },
+    "income": {
+      "date": "12-31",
+      "yearsAfter": 1
+    },
+    "note": "VAT returns and payment are due within 60 days after each period (quarterly; half-yearly with net tax rates). Income tax is assessed by the canton from the return, with provisional invoices during the year and the balance on assessment; dates vary by canton, so the vault keeps the reserve until the end of the following year.",
+    "sources": [
+      {
+        "title": "ESTV: Mehrwertsteuer bezahlen",
+        "url": "https://www.estv.admin.ch/estv/de/home/mehrwertsteuer/mwst-bezahlen.html"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

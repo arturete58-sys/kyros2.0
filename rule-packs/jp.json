@@ -4,7 +4,7 @@
   "country": "JP",
   "name": "Japan: sole proprietors (kojin jigyo)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "JPY",
   "vatName": "Consumption tax",
   "vatRates": [
@@ -56,9 +56,38 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 90,
-  "dueNote": "The final income tax return is due on 15 March and consumption tax for individuals on 31 March; the rest of a year's reserve is released then.",
+  "calendar": {
+    "period": "Year",
+    "vat": {
+      "date": "03-31",
+      "yearsAfter": 1
+    },
+    "income": {
+      "date": "03-15",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "07-31",
+        "what": "Yotei nozei (first prepayment)"
+      },
+      {
+        "date": "11-30",
+        "what": "Yotei nozei (second prepayment)"
+      }
+    ],
+    "note": "Individuals file and pay income tax by 15 March of the next year and consumption tax by 31 March (later when the next business day applies). With payment by account transfer, the debit falls in late April: keep the reserve until then.",
+    "sources": [
+      {
+        "title": "NTA: Income tax return guide 2025",
+        "url": "https://www.nta.go.jp/english/taxes/individual/pdf/incometax_2025/01.pdf"
+      },
+      {
+        "title": "NTA: Consumption tax final return guide",
+        "url": "https://www.nta.go.jp/english/taxes/consumption_tax/pdf/2025/general_00.pdf"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "taxable",

@@ -141,6 +141,98 @@ fn periods_match_an_independent_calendar() {
     }
 }
 
+fn due_rule(r: &serde_json::Value) -> Due {
+    let n = |v: &serde_json::Value, k: &str| v[k].as_u64().unwrap() as u32;
+    if let Some(a) = r.get("after") {
+        return Due::After(a.as_u64().unwrap());
+    }
+    if let Some(m) = r.get("monthDay") {
+        return Due::MonthDay(MonthDay {
+            months: n(m, "months"),
+            day: n(m, "day"),
+            exception_month: n(m, "exceptionMonth"),
+            exception_months: n(m, "exceptionMonths"),
+            exception_day: n(m, "exceptionDay"),
+        });
+    }
+    let y = &r["yearDate"];
+    Due::YearDate(YearDate {
+        fy_start_month: n(y, "fyStartMonth"),
+        fy_start_day: n(y, "fyStartDay"),
+        month: n(y, "month"),
+        day: n(y, "day"),
+        years_after: n(y, "yearsAfter"),
+    })
+}
+
+#[test]
+fn n_month_periods_match_an_independent_calendar() {
+    let v = vectors();
+    for p in v["monthsPeriods"].as_array().unwrap() {
+        let ts: u64 = p["ts"].as_str().unwrap().parse().unwrap();
+        for n in [2u32, 4, 6] {
+            let kind = PeriodKind::Months(n);
+            let want = &p[std::format!("months{n}")];
+            let id = period_of(&kind, ts);
+            assert_eq!(id as u64, want["id"].as_u64().unwrap(), "months{n} {ts}");
+            assert_eq!(
+                period_start(&kind, id).to_string(),
+                want["start"].as_str().unwrap()
+            );
+            assert_eq!(
+                period_end(&kind, id).to_string(),
+                want["end"].as_str().unwrap()
+            );
+        }
+    }
+    assert!(valid_period(&PeriodKind::Months(4)));
+    assert!(!valid_period(&PeriodKind::Months(5)));
+    assert!(!valid_period(&PeriodKind::Months(0)));
+}
+
+#[test]
+fn due_dates_match_an_independent_calendar() {
+    let v = vectors();
+    let rules = &v["dueRules"];
+    for d in v["dues"].as_array().unwrap() {
+        let kind = match d["kind"].as_str().unwrap() {
+            "Month" => PeriodKind::Month,
+            "Quarter" => PeriodKind::Quarter,
+            "Year" => PeriodKind::Year,
+            k => PeriodKind::Months(k.trim_start_matches("Months").parse().unwrap()),
+        };
+        let rule = due_rule(&rules[d["rule"].as_str().unwrap()]);
+        assert!(valid_due(&rule));
+        let id = d["id"].as_u64().unwrap() as u32;
+        assert_eq!(
+            due_at(&kind, id, &rule).to_string(),
+            d["due"].as_str().unwrap(),
+            "{d}"
+        );
+    }
+    assert!(!valid_due(&Due::YearDate(YearDate {
+        fy_start_month: 13,
+        fy_start_day: 1,
+        month: 6,
+        day: 30,
+        years_after: 1
+    })));
+    assert!(!valid_due(&Due::MonthDay(MonthDay {
+        months: 0,
+        day: 0,
+        exception_month: 0,
+        exception_months: 0,
+        exception_day: 0
+    })));
+    assert!(!valid_due(&Due::MonthDay(MonthDay {
+        months: 0,
+        day: 20,
+        exception_month: 13,
+        exception_months: 0,
+        exception_day: 30
+    })));
+}
+
 #[test]
 fn civil_dates_round_trip() {
     for z in (-800_000i64..800_000).step_by(997) {

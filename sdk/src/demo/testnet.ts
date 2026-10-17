@@ -38,7 +38,8 @@ import { invoiceReference, KyrosClient, KyrosError } from '../client.js';
 import { vaultEvents, toCsv } from '../events.js';
 import { Keeper } from '../keeper.js';
 import { periodLabel } from '../periods.js';
-import { loadRulePack, termsFromPack, vatUpdatePlan } from '../rulepacks.js';
+import { loadRulePack, periodKindOf, termsFromPack, vatUpdatePlan } from '../rulepacks.js';
+import { duesAfter } from '../periods.js';
 import { changeCountryPlan, registrySyncPlan } from '../registry.js';
 import { formatAmount, parseAmount } from '../split.js';
 
@@ -143,7 +144,7 @@ async function main(): Promise<void> {
     taxDestination: k.taxAccount.publicKey(),
     noticeSecs: 120n,
     period,
-    dueOffsetSecs: 0n,
+    dues: duesAfter(0n),
     tokens: [token],
   });
   const inbox = await c.deployInbox(k.keeper, inboxHash, vault.contractId);
@@ -263,7 +264,7 @@ async function main(): Promise<void> {
       taxDestination: k.taxAccount.publicKey(),
       noticeSecs: 120n,
       period,
-      dueOffsetSecs: 0n,
+      dues: duesAfter(0n),
       tokens: [token, eurToken],
     });
     const prop = await c.send(
@@ -301,7 +302,7 @@ async function main(): Promise<void> {
     taxDestination: k.taxAccount.publicKey(),
     noticeSecs: 120n,
     period: thTerms.period,
-    dueOffsetSecs: thTerms.dueOffsetSecs,
+    dues: thTerms.dues,
     tokens: [token],
   });
   // The plan for the real change (1 October 2027); the demo compresses its date to a few minutes from now.
@@ -341,14 +342,14 @@ async function main(): Promise<void> {
   });
 
   log('moving to Germany: new vault, inbox moves after the notice');
-  const move = changeCountryPlan({ period: 'Seconds', dueOffsetSecs: 0n, following: true }, { pack: loadRulePack('de'), presetId: 'standard' }, '2026-10-16');
+  const move = changeCountryPlan({ period: 'Seconds', dues: duesAfter(0n), following: true }, { pack: loadRulePack('de'), presetId: 'standard' }, '2026-10-16');
   const deVault = await c.deployVault(k.keeper, vaultHash, {
     owner: k.freelancer.publicKey(),
     rule: move.rule,
     taxDestination: k.newDestination.publicKey(),
     noticeSecs: 120n,
-    period: { kind: move.period },
-    dueOffsetSecs: move.dueOffsetSecs,
+    period: periodKindOf(move.period),
+    dues: move.dues,
     tokens: [token],
   });
   const moved = await c.send(k.freelancer, c.proposeVaultOp(inbox.contractId, deVault.contractId));
@@ -384,7 +385,7 @@ async function main(): Promise<void> {
       taxDestination: k.taxAccount.publicKey(),
       noticeSecs: 120n,
       period: t.period,
-      dueOffsetSecs: t.dueOffsetSecs,
+      dues: t.dues,
       tokens: [token],
     });
     const g = parseAmount(amount);

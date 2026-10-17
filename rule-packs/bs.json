@@ -4,7 +4,7 @@
   "country": "BS",
   "name": "The Bahamas: businesses registered for VAT",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "BSD",
   "vatName": "VAT",
   "vatRates": [
@@ -40,9 +40,22 @@
       "url": "https://taxsummaries.pwc.com/bahamas/individual/residence"
     }
   },
-  "period": "Quarter",
-  "dueOffsetDays": 21,
-  "dueNote": "VAT returns are due 21 days after each period: quarterly below BSD 5 million of turnover, monthly above.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "days": 21
+    },
+    "income": {
+      "days": 21
+    },
+    "note": "VAT returns are due within 21 days of the end of each period: quarterly below BSD 5 million of turnover, monthly above. There is no income tax.",
+    "sources": [
+      {
+        "title": "Bahamas Inland Revenue: VAT FAQs",
+        "url": "https://inlandrevenue.finance.gov.bs/value-added-tax/faqs/"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "vat-only",

@@ -4,7 +4,7 @@
   "country": "FR",
   "name": "France: micro-entrepreneurs (auto-entrepreneurs)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "TVA",
   "vatRates": [
@@ -43,9 +43,28 @@
     },
     "inclusive": false
   },
-  "period": "Quarter",
-  "dueOffsetDays": 31,
-  "dueNote": "Micro-entrepreneurs declaring quarterly pay URSSAF contributions (and the optional versement libératoire) by the end of the month after each quarter.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "date": "05-05",
+      "yearsAfter": 1
+    },
+    "income": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "note": "Micro-entrepreneurs declaring quarterly declare and pay URSSAF contributions (and the optional versement libératoire) by the last day of the month after each quarter. Those who charge VAT under the simplified regime pay instalments in July and December and the annual CA12 return in early May of the next year.",
+    "sources": [
+      {
+        "title": "URSSAF auto-entrepreneur: déclarer et payer",
+        "url": "https://www.autoentrepreneur.urssaf.fr/portail/accueil/une-question/toutes-les-fiches-pratiques/declarer-et-payer-mes-cotisation.html"
+      },
+      {
+        "title": "economie.gouv.fr: obligations du micro-entrepreneur",
+        "url": "https://www.economie.gouv.fr/entreprises/gerer-sa-micro-entreprise/micro-entrepreneur-auto-entrepreneur-quelles-sont-vos-obligations"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "micro-bnc",

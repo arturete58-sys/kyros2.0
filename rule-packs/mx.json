@@ -4,7 +4,7 @@
   "country": "MX",
   "name": "México: personas físicas (RESICO and actividad empresarial)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "MXN",
   "vatName": "IVA",
   "vatRates": [
@@ -39,9 +39,30 @@
       "url": "https://taxsummaries.pwc.com/mexico/individual/residence"
     }
   },
-  "period": "Year",
-  "dueOffsetDays": 120,
-  "dueNote": "IVA and ISR are paid monthly, by the 17th of the following month; the annual return is due on 30 April.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 17
+    },
+    "income": {
+      "date": "04-30",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "01-17",
+        "what": "ISR monthly provisional payment (every 17th)"
+      }
+    ],
+    "note": "IVA and the monthly ISR payments are due by the 17th of the following month. The annual return of individuals and its balance are due on 30 April.",
+    "sources": [
+      {
+        "title": "SAT",
+        "url": "https://www.sat.gob.mx"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "resico",

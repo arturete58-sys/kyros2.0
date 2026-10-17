@@ -1,11 +1,42 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { PeriodKind } from './periods.js';
+import { dueAt, periodOf as periodOfImpl, validDue, validPeriod, type Due, type Dues, type PeriodKind } from './periods.js';
 import { type Rule, validateRule } from './split.js';
 import type { Enforcement, Estimate, Precision, Prepayment, Region } from './estimate.js';
 
-export type CalendarPeriod = 'Month' | 'Quarter' | 'Year';
+/** How often the vault books reserves: the VAT filing period (Months2 = bimonthly, Months4 = four-monthly, Months6 = half-yearly). */
+export type CalendarPeriod = 'Month' | 'Quarter' | 'Year' | 'Months2' | 'Months4' | 'Months6';
+
+/**
+ * When a tax falls due, as a rule pack writes it:
+ *   `{ "days": 28 }`: 28 days after the period;
+ *   `{ "monthsAfter": 0, "day": 20, "except": { "periodEndMonth": 12, "monthsAfter": 0, "day": 30 } }`:
+ *     the 20th of the month after the period, but 30 January for a period ending in December;
+ *   `{ "date": "06-30", "yearsAfter": 1 }`: 30 June of the year after the fiscal year starts.
+ * The tax may be paid earlier; after the end of that day what is left can be released.
+ */
+export type DueSpec =
+  | { days: number }
+  | { monthsAfter: number; day: number; except?: { periodEndMonth: number; monthsAfter: number; day: number } }
+  | { date: string; yearsAfter: number };
+
+/** A country's tax calendar: when VAT, the income-tax reserve and any other bucket fall due. */
+export interface TaxCalendar {
+  period: CalendarPeriod;
+  /** First day of the fiscal year (MM-DD); default 01-01. */
+  fiscalYearStart?: string;
+  /** When the VAT of a period is due (absent: no VAT). */
+  vat?: DueSpec;
+  /** When the income-tax reserve (and any bucket not listed in `buckets`) is due: usually the annual payment. */
+  income: DueSpec;
+  /** Buckets with their own date (e.g. a monthly turnover tax). */
+  buckets?: Record<string, DueSpec>;
+  /** Prepayments along the year, paid from the reserve (MM-DD), for reminders. */
+  prepayments?: { date: string; what: string }[];
+  note: string;
+  sources?: { title: string; url: string }[];
+}
 /** What a preset's reserve buckets are meant to cover, for the reserve check. */
 export type Coverage = 'incomeTax' | 'social';
 
@@ -30,10 +61,8 @@ export interface RulePackPreset {
   covers?: Coverage[];
   /** Overrides the pack's estimate for this preset (e.g. a flat-rate regime). */
   estimate?: Estimate;
-  /** Overrides the pack's period for this preset. */
-  period?: CalendarPeriod;
-  /** Overrides the pack's due offset for this preset. */
-  dueOffsetDays?: number;
+  /** Overrides parts of the pack's tax calendar for this preset (another regime). */
+  calendar?: Partial<TaxCalendar>;
   /** Overrides the computed precision of the reserve check (see `precisionOf`). */
   precision?: Precision;
 }
@@ -51,9 +80,8 @@ export interface RulePack {
   vatName?: string;
   /** Consumption-tax rate tables with the dates they apply from. */
   vatRates?: VatTable[];
-  period: CalendarPeriod;
-  dueOffsetDays: number;
-  dueNote?: string;
+  /** When each tax falls due (official deadlines, with sources). */
+  calendar: TaxCalendar;
   presets: RulePackPreset[];
   /** Simplified annual tax estimate used by `checkReserve`. */
   estimate?: Estimate;
@@ -72,7 +100,7 @@ export interface RulePack {
 export interface VaultTerms {
   rule: Rule;
   period: PeriodKind;
-  dueOffsetSecs: bigint;
+  dues: Dues;
 }
 
 function packDir(): string {
@@ -99,12 +127,73 @@ export function loadRulePack(idOrPath: string): RulePack {
   return pack;
 }
 
-const PERIODS = ['Month', 'Quarter', 'Year'];
+const PERIODS = ['Month', 'Quarter', 'Year', 'Months2', 'Months4', 'Months6'];
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const MMDD = /^(\d{2})-(\d{2})$/;
+
+function mmdd(s: string, what: string): [number, number] {
+  const m = MMDD.exec(s);
+  if (!m || +m[1] < 1 || +m[1] > 12 || +m[2] < 1 || +m[2] > 31) throw new Error(`${what}: ${s} is not MM-DD`);
+  return [+m[1], +m[2]];
+}
+
+/** The contract's period kind for a pack period. */
+export function periodKindOf(p: CalendarPeriod): PeriodKind {
+  const m = /^Months(\d+)$/.exec(p);
+  return m ? { kind: 'Months', months: Number(m[1]) } : { kind: p as 'Month' | 'Quarter' | 'Year' };
+}
+
+/** The contract's due rule for a pack's due spec. */
+export function dueOfSpec(spec: DueSpec, fiscalYearStart = '01-01'): Due {
+  if ('days' in spec) return { after: BigInt(spec.days) * 86_400n };
+  if ('date' in spec) {
+    const [fm, fd] = mmdd(fiscalYearStart, 'fiscalYearStart');
+    const [m, d] = mmdd(spec.date, 'due date');
+    return { yearDate: { fyStartMonth: fm, fyStartDay: fd, month: m, day: d, yearsAfter: spec.yearsAfter } };
+  }
+  return {
+    monthDay: {
+      months: spec.monthsAfter,
+      day: spec.day,
+      exceptionMonth: spec.except?.periodEndMonth ?? 0,
+      exceptionMonths: spec.except?.monthsAfter ?? 0,
+      exceptionDay: spec.except?.day ?? 0,
+    },
+  };
+}
+
+/** The pack's calendar with the preset's overrides. */
+export function calendarOf(pack: RulePack, presetId: string): TaxCalendar {
+  const p = pack.presets.find((x) => x.id === presetId);
+  if (!p) throw new Error(`no preset ${presetId} in ${pack.id}`);
+  const o = p.calendar ?? {};
+  const c = { ...pack.calendar, ...o, buckets: { ...(pack.calendar.buckets ?? {}), ...(o.buckets ?? {}) } };
+  // A preset without VAT has no VAT date.
+  if (p.vatBps === 0 && !p.vatRate) delete c.vat;
+  return c;
+}
+
+/** The vault's due rules for a calendar: VAT, the named buckets, and the income date for everything else. */
+export function duesOfCalendar(c: TaxCalendar): Dues {
+  const fy = c.fiscalYearStart ?? '01-01';
+  const buckets: Record<string, Due> = {};
+  if (c.vat) buckets.vat = dueOfSpec(c.vat, fy);
+  for (const [k, v] of Object.entries(c.buckets ?? {})) buckets[k] = dueOfSpec(v, fy);
+  return { default: dueOfSpec(c.income, fy), buckets };
+}
+
+function checkCalendar(id: string, c: TaxCalendar): void {
+  if (!c || !PERIODS.includes(c.period)) throw new Error(`${id}: calendar period ${c?.period}`);
+  if (!c.note) throw new Error(`${id}: calendar note`);
+  if (!validPeriod(periodKindOf(c.period))) throw new Error(`${id}: period ${c.period}`);
+  const d = duesOfCalendar(c);
+  for (const due of [d.default, ...Object.values(d.buckets)]) if (!validDue(due)) throw new Error(`${id}: due rule ${JSON.stringify(due, (_, v) => (typeof v === 'bigint' ? String(v) : v))}`);
+  for (const pp of c.prepayments ?? []) mmdd(pp.date, `${id}: prepayment`);
+}
 
 export function checkRulePack(pack: RulePack): void {
   if (!pack.id || !pack.country || !Array.isArray(pack.presets) || pack.presets.length === 0) throw new Error('incomplete rule pack');
-  if (!PERIODS.includes(pack.period)) throw new Error(`unknown period ${pack.period}`);
+  checkCalendar(pack.id, pack.calendar);
   if (!/^[A-Z]{3}$/.test(pack.currency ?? '')) throw new Error(`${pack.id}: currency must be an ISO 4217 code`);
   if (pack.reviewed !== undefined && !DAY.test(pack.reviewed)) throw new Error(`${pack.id}: reviewed must be YYYY-MM-DD`);
   for (const t of pack.vatRates ?? []) {
@@ -117,7 +206,7 @@ export function checkRulePack(pack: RulePack): void {
   for (const p of pack.presets) {
     if (ids.has(p.id)) throw new Error(`${pack.id}: duplicate preset ${p.id}`);
     ids.add(p.id);
-    if (p.period && !PERIODS.includes(p.period)) throw new Error(`${pack.id}/${p.id}: unknown period ${p.period}`);
+    if (p.calendar) checkCalendar(`${pack.id}/${p.id}`, calendarOf(pack, p.id));
     if (p.vatRate && !(pack.vatRates ?? []).some((t) => p.vatRate! in t.rates)) throw new Error(`${pack.id}/${p.id}: no VAT rate ${p.vatRate}`);
     validateRule({ vatBps: p.vatBps, buckets: p.buckets.map(({ name, bps }) => ({ name, bps })) });
   }
@@ -268,8 +357,8 @@ export function termsFromPack(pack: RulePack, presetId: string, date: Date | str
   const p = preset(pack, presetId);
   return {
     rule: { vatBps: presetVatBps(pack, presetId, date), buckets: p.buckets.map(({ name, bps }) => ({ name, bps })) },
-    period: { kind: p.period ?? pack.period },
-    dueOffsetSecs: BigInt(p.dueOffsetDays ?? pack.dueOffsetDays) * 86_400n,
+    period: periodKindOf(calendarOf(pack, presetId).period),
+    dues: duesOfCalendar(calendarOf(pack, presetId)),
   };
 }
 
@@ -368,4 +457,64 @@ export function residenceGuide(packs: RulePack[], s: ResidenceSituation): { find
         ? `${likely[0].country} is likely your tax residence (${likely[0].why}); use its rule pack.`
         : `${likely.map((f) => f.country).join(' and ')} may both treat you as resident: the tax treaty between them decides (permanent home, then centre of vital interests, then habitual abode, then nationality).${taxing.length < likely.length ? ' Some of them have no personal income tax.' : ''}`;
   return { findings, summary };
+}
+
+/** A tax deadline the user meets from the vault. */
+export interface Deadline {
+  /** The due day (UTC, YYYY-MM-DD). */
+  date: string;
+  kind: 'vat' | 'income' | 'bucket' | 'prepayment';
+  /** The bucket it pays (`vat`, `irpf`...), when one. */
+  bucket?: string;
+  /** The period whose reserve it pays, when one. */
+  period?: number;
+  what: string;
+}
+
+const dayOf = (secs: bigint) => new Date(Number(secs - 1n) * 1000).toISOString().slice(0, 10);
+
+/**
+ * The deadlines from `from` over the next `days` days for a vault built from
+ * `pack`/`presetId`: each period's VAT and other buckets, the annual income-tax
+ * payments and the prepayments, sorted by date.
+ */
+export function upcomingDeadlines(pack: RulePack, presetId: string, from: Date = new Date(), days = 400): Deadline[] {
+  const c = calendarOf(pack, presetId);
+  const kind = periodKindOf(c.period);
+  const dues = duesOfCalendar(c);
+  const p = pack.presets.find((x) => x.id === presetId)!;
+  const start = BigInt(Math.floor(from.getTime() / 1000));
+  const end = start + BigInt(days) * 86_400n;
+  const out: Deadline[] = [];
+  const seen = new Set<string>();
+  const add = (d: Deadline) => {
+    const k = `${d.date}|${d.kind}|${d.bucket ?? ''}|${d.what}`;
+    if (!seen.has(k)) seen.add(k), out.push(d);
+  };
+  // Periods ending up to three years back can still fall due in the window (annual returns).
+  const step = kind.kind === 'Months' ? kind.months : kind.kind === 'Month' ? 1 : kind.kind === 'Quarter' ? 3 : 12;
+  const now = periodOfTs(kind, start);
+  const back = Math.ceil(40 / step);
+  const names = ['vat', ...p.buckets.map((b) => b.name)];
+  for (let id = now - back; id <= now + Math.ceil(days / 28 / step); id++) {
+    for (const b of names) {
+      if (b === 'vat' && !c.vat) continue;
+      const due = dueAt(kind, id, b === 'vat' ? dues.buckets.vat : dues.buckets[b] ?? dues.default);
+      if (due <= start || due - 86_400n > end) continue;
+      add({ date: dayOf(due), kind: b === 'vat' ? 'vat' : b in (c.buckets ?? {}) ? 'bucket' : 'income', bucket: b, period: id, what: b === 'vat' ? (pack.vatName ?? 'VAT') : (p.buckets.find((x) => x.name === b)?.label ?? b) });
+    }
+  }
+  for (const pp of c.prepayments ?? []) {
+    const [m, d] = mmdd(pp.date, 'prepayment');
+    for (let y = from.getUTCFullYear(); y <= from.getUTCFullYear() + Math.ceil(days / 365); y++) {
+      const t = BigInt(Date.UTC(y, m - 1, d) / 1000) + 86_400n;
+      if (t > start && t - 86_400n <= end) add({ date: dayOf(t), kind: 'prepayment', what: pp.what });
+    }
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+function periodOfTs(kind: PeriodKind, ts: bigint): number {
+  // Local import cycle-free copy of periods.periodOf.
+  return periodOfImpl(kind, ts);
 }

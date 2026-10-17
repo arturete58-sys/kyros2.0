@@ -4,7 +4,7 @@
   "country": "NL",
   "name": "Netherlands: freelancers (zzp) and sole traders",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "BTW",
   "vatRates": [
@@ -38,9 +38,28 @@
       "url": "https://taxsummaries.pwc.com/netherlands/individual/residence"
     }
   },
-  "period": "Year",
-  "dueOffsetDays": 120,
-  "dueNote": "VAT returns are usually quarterly, due by the end of the month after the quarter; provisional income-tax assessments are paid in monthly instalments. The rest of a year's reserve is released after 1 May, the deadline of the annual return.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "income": {
+      "date": "12-31",
+      "yearsAfter": 1
+    },
+    "note": "Quarterly VAT returns and payment are due by the last day of the month after each quarter. The income-tax return is due on 1 May; provisional assessments are paid in monthly instalments and the final one on its notice, so the vault keeps the reserve until the end of the following year.",
+    "sources": [
+      {
+        "title": "Belastingdienst: btw-aangifte en betaaldatums",
+        "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/btw/content/uiterste-aangifte-en-betaaldatums"
+      },
+      {
+        "title": "Belastingdienst: aangifte inkomstenbelasting",
+        "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/belastingaangifte/content/wanneer-moet-ik-aangifte-doen"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

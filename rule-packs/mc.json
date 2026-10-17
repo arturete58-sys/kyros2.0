@@ -4,7 +4,7 @@
   "country": "MC",
   "name": "Monaco: self-employed and small businesses",
   "version": "2026.3",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "TVA",
   "vatRates": [
@@ -38,9 +38,28 @@
       "url": "https://taxsummaries.pwc.com/monaco/individual/residence"
     }
   },
-  "period": "Quarter",
-  "dueOffsetDays": 31,
-  "dueNote": "VAT is declared monthly or quarterly as in France. ISB, where it applies, is paid in quarterly instalments (February, May, August, November) and a return by 31 March.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 24
+    },
+    "income": {
+      "date": "03-31",
+      "yearsAfter": 1
+    },
+    "note": "VAT is declared and paid as in France, by about the 24th of the month after each quarter for quarterly filers. ISB, where it applies, is settled with the annual return by 31 March.",
+    "sources": [
+      {
+        "title": "Monaco: VAT",
+        "url": "https://monentreprise.gouv.mc/en/themes/accounting-obligations-and-tax/tax/vat/vat"
+      },
+      {
+        "title": "KPMG Monaco: calendrier ISB",
+        "url": "https://assets.kpmg.com/content/dam/kpmg/mc/newsletters/KPMG-Monaco_Newsletter-2025-No4_Fiscalite_Calendrier_ISB.pdf"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

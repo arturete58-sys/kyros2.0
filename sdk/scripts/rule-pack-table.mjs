@@ -19,6 +19,14 @@ const inForce = (p) =>
   (p.vatRates ?? []).filter((t) => !t.proposed && t.from <= today).sort((a, b) => (a.from < b.from ? 1 : -1))[0]?.rates ?? {};
 const pct = (bps) => `${+(bps / 100).toFixed(3)}%`;
 const country = (p) => p.name.split(':')[0];
+const dueText = (d, fy) => {
+  if (!d) return '';
+  if ('days' in d) return `${d.days} days after the period`;
+  if ('date' in d) return `${d.date} of FY+${d.yearsAfter}${fy && fy !== '01-01' ? ` (FY from ${fy})` : ''}`;
+  const ex = d.except ? `; ${d.except.day} of +${d.except.monthsAfter} for periods ending in month ${d.except.periodEndMonth}` : '';
+  return `day ${d.day} of month +${d.monthsAfter}${ex}`;
+};
+const calText = (c) => [`${c.period}`, c.vat ? `VAT: ${dueText(c.vat, c.fiscalYearStart)}` : '', `income: ${dueText(c.income, c.fiscalYearStart)}`].filter(Boolean).join('; ');
 
 const rows = packs.map((p) => {
   const rates = Object.values(inForce(p)).filter((v) => v > 0).sort((a, b) => b - a);
@@ -28,7 +36,7 @@ const rows = packs.map((p) => {
   const presets = p.presets.map((x) => `\`${x.id}\` (${LABEL[precisionOf(p, x.id)]})`).join(', ');
   const official = (p.sources ?? []).filter((x) => x.official).length;
   const checked = (p.sources ?? []).filter((x) => x.checked).length;
-  return `| [${p.country}](../rule-packs/${p.id}.json) | ${country(p)} | ${p.currency} | ${vat}${changes.length ? `; changes ${changes.join(', ')}` : ''} | ${p.period} + ${p.dueOffsetDays} days | ${presets} | ${official} official, ${checked} checked ${p.reviewed ?? ''} |`;
+  return `| [${p.country}](../rule-packs/${p.id}.json) | ${country(p)} | ${p.currency} | ${vat}${changes.length ? `; changes ${changes.join(', ')}` : ''} | ${calText(p.calendar)} | ${presets} | ${official} official, ${checked} checked ${p.reviewed ?? ''} |`;
 });
 
 const table = [

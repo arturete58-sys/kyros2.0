@@ -4,7 +4,7 @@
   "country": "AD",
   "name": "Andorra: self-employed",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "IGI",
   "vatRates": [
@@ -38,9 +38,34 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 212,
-  "dueNote": "IGI returns are quarterly or half-yearly. Personal income tax (IRPF) is settled yearly; the rest of a year's reserve is released after 31 July.",
+  "calendar": {
+    "period": "Months6",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 20
+    },
+    "income": {
+      "date": "09-30",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "09-30",
+        "what": "IRPF payment on account for business income (form 320), during September"
+      }
+    ],
+    "note": "IGI returns are half-yearly below EUR 250,000 of turnover (quarterly up to EUR 3.6 million, monthly above), due within the first 20 days of the month after the period. The IRPF return and payment for a year run from 1 April to 30 September of the next year.",
+    "sources": [
+      {
+        "title": "CCIS: Calendari fiscal 2025 (Govern d'Andorra deadlines)",
+        "url": "https://www.ccis.ad/wp-content/uploads/2025/03/Calendari-Fiscal-2025.pdf"
+      },
+      {
+        "title": "Govern d'Andorra: Guia IRPF",
+        "url": "https://www.govern.ad/documents/d/guest/guia_irpf"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

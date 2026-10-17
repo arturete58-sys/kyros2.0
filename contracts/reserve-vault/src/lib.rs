@@ -35,8 +35,9 @@
 //! is a new contract the owner moves to by choice.
 #![no_std]
 use kyros_types::{
-    period_end, period_of, split, split_withheld, validate, validate_withholding, vat_symbol,
-    Asset, OracleClient, PeriodKind, RegistryClient, Rule, Split, SwapClient, YieldClient, BPS,
+    due_at, period_of, split, split_withheld, valid_due, valid_period, validate,
+    validate_withholding, vat_symbol, Asset, Due, OracleClient, PeriodKind, RegistryClient, Rule,
+    Split, SwapClient, YieldClient, BPS,
 };
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, token, Address, BytesN,
@@ -103,6 +104,10 @@ pub enum VaultError {
     InvalidTerms = 26,
     /// No terms are registered for that invoice reference.
     UnknownInvoice = 27,
+    /// A period kind that cannot be used (`Months(n)` with n not dividing 12).
+    InvalidPeriod = 28,
+    /// A due rule that cannot be used (a month or day out of range).
+    InvalidDue = 29,
 }
 
 /// How the payments of one invoice are split (shared with the CCTP receiver, which predicts the split).
@@ -130,10 +135,46 @@ pub struct Config {
     /// Seconds a proposed rule or destination waits before it can apply.
     pub notice_secs: u64,
     pub period: PeriodKind,
-    /// Seconds after a period ends until its due date (from the rule pack).
-    pub due_offset_secs: u64,
+    /// When each tax set aside in a period falls due (from the rule pack).
+    pub dues: Dues,
     /// SEP-41 tokens the vault accepts (an allow-list: USDC, EURC).
     pub tokens: Vec<Address>,
+}
+
+/// When each bucket of a period falls due: VAT and income tax usually have
+/// different dates (in Spain, VAT on the 20th after each quarter and the
+/// income-tax reserve on 30 June of the next year). A bucket not listed uses
+/// `default`. Before its due date a bucket's reserve can only be paid to the
+/// tax destination; after it, what is left can be released to the owner.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Dues {
+    pub default: Due,
+    pub buckets: Map<Symbol, Due>,
+}
+
+/// Dues with one fixed delay after the period for every bucket (tests, simple regimes).
+pub fn dues_after(e: &Env, secs: u64) -> Dues {
+    Dues {
+        default: Due::After(secs),
+        buckets: Map::new(e),
+    }
+}
+
+fn bucket_due(d: &Dues, bucket: &Symbol) -> Due {
+    d.buckets.get(bucket.clone()).unwrap_or(d.default.clone())
+}
+
+fn check_dues(d: &Dues) -> Result<(), VaultError> {
+    if !valid_due(&d.default) {
+        return Err(VaultError::InvalidDue);
+    }
+    for (_, due) in d.buckets.iter() {
+        if !valid_due(&due) {
+            return Err(VaultError::InvalidDue);
+        }
+    }
+    Ok(())
 }
 
 /// A proposed rule, waiting for its notice period.
@@ -587,10 +628,14 @@ impl ReserveVault {
         tax_destination: Address,
         notice_secs: u64,
         period: PeriodKind,
-        due_offset_secs: u64,
+        dues: Dues,
         tokens: Vec<Address>,
     ) -> Result<(), VaultError> {
         check_rule(&e, &rule)?;
+        if !valid_period(&period) {
+            return Err(VaultError::InvalidPeriod);
+        }
+        check_dues(&dues)?;
         if tokens.is_empty() {
             return Err(VaultError::NoTokens);
         }
@@ -600,7 +645,7 @@ impl ReserveVault {
             tax_destination,
             notice_secs,
             period,
-            due_offset_secs,
+            dues,
             tokens,
         };
         e.storage().instance().set(&Key::Config, &c);
@@ -650,10 +695,22 @@ impl ReserveVault {
         period_of(&stored_config(&e).period, now(&e))
     }
 
-    /// Unix seconds from which `period`'s reserve can be released to the owner.
+    /// Unix seconds from which all of `period`'s reserve can be released to
+    /// the owner: the latest due date among its buckets.
     pub fn due_date(e: Env, period: u32) -> u64 {
         let c = stored_config(&e);
-        period_end(&c.period, period) + c.due_offset_secs
+        let mut latest = due_at(&c.period, period, &c.dues.default);
+        for (_, d) in c.dues.buckets.iter() {
+            latest = latest.max(due_at(&c.period, period, &d));
+        }
+        latest
+    }
+
+    /// Unix seconds from which `bucket`'s reserve of `period` is past its due
+    /// date (e.g. `vat`, or `irpf` for the Spanish income-tax reserve).
+    pub fn bucket_due_date(e: Env, period: u32, bucket: Symbol) -> u64 {
+        let c = stored_config(&e);
+        due_at(&c.period, period, &bucket_due(&c.dues, &bucket))
     }
 
     pub fn period(e: Env, period: u32, token: Address) -> PeriodState {
@@ -773,24 +830,33 @@ impl ReserveVault {
         Self::pay(&e, &c, period, token, bucket, amount, to)
     }
 
-    /// After the period's due date, returns everything it still holds to the owner.
+    /// Returns to the owner what the period still holds in every bucket whose
+    /// due date has passed; buckets not yet due stay locked.
     pub fn release(e: Env, period: u32, token: Address) -> Result<i128, VaultError> {
         let c = active(&e);
         c.owner.require_auth();
-        if now(&e) < period_end(&c.period, period) + c.due_offset_secs {
-            return Err(VaultError::NotDue);
-        }
+        let t = now(&e);
         let mut p = load_period(&e, period, &token);
         let mut total: i128 = 0;
-        let mut emptied = Map::new(&e);
+        let mut held_back: i128 = 0;
+        let mut after = Map::new(&e);
         for (k, v) in p.buckets.iter() {
-            total += v;
-            emptied.set(k, 0i128);
+            if t >= due_at(&c.period, period, &bucket_due(&c.dues, &k)) {
+                total += v;
+                after.set(k, 0i128);
+            } else {
+                held_back += v;
+                after.set(k, v);
+            }
         }
         if total <= 0 {
-            return Err(VaultError::NothingToRelease);
+            return Err(if held_back > 0 {
+                VaultError::NotDue
+            } else {
+                VaultError::NothingToRelease
+            });
         }
-        p.buckets = emptied;
+        p.buckets = after;
         p.released += total;
         save_period(&e, period, &token, &p);
         add_held(&e, &token, -total);

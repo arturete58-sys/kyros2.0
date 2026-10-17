@@ -727,10 +727,34 @@
                         "map": [
                           {
                             "key": {
-                              "symbol": "due_offset_secs"
+                              "symbol": "dues"
                             },
                             "val": {
-                              "u64": "2592000"
+                              "map": [
+                                {
+                                  "key": {
+                                    "symbol": "buckets"
+                                  },
+                                  "val": {
+                                    "map": []
+                                  }
+                                },
+                                {
+                                  "key": {
+                                    "symbol": "default"
+                                  },
+                                  "val": {
+                                    "vec": [
+                                      {
+                                        "symbol": "After"
+                                      },
+                                      {
+                                        "u64": "2592000"
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
                             }
                           },
                           {

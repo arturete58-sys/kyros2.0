@@ -56,7 +56,7 @@ fn world() -> W {
             tax.clone(),
             NOTICE,
             PeriodKind::Quarter,
-            DUE_OFFSET,
+            crate::dues_after(&e, DUE_OFFSET),
             vec![&e, token.clone()],
         ),
     );
@@ -279,7 +279,7 @@ fn money_out_needs_the_owner() {
             Address::generate(&e),
             NOTICE,
             PeriodKind::Quarter,
-            DUE_OFFSET,
+            crate::dues_after(&e, DUE_OFFSET),
             vec![&e, token.clone()],
         ),
     );
@@ -489,7 +489,7 @@ fn euro_world() -> E2 {
             tax.clone(),
             NOTICE,
             PeriodKind::Quarter,
-            DUE_OFFSET,
+            crate::dues_after(&e, DUE_OFFSET),
             vec![&e, usdc.clone(), eurc.clone()],
         ),
     );
@@ -806,4 +806,147 @@ fn an_invoice_with_irpf_withheld_splits_exactly() {
         w.v.try_forget_invoice(&abroad),
         Err(Ok(VaultError::UnknownInvoice))
     );
+}
+
+/// Spain: VAT due on the 20th after each quarter (30 January for the fourth),
+/// the income-tax reserve on 30 June of the next year (the annual return).
+fn spanish_dues(e: &Env) -> Dues {
+    let mut buckets = Map::new(e);
+    buckets.set(
+        Symbol::new(e, "vat"),
+        Due::MonthDay(kyros_types::MonthDay {
+            months: 0,
+            day: 20,
+            exception_month: 12,
+            exception_months: 0,
+            exception_day: 30,
+        }),
+    );
+    Dues {
+        default: Due::YearDate(kyros_types::YearDate {
+            fy_start_month: 1,
+            fy_start_day: 1,
+            month: 6,
+            day: 30,
+            years_after: 1,
+        }),
+        buckets,
+    }
+}
+
+#[test]
+fn each_tax_falls_due_on_its_own_date() {
+    let w = world();
+    let id = w.e.register(
+        ReserveVault,
+        (
+            w.owner.clone(),
+            spain(&w.e),
+            w.tax.clone(),
+            NOTICE,
+            PeriodKind::Quarter,
+            spanish_dues(&w.e),
+            vec![&w.e, w.token.clone()],
+        ),
+    );
+    let v = ReserveVaultClient::new(&w.e, &id);
+    v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    let q = v.current_period();
+    // 2027-04-21 00:00 UTC: the end of 20 April, Q1 VAT's last day.
+    const APR_21_2027: u64 = 1_808_265_600;
+    // 2028-07-01 00:00 UTC: the end of 30 June 2028, when the 2027 return is paid.
+    const JUL_1_2028: u64 = 1_846_022_400;
+    assert_eq!(v.bucket_due_date(&q, &symbol_short!("vat")), APR_21_2027);
+    assert_eq!(v.bucket_due_date(&q, &symbol_short!("irpf")), JUL_1_2028);
+    assert_eq!(v.due_date(&q), JUL_1_2028);
+    // The VAT is paid on time; the income-tax reserve stays locked after the VAT date.
+    v.pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+    w.e.ledger().set_timestamp(APR_21_2027);
+    assert_eq!(v.try_release(&q, &w.token), Err(Ok(VaultError::NotDue)));
+    // Unpaid VAT left over after its date can be released, and only that.
+    let mut v2_dues = spanish_dues(&w.e);
+    v2_dues.default = Due::YearDate(kyros_types::YearDate {
+        fy_start_month: 1,
+        fy_start_day: 1,
+        month: 6,
+        day: 30,
+        years_after: 1,
+    });
+    w.e.ledger().set_timestamp(FEB_10_2027);
+    let v2 = ReserveVaultClient::new(
+        &w.e,
+        &w.e.register(
+            ReserveVault,
+            (
+                w.owner.clone(),
+                spain(&w.e),
+                w.tax.clone(),
+                NOTICE,
+                PeriodKind::Quarter,
+                v2_dues,
+                vec![&w.e, w.token.clone()],
+            ),
+        ),
+    );
+    v2.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    v2.pay_tax(&q, &w.token, &symbol_short!("vat"), &(200 * UNIT));
+    w.e.ledger().set_timestamp(APR_21_2027);
+    assert_eq!(v2.release(&q, &w.token), 10 * UNIT);
+    assert_eq!(
+        v2.period(&q, &w.token)
+            .buckets
+            .get(symbol_short!("irpf"))
+            .unwrap(),
+        200 * UNIT
+    );
+    // A year and a quarter later the income-tax reserve is free too.
+    w.e.ledger().set_timestamp(JUL_1_2028 - 1);
+    assert_eq!(v2.try_release(&q, &w.token), Err(Ok(VaultError::NotDue)));
+    w.e.ledger().set_timestamp(JUL_1_2028);
+    assert_eq!(v2.release(&q, &w.token), 200 * UNIT);
+}
+
+#[test]
+fn unusable_periods_and_due_rules_are_refused() {
+    let w = world();
+    let bad_due = Dues {
+        default: Due::YearDate(kyros_types::YearDate {
+            fy_start_month: 1,
+            fy_start_day: 1,
+            month: 13,
+            day: 1,
+            years_after: 1,
+        }),
+        buckets: Map::new(&w.e),
+    };
+    assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        w.e.register(
+            ReserveVault,
+            (
+                w.owner.clone(),
+                spain(&w.e),
+                w.tax.clone(),
+                NOTICE,
+                PeriodKind::Quarter,
+                bad_due.clone(),
+                vec![&w.e, w.token.clone()],
+            ),
+        )
+    }))
+    .is_err());
+    assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        w.e.register(
+            ReserveVault,
+            (
+                w.owner.clone(),
+                spain(&w.e),
+                w.tax.clone(),
+                NOTICE,
+                PeriodKind::Months(5),
+                crate::dues_after(&w.e, 0),
+                vec![&w.e, w.token.clone()],
+            ),
+        )
+    }))
+    .is_err());
 }

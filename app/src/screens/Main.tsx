@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
-import { convertNow, expectPayment, followLaw, money, payTaxes, proposeEuroReserve, simulateClientPayment } from '../kyros';
+import { type Deadline, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
+import { convertNow, expectPayment, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Button, LangPicker, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
 import { activityText, clientText } from './Start';
-import { fmtDate as fmtDay, fmtDateTime, fmtTime, t, type Key } from '../i18n';
+import { fmtDate as fmtDay, fmtDateTime, fmtTime, locale, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
 const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : 'bucketIncome');
@@ -107,7 +107,7 @@ export function Home() {
             <span className="dot" style={{ background: 'var(--warn)', marginLeft: 12 }} /> {t('incomeTax')} {money(otherUsd + otherEur)}
           </div>
           <div className="row spread" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-            <span className="small muted">{t('nextPayment', { date: s?.dueDate ? fmtDate(s.dueDate) : '…' })}</span>
+            <span className="small muted">{s?.deadlines?.[0] ? t('nextDeadline', { what: deadlineText(s.deadlines[0]), date: fmtDay(new Date(`${s.deadlines[0].date}T12:00:00Z`)) }) : ''}</span>
             <Button small onClick={() => go('pay')}>
               {t('pay')}
             </Button>
@@ -289,36 +289,118 @@ export function Request() {
   );
 }
 
+/** "3T 2026", "octubre 2026", "2026" or "2026 · 1/2" for a period of the vault. */
+export function periodText(kind: PeriodKind | null, id: number): string {
+  if (!kind) return String(id);
+  switch (kind.kind) {
+    case 'Quarter':
+      return t('periodQ', { q: (id % 4) + 1, y: Math.floor(id / 4) });
+    case 'Month':
+      return new Date(Date.UTC(Math.floor(id / 12), id % 12, 1)).toLocaleDateString(locale(), { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    case 'Year':
+      return String(id);
+    case 'Months': {
+      const per = 12 / kind.months;
+      return t('periodPart', { i: (id % per) + 1, n: per, y: Math.floor(id / per) });
+    }
+    default:
+      return `#${id}`;
+  }
+}
+
+const dueDay = (secs: bigint) => fmtDay(new Date(Number(secs - 1n) * 1000));
+
+function deadlineText(d: Deadline): string {
+  if (d.kind === 'prepayment') return d.what;
+  if (d.kind === 'vat') return t('dlVat');
+  return t('dlIncome', { what: d.what });
+}
+
 export function Pay() {
   const { vault, snap, chain, wallet, run, go, refresh } = useApp();
   const [hashes, setHashes] = useState<string[]>([]);
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
   if (!vault || !wallet) return null;
-  const rows = Object.entries(snap?.buckets ?? {}).filter(([, v]) => v.usd > 0n || v.eur > 0n);
-  const total = rows.reduce((a, [, v]) => a + v.usd + v.eur, 0n);
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const held = snap?.held ?? [];
+  const vatRows = held.filter((h) => h.bucket === 'vat');
+  const key = (h: Held) => `${h.period}|${h.bucket}|${h.token}`;
+  const cur = (h: Held) => (h.which === 'eur' ? 'EURC' : 'USDC');
+  const soon = (snap?.deadlines ?? []).filter((d) => new Date(`${d.date}T00:00:00Z`).getTime() - Date.now() < 120 * 86_400_000).slice(0, 5);
+  const payOne = (h: Held) =>
+    run(t('paying'), async (step) => {
+      const raw = amounts[key(h)];
+      const amount = raw ? BigInt(Math.round(Number(raw.replace(',', '.')) * 1e7)) : h.amount;
+      if (amount <= 0n || amount > h.amount) throw new Error(t('badAmount', { max: money(h.amount) }));
+      step(t('payingBucket', { what: bucketLabel(h.bucket), cur: cur(h) }));
+      setHashes([await payBucket(chain, wallet, vault, h, amount)]);
+      await refresh();
+    });
   return (
     <>
       <div className="content">
         <Top onBack={() => go('home')} />
         <h1>{t('payTaxes')}</h1>
         <p className="muted">{t('paySub')}</p>
+        {soon.length > 0 && (
+          <div className="card" data-testid="deadlines">
+            <p style={{ fontWeight: 600 }}>{t('nextDeadlines')}</p>
+            {soon.map((d) => (
+              <div className="row spread small" key={`${d.date}${d.kind}${d.bucket ?? ''}${d.what}`}>
+                <span>{deadlineText(d)}</span>
+                <b>{fmtDay(new Date(`${d.date}T12:00:00Z`))}</b>
+              </div>
+            ))}
+            <p className="tiny muted">{t('weekendNote')}</p>
+          </div>
+        )}
         <div className="card">
-          {rows.length === 0 && <p className="small muted">{t('nothingYet')}</p>}
-          {rows.map(([b, v]) => (
-            <div className="row spread" key={b}>
-              <span>{bucketLabel(b)}</span>
-              <b>
-                {v.eur > 0n ? `${money(v.eur)} €` : ''} {v.usd > 0n ? `${money(v.usd)} USDC` : ''}
-              </b>
-            </div>
-          ))}
-          {rows.length > 0 && (
-            <div className="row spread" style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-              <b>{t('total')}</b>
-              <span className="amount" style={{ fontSize: 20 }}>
-                {money(total)}
-              </span>
-            </div>
-          )}
+          <p style={{ fontWeight: 600 }}>{t('setAsideByTax')}</p>
+          {held.length === 0 && <p className="small muted">{t('nothingYet')}</p>}
+          {held.map((h) => {
+            const past = h.dueAt > 0n && h.dueAt <= now;
+            return (
+              <div key={key(h)} style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="row spread">
+                  <span>
+                    {bucketLabel(h.bucket)} · {periodText(snap?.periodKind ?? null, h.period)}
+                  </span>
+                  <b>
+                    {money(h.amount)} {cur(h)}
+                  </b>
+                </div>
+                <span className={`tiny ${past ? '' : 'muted'}`}>{h.dueAt > 0n ? (past ? t('pastDue', { date: dueDay(h.dueAt) }) : t('dueOn', { date: dueDay(h.dueAt) })) : ''}</span>
+                <div className="row">
+                  <input
+                    className="input"
+                    style={{ flex: 1, minHeight: 38, padding: '6px 10px' }}
+                    inputMode="decimal"
+                    aria-label={t('amount')}
+                    placeholder={money(h.amount)}
+                    value={amounts[key(h)] ?? ''}
+                    onChange={(e) => setAmounts({ ...amounts, [key(h)]: e.target.value.replace(/[^\d.,]/g, '') })}
+                  />
+                  <Button small onClick={() => payOne(h)}>
+                    {t('pay')}
+                  </Button>
+                  {past && (
+                    <Button
+                      small
+                      kind="secondary"
+                      onClick={() =>
+                        run(t('releasing'), async () => {
+                          setHashes([await releaseDue(chain, wallet, vault, h)]);
+                          await refresh();
+                        })
+                      }
+                    >
+                      {t('release')}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
         <h2>{t('howPaid')}</h2>
         <div className="list">
@@ -336,16 +418,20 @@ export function Pay() {
       <div className="footer">
         <Button
           testid="pay-taxes"
-          disabled={rows.length === 0 || !snap}
+          disabled={vatRows.length === 0}
           onClick={() =>
             run(t('paying'), async (step) => {
-              const hs = await payTaxes(chain, wallet, vault, snap!.period, step);
+              const hs: string[] = [];
+              for (const h of vatRows) {
+                step(t('payingBucket', { what: `${bucketLabel(h.bucket)} ${periodText(snap?.periodKind ?? null, h.period)}`, cur: cur(h) }));
+                hs.push(await payBucket(chain, wallet, vault, h, h.amount));
+              }
               setHashes(hs);
               await refresh();
             })
           }
         >
-          {t('payFromVault')}
+          {t('payVatAll')}
         </Button>
       </div>
     </>
@@ -543,6 +629,11 @@ export function Alerts() {
     items.push({ tone: 'info', title: t('al_scheduled'), body: t('al_scheduledBody', { date: fmtDateTime(new Date(Number(snap.pendingConversionAt) * 1000)) }) });
   if (snap?.feed) items.push({ tone: 'ok', title: t('al_law'), body: t('al_lawBody', { country: countryName(snap.feed.country) }) });
   if (snap?.conversion && (snap.reserved.usd ?? 0n) > 0n) items.push({ tone: 'warn', title: t('al_usd'), body: t('al_usdBody') });
+  for (const d of snap?.deadlines ?? []) {
+    const days = Math.ceil((new Date(`${d.date}T23:59:59Z`).getTime() - Date.now()) / 86_400_000);
+    if (days > 30) break;
+    items.push({ tone: days <= 7 ? 'warn' : 'info', title: t('al_deadline', { days }), body: t('al_deadlineBody', { what: deadlineText(d), date: fmtDay(new Date(`${d.date}T12:00:00Z`)) }) });
+  }
   const paid = snap?.events.filter((e) => e.kind === 'tax_paid') ?? [];
   if (paid.length) items.push({ tone: 'ok', title: t('al_paid'), body: t('al_paidBody', { n: paid.length }) });
   return (
@@ -551,7 +642,7 @@ export function Alerts() {
         <h1>{t('alerts')}</h1>
         {items.length === 0 && <p className="muted">{t('nothingPending')}</p>}
         {items.map((i) => (
-          <div key={i.title} className={`card ${i.tone}`}>
+          <div key={i.title + i.body} className={`card ${i.tone}`}>
             <p className="tiny" style={{ fontWeight: 700 }}>
               {i.title}
             </p>

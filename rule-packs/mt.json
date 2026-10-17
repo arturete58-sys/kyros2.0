@@ -4,7 +4,7 @@
   "country": "MT",
   "name": "Malta: self-employed",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "VAT",
   "vatRates": [
@@ -43,9 +43,42 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 181,
-  "dueNote": "VAT returns are quarterly. Provisional tax is paid in April, August and December; the annual return and balance are due on 30 June.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 1,
+      "day": 15
+    },
+    "income": {
+      "date": "06-30",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "04-30",
+        "what": "Provisional tax (20%)"
+      },
+      {
+        "date": "08-31",
+        "what": "Provisional tax (30%)"
+      },
+      {
+        "date": "12-21",
+        "what": "Provisional tax (50%)"
+      }
+    ],
+    "note": "Quarterly VAT returns and payment are due by the 15th of the second month after each quarter. Provisional tax is paid on 30 April, 31 August and 21 December; the annual return and balance are due on 30 June of the next year.",
+    "sources": [
+      {
+        "title": "MTCA: Tax return cycle",
+        "url": "https://mtca.gov.mt/personal-tax/individual/tax-return-cycle"
+      },
+      {
+        "title": "MTCA: Provisional tax booklet",
+        "url": "https://mtca.gov.mt/docs/default-source/documents/personal-tax/individual/tax-return-cycle/pt-booklet730742a2-5244-4a68-81a5-6af28f61d15f.pdf?sfvrsn=b6a5c20c_1"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

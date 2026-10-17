@@ -4,7 +4,7 @@
   "country": "AR",
   "name": "Argentina: monotributistas and responsables inscriptos",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "ARS",
   "vatName": "IVA",
   "vatRates": [
@@ -36,9 +36,30 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 181,
-  "dueNote": "IVA returns are monthly. The annual Ganancias return is due in June; the rest of a year's reserve is released after 30 June.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 25
+    },
+    "income": {
+      "date": "06-30",
+      "yearsAfter": 1
+    },
+    "buckets": {
+      "monotributo": {
+        "monthsAfter": 0,
+        "day": 20
+      }
+    },
+    "note": "IVA is filed and paid monthly, between about the 18th and 25th of the next month depending on the CUIT; the vault uses the 25th. Monotributo is paid by the 20th of each month. The annual Ganancias return and payment fall in mid-June of the next year (the vault uses 30 June).",
+    "sources": [
+      {
+        "title": "ARCA (AFIP)",
+        "url": "https://www.arca.gob.ar"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "responsable-inscripto",

@@ -4,7 +4,7 @@
   "country": "ID",
   "name": "Indonesia: individual entrepreneurs (UMKM)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "IDR",
   "vatName": "PPN",
   "vatRates": [
@@ -55,9 +55,34 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 90,
-  "dueNote": "The UMKM final tax is paid monthly, by the 15th of the following month; annual returns are due on 31 March.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "income": {
+      "date": "03-31",
+      "yearsAfter": 1
+    },
+    "buckets": {
+      "pph_final": {
+        "monthsAfter": 0,
+        "day": 15
+      }
+    },
+    "note": "The UMKM final income tax (0.5% of turnover) is paid by the 15th of the following month. VAT-registered businesses file and pay VAT by the end of the following month. Individual annual returns (SPT Tahunan) and any balance are due on 31 March.",
+    "sources": [
+      {
+        "title": "DJP: Batas waktu pembayaran, penyetoran dan pelaporan pajak",
+        "url": "https://pajak.go.id/en/node/34291"
+      },
+      {
+        "title": "DJP: PPh final UMKM",
+        "url": "https://www.pajak.go.id/en/node/113050"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "umkm-final",

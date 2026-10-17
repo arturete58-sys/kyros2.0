@@ -4,7 +4,7 @@
   "country": "AE",
   "name": "United Arab Emirates: freelancers and small companies",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "AED",
   "vatName": "VAT",
   "vatRates": [
@@ -37,9 +37,27 @@
     },
     "inclusive": false
   },
-  "period": "Quarter",
-  "dueOffsetDays": 28,
-  "dueNote": "VAT returns are quarterly, due on the 28th day after the period. Corporate tax returns and payment are due nine months after the financial year.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "days": 28
+    },
+    "income": {
+      "date": "09-30",
+      "yearsAfter": 1
+    },
+    "note": "VAT returns and payment are due 28 days after each tax period (usually quarterly). Corporate tax returns and payment are due nine months after the financial year (30 September for a calendar year).",
+    "sources": [
+      {
+        "title": "FTA: Filing returns and payments",
+        "url": "https://tax.gov.ae/en/content/filing.returns.and.payments.aspx"
+      },
+      {
+        "title": "FTA: corporate tax within nine months",
+        "url": "https://tax.gov.ae/en/media.centre/news/federal.tax.authority.urges.submission.of.corporate.tax.returns.and.settlement.of.corporate.tax.liabilities.within.nine.months.from.the.end.of.the.tax.period.aspx"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "vat-only",
@@ -62,9 +80,7 @@
       ],
       "covers": [
         "incomeTax"
-      ],
-      "period": "Year",
-      "dueOffsetDays": 273
+      ]
     }
   ],
   "estimate": {

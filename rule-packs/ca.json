@@ -4,7 +4,7 @@
   "country": "CA",
   "name": "Canada: self-employed individuals",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "CAD",
   "vatName": "GST/HST",
   "vatRates": [
@@ -45,9 +45,42 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 120,
-  "dueNote": "GST/HST returns are annual, quarterly or monthly. Self-employed individuals pay quarterly instalments and the balance by 30 April (return by 15 June); the rest of a year's reserve is released after 30 April.",
+  "calendar": {
+    "period": "Year",
+    "vat": {
+      "date": "04-30",
+      "yearsAfter": 1
+    },
+    "income": {
+      "date": "04-30",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "03-15",
+        "what": "Income tax instalment"
+      },
+      {
+        "date": "06-15",
+        "what": "Income tax instalment"
+      },
+      {
+        "date": "09-15",
+        "what": "Income tax instalment"
+      },
+      {
+        "date": "12-15",
+        "what": "Income tax instalment"
+      }
+    ],
+    "note": "Self-employed individuals pay any balance by 30 April (return by 15 June) and instalments on 15 March, June, September and December. Annual GST/HST filers with a 31 December year-end pay by 30 April; quarterly or monthly filers pay one month after each period.",
+    "sources": [
+      {
+        "title": "CRA: Tax deadlines for businesses and self-employed individuals",
+        "url": "https://www.canada.ca/en/services/taxes/resources-for-small-and-medium-businesses/2026-tax-deadlines-canadian-businesses-self-employed-individuals.html"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "gst",

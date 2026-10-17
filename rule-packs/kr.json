@@ -4,7 +4,7 @@
   "country": "KR",
   "name": "South Korea: freelancers and sole proprietors",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "KRW",
   "vatName": "VAT",
   "vatRates": [
@@ -38,9 +38,42 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 151,
-  "dueNote": "VAT for individuals is filed twice a year (25 January and 25 July); the comprehensive income tax return is due on 31 May.",
+  "calendar": {
+    "period": "Months6",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 25
+    },
+    "income": {
+      "date": "05-31",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "04-25",
+        "what": "VAT preliminary notice"
+      },
+      {
+        "date": "10-25",
+        "what": "VAT preliminary notice"
+      },
+      {
+        "date": "11-30",
+        "what": "Interim income tax prepayment"
+      }
+    ],
+    "note": "Individual businesses file VAT for each half year by 25 July and 25 January, with preliminary notices paid by 25 April and 25 October. The comprehensive income tax return and payment are due on 31 May (30 June for faithful-reporting filers), with an interim prepayment on 30 November.",
+    "sources": [
+      {
+        "title": "NTS: VAT filing and payment deadlines",
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2273&cntntsId=7694"
+      },
+      {
+        "title": "NTS: Comprehensive income tax",
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2223&cntntsId=7665"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "general",

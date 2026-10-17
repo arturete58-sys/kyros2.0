@@ -4,7 +4,7 @@
   "country": "CY",
   "name": "Cyprus: self-employed",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "VAT",
   "vatRates": [
@@ -43,9 +43,38 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 396,
-  "dueNote": "VAT returns are quarterly. From tax year 2026, individuals who prepare accounts file and pay by 31 January of the second following year; the rest of a year's reserve is released then.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 1,
+      "day": 10
+    },
+    "income": {
+      "date": "01-31",
+      "yearsAfter": 2
+    },
+    "prepayments": [
+      {
+        "date": "07-31",
+        "what": "Provisional tax, first instalment"
+      },
+      {
+        "date": "12-31",
+        "what": "Provisional tax, second instalment"
+      }
+    ],
+    "note": "VAT returns and payment are due by the 10th day of the second month after each quarter. From tax year 2026 the self-employed who prepare accounts file and pay by 31 January of the second following year, with provisional tax on 31 July and 31 December.",
+    "sources": [
+      {
+        "title": "Cyprus tax calendar 2026 (Markou & Co)",
+        "url": "https://www.cmarkou.com/tax/cyprus-tax-guide/tax-calendar/"
+      },
+      {
+        "title": "Tax Department",
+        "url": "https://www.mof.gov.cy"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

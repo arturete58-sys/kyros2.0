@@ -43,8 +43,9 @@ pub struct Split {
 }
 
 /// How the vault groups reserves into fiscal periods. Calendar periods use
-/// UTC; `Seconds` is a fixed length counted from the Unix epoch (testing and
-/// non-calendar regimes).
+/// UTC; `Months(n)` are n-month periods from January (2: bimonthly, 4:
+/// four-monthly, 6: half-yearly; n divides 12); `Seconds` is a fixed length
+/// counted from the Unix epoch (testing and non-calendar regimes).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PeriodKind {
@@ -52,6 +53,50 @@ pub enum PeriodKind {
     Quarter,
     Year,
     Seconds(u64),
+    Months(u32),
+}
+
+/// A due date set as a day of a month after the period ends. `months` counts
+/// from the month right after the period (0: that month, e.g. "the 20th of
+/// the month after the quarter"; 1: the month after it). A period whose last
+/// month is `exception_month` (1-12; 0 for none) has its own date instead,
+/// e.g. Spain's fourth-quarter VAT, due on 30 January rather than the 20th
+/// (exception_month 12), or Portugal's second-quarter VAT, due in September.
+/// Days past the end of a month mean its last day.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MonthDay {
+    pub months: u32,
+    pub day: u32,
+    pub exception_month: u32,
+    pub exception_months: u32,
+    pub exception_day: u32,
+}
+
+/// A due date fixed in the calendar after the fiscal year that contains the
+/// period, e.g. the annual income-tax payment: 30 June of the following year
+/// in Spain, 31 January two years after the tax year starts in the UK. The
+/// fiscal year starts on `fy_start_month`/`fy_start_day` (1/1 for a calendar
+/// year, 4/6 in the UK); `years_after` counts from the year it starts in.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct YearDate {
+    pub fy_start_month: u32,
+    pub fy_start_day: u32,
+    pub month: u32,
+    pub day: u32,
+    pub years_after: u32,
+}
+
+/// When a tax set aside in a period falls due. The reserve can be paid at any
+/// time and only released to the owner after the end of its due day (UTC).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Due {
+    /// A fixed number of seconds after the period ends.
+    After(u64),
+    MonthDay(MonthDay),
+    YearDate(YearDate),
 }
 
 /// Why a rule is invalid.
@@ -204,27 +249,50 @@ pub fn civil_from_days(z: i64) -> (i64, u32, u32) {
     (y, m, d)
 }
 
+/// Whether a period kind is usable: `Months(n)` needs n to divide 12, and
+/// `Seconds` a non-zero length.
+pub fn valid_period(kind: &PeriodKind) -> bool {
+    match kind {
+        PeriodKind::Months(n) => *n > 0 && 12 % *n == 0,
+        PeriodKind::Seconds(len) => *len > 0,
+        _ => true,
+    }
+}
+
+/// Months per period for calendar kinds (`None` for `Seconds`).
+fn months_per(kind: &PeriodKind) -> Option<i64> {
+    match kind {
+        PeriodKind::Month => Some(1),
+        PeriodKind::Quarter => Some(3),
+        PeriodKind::Year => Some(12),
+        PeriodKind::Months(n) => Some((*n).clamp(1, 12) as i64),
+        PeriodKind::Seconds(_) => None,
+    }
+}
+
 /// The id of the period containing `ts` (Unix seconds): year*12+month-1 for
-/// months, year*4+quarter-1 for quarters, the year for years, ts/len for
-/// fixed lengths.
+/// months, year*4+quarter-1 for quarters, the year for years,
+/// year*(12/n)+(month-1)/n for n-month periods, ts/len for fixed lengths.
 pub fn period_of(kind: &PeriodKind, ts: u64) -> u32 {
     let (y, m, _) = civil_from_days(ts as i64 / DAY);
-    match kind {
-        PeriodKind::Month => (y * 12 + m as i64 - 1) as u32,
-        PeriodKind::Quarter => (y * 4 + (m as i64 - 1) / 3) as u32,
-        PeriodKind::Year => y as u32,
-        PeriodKind::Seconds(len) => (ts / (*len).max(1)) as u32,
+    match months_per(kind) {
+        Some(n) => (y * (12 / n) + (m as i64 - 1) / n) as u32,
+        None => match kind {
+            PeriodKind::Seconds(len) => (ts / (*len).max(1)) as u32,
+            _ => 0,
+        },
     }
 }
 
 /// Unix seconds at which period `id` starts.
 pub fn period_start(kind: &PeriodKind, id: u32) -> u64 {
     let id = id as i64;
-    let (y, m) = match kind {
-        PeriodKind::Month => (id / 12, (id % 12) as u32 + 1),
-        PeriodKind::Quarter => (id / 4, (id % 4) as u32 * 3 + 1),
-        PeriodKind::Year => (id, 1),
-        PeriodKind::Seconds(len) => return id as u64 * (*len).max(1),
+    let (y, m) = match months_per(kind) {
+        Some(n) => (id / (12 / n), ((id % (12 / n)) * n) as u32 + 1),
+        None => match kind {
+            PeriodKind::Seconds(len) => return id as u64 * (*len).max(1),
+            _ => return 0,
+        },
     };
     (days_from_civil(y, m, 1) * DAY) as u64
 }
@@ -232,6 +300,70 @@ pub fn period_start(kind: &PeriodKind, id: u32) -> u64 {
 /// Unix seconds at which period `id` ends (the start of the next one).
 pub fn period_end(kind: &PeriodKind, id: u32) -> u64 {
     period_start(kind, id + 1)
+}
+
+fn days_in_month(y: i64, m: u32) -> u32 {
+    let (ny, nm) = if m == 12 { (y + 1, 1) } else { (y, m + 1) };
+    (days_from_civil(ny, nm, 1) - days_from_civil(y, m, 1)) as u32
+}
+
+/// Unix seconds at the end (UTC) of day `day` of month `m` of year `y`, with
+/// `m` allowed past 12 and `day` past the month's length (its last day).
+fn end_of_day(y: i64, m: i64, day: u32) -> u64 {
+    let y = y + (m - 1).div_euclid(12);
+    let m = ((m - 1).rem_euclid(12) + 1) as u32;
+    let d = day.clamp(1, days_in_month(y, m));
+    ((days_from_civil(y, m, d) + 1) * DAY) as u64
+}
+
+/// Whether a due rule is well formed.
+pub fn valid_due(due: &Due) -> bool {
+    match due {
+        Due::After(_) => true,
+        Due::MonthDay(md) => {
+            md.months <= 24
+                && (1..=31).contains(&md.day)
+                && md.exception_month <= 12
+                && md.exception_months <= 24
+                && (md.exception_month == 0 || (1..=31).contains(&md.exception_day))
+        }
+        Due::YearDate(yd) => {
+            (1..=12).contains(&yd.fy_start_month)
+                && (1..=31).contains(&yd.fy_start_day)
+                && (1..=12).contains(&yd.month)
+                && (1..=31).contains(&yd.day)
+                && yd.years_after <= 3
+        }
+    }
+}
+
+/// Unix seconds from which the tax of period `id` is past its due day.
+pub fn due_at(kind: &PeriodKind, id: u32, due: &Due) -> u64 {
+    let end = period_end(kind, id);
+    match due {
+        Due::After(secs) => end + secs,
+        Due::MonthDay(md) => {
+            // The month in which the next period starts, and the period's last month.
+            let (y, m, _) = civil_from_days(end as i64 / DAY);
+            let (_, last_month, _) = civil_from_days((end as i64 - 1) / DAY);
+            let (months, day) = if md.exception_month != 0 && last_month == md.exception_month {
+                (md.exception_months, md.exception_day)
+            } else {
+                (md.months, md.day)
+            };
+            end_of_day(y, m as i64 + months as i64, day)
+        }
+        Due::YearDate(yd) => {
+            // The fiscal year containing the period's last second.
+            let (y, m, d) = civil_from_days((end as i64 - 1) / DAY);
+            let fy = if (m, d) >= (yd.fy_start_month, yd.fy_start_day) {
+                y
+            } else {
+                y - 1
+            };
+            end_of_day(fy + yd.years_after as i64, yd.month as i64, yd.day)
+        }
+    }
 }
 
 /// How the payments of one invoice are split, registered by the vault owner

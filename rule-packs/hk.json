@@ -4,7 +4,7 @@
   "country": "HK",
   "name": "Hong Kong: unincorporated businesses",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "HKD",
   "enforcement": {
     "level": "standard"
@@ -19,9 +19,31 @@
       "url": "https://taxsummaries.pwc.com/hong-kong-sar/individual/residence"
     }
   },
-  "period": "Year",
-  "dueOffsetDays": 365,
-  "dueNote": "There is no VAT or GST. Profits tax is assessed yearly with provisional tax; the rest of a year's reserve is released one year after it ends.",
+  "calendar": {
+    "period": "Quarter",
+    "fiscalYearStart": "04-01",
+    "income": {
+      "date": "04-30",
+      "yearsAfter": 2
+    },
+    "prepayments": [
+      {
+        "date": "01-31",
+        "what": "Final and first provisional tax instalment (date on the notice)"
+      }
+    ],
+    "note": "There is no VAT. The year of assessment runs 1 April to 31 March; the profits tax of a year is assessed the next year and paid in instalments in January and April (with provisional tax for the year after), so the reserve stays until 30 April two years after the year starts.",
+    "sources": [
+      {
+        "title": "IRD: Profits tax",
+        "url": "https://www.ird.gov.hk/eng/tax/bus_pft.htm"
+      },
+      {
+        "title": "IRD: A guide to profits tax for unincorporated businesses",
+        "url": "https://www.ird.gov.hk/eng/pdf/pam56e.pdf"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "profits-tax",

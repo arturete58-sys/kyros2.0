@@ -18,7 +18,7 @@ import {
   TransactionBuilder,
   xdr,
 } from '@stellar/stellar-sdk';
-import type { PeriodKind } from './periods.js';
+import type { Dues, PeriodKind } from './periods.js';
 import {
   addr,
   bytes32,
@@ -28,6 +28,8 @@ import {
   invoiceTermsToScVal,
   payoutsToScVal,
   periodKindFromNative,
+  duesFromNative,
+  duesToScVal,
   periodKindToScVal,
   ruleFromNative,
   ruleToScVal,
@@ -54,7 +56,8 @@ export interface VaultConfig {
   taxDestination: string;
   noticeSecs: bigint;
   period: PeriodKind;
-  dueOffsetSecs: bigint;
+  /** When each tax of a period falls due. */
+  dues: Dues;
   tokens: string[];
 }
 
@@ -161,7 +164,7 @@ export class KyrosClient {
   deployVault(
     deployer: Keypair,
     wasmHash: Buffer,
-    v: { owner: string; rule: Rule; taxDestination: string; noticeSecs: bigint; period: PeriodKind; dueOffsetSecs: bigint; tokens: string[] },
+    v: { owner: string; rule: Rule; taxDestination: string; noticeSecs: bigint; period: PeriodKind; dues: Dues; tokens: string[] },
   ) {
     return this.create(deployer, wasmHash, [
       addr(v.owner),
@@ -169,7 +172,7 @@ export class KyrosClient {
       addr(v.taxDestination),
       u64(v.noticeSecs),
       periodKindToScVal(v.period),
-      u64(v.dueOffsetSecs),
+      duesToScVal(v.dues),
       xdr.ScVal.scvVec(v.tokens.map(addr)),
     ]);
   }
@@ -362,7 +365,7 @@ export class KyrosClient {
       taxDestination: String(n.tax_destination),
       noticeSecs: BigInt(n.notice_secs as bigint),
       period: periodKindFromNative(n.period),
-      dueOffsetSecs: BigInt(n.due_offset_secs as bigint),
+      dues: duesFromNative(n.dues),
       tokens: (n.tokens as string[]).map(String),
     };
   }
@@ -371,8 +374,14 @@ export class KyrosClient {
     return Number(scValToNative(await this.read(vault, 'current_period')));
   }
 
+  /** When all of a period's reserve can be released (the latest bucket due date). */
   async dueDate(vault: string, period: number): Promise<bigint> {
     return BigInt(scValToNative(await this.read(vault, 'due_date', u32(period))) as bigint);
+  }
+
+  /** When one bucket of a period falls due (`vat`, `irpf`...). */
+  async bucketDueDate(vault: string, period: number, bucket: string): Promise<bigint> {
+    return BigInt(scValToNative(await this.read(vault, 'bucket_due_date', u32(period), xdr.ScVal.scvSymbol(bucket))) as bigint);
   }
 
   async period(vault: string, period: number, token: string): Promise<PeriodState> {

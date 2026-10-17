@@ -10,9 +10,8 @@
     "name",
     "version",
     "currency",
-    "period",
-    "dueOffsetDays",
-    "presets"
+    "presets",
+    "calendar"
   ],
   "properties": {
     "id": {
@@ -48,22 +47,6 @@
       "items": {
         "$ref": "#/$defs/vatTable"
       }
-    },
-    "period": {
-      "enum": [
-        "Month",
-        "Quarter",
-        "Year"
-      ]
-    },
-    "dueOffsetDays": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 800,
-      "description": "Days after a period ends until its reserve can be released. Use the latest deadline among the taxes reserved (often the annual income-tax return); each tax can still be paid from the vault whenever it is due."
-    },
-    "dueNote": {
-      "type": "string"
     },
     "presets": {
       "type": "array",
@@ -117,20 +100,6 @@
               }
             }
           },
-          "period": {
-            "enum": [
-              "Month",
-              "Quarter",
-              "Year"
-            ],
-            "description": "Overrides the pack's period for this preset"
-          },
-          "dueOffsetDays": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 800,
-            "description": "Overrides the pack's due offset for this preset"
-          },
           "vatRate": {
             "type": "string",
             "description": "Name of the rate in vatRates this preset charges; the rule follows the table's dates"
@@ -158,6 +127,79 @@
               "none"
             ],
             "description": "Overrides the computed precision of the reserve check"
+          },
+          "calendar": {
+            "type": "object",
+            "description": "Overrides parts of the pack's calendar for this preset",
+            "properties": {
+              "period": {
+                "enum": [
+                  "Month",
+                  "Quarter",
+                  "Year",
+                  "Months2",
+                  "Months4",
+                  "Months6"
+                ],
+                "description": "How often the vault books reserves: the VAT filing period"
+              },
+              "fiscalYearStart": {
+                "type": "string",
+                "pattern": "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+              },
+              "vat": {
+                "$ref": "#/$defs/due"
+              },
+              "income": {
+                "$ref": "#/$defs/due"
+              },
+              "buckets": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/$defs/due"
+                }
+              },
+              "prepayments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "date",
+                    "what"
+                  ],
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "pattern": "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+                    },
+                    "what": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "note": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "url"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -355,6 +397,10 @@
         }
       },
       "description": "How strictly late or short payment is penalised; sets the safety margin"
+    },
+    "calendar": {
+      "$ref": "#/$defs/calendar",
+      "description": "When each tax falls due, from the official deadlines"
     }
   },
   "$defs": {
@@ -522,6 +568,167 @@
             "central"
           ],
           "description": "The national (central government) scale, compared with the OECD Tax Database"
+        }
+      }
+    },
+    "due": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "days"
+          ],
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 800
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "monthsAfter",
+            "day"
+          ],
+          "properties": {
+            "monthsAfter": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 24
+            },
+            "day": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            },
+            "except": {
+              "type": "object",
+              "required": [
+                "periodEndMonth",
+                "monthsAfter",
+                "day"
+              ],
+              "properties": {
+                "periodEndMonth": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                },
+                "monthsAfter": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 24
+                },
+                "day": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "date",
+            "yearsAfter"
+          ],
+          "properties": {
+            "date": {
+              "type": "string",
+              "pattern": "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+            },
+            "yearsAfter": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            }
+          },
+          "additionalProperties": false
+        }
+      ],
+      "description": "When a tax falls due: days after the period; a day of a month after it (with one exception by the period's last month); or a date after the fiscal year starts. After the end of that day (UTC) what is left can be released."
+    },
+    "calendar": {
+      "type": "object",
+      "required": [
+        "period",
+        "income",
+        "note"
+      ],
+      "properties": {
+        "period": {
+          "enum": [
+            "Month",
+            "Quarter",
+            "Year",
+            "Months2",
+            "Months4",
+            "Months6"
+          ],
+          "description": "How often the vault books reserves: the VAT filing period"
+        },
+        "fiscalYearStart": {
+          "type": "string",
+          "pattern": "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+        },
+        "vat": {
+          "$ref": "#/$defs/due"
+        },
+        "income": {
+          "$ref": "#/$defs/due"
+        },
+        "buckets": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/due"
+          }
+        },
+        "prepayments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "date",
+              "what"
+            ],
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+              },
+              "what": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "note": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "title",
+              "url"
+            ],
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     }

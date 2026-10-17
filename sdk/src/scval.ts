@@ -1,6 +1,6 @@
 /** ScVal encoding of the contract types (Soroban `#[contracttype]`: structs are maps with sorted symbol keys, enums are vectors). */
 import { Address, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
-import type { PeriodKind } from './periods.js';
+import type { Due, Dues, PeriodKind } from './periods.js';
 import type { Rule, Split } from './split.js';
 
 const sym = (s: string) => xdr.ScVal.scvSymbol(s);
@@ -87,7 +87,51 @@ export function invoiceTermsToScVal(t: { vatBps: number; withholdingBps: number;
 }
 
 export function periodKindToScVal(p: PeriodKind): xdr.ScVal {
-  return p.kind === 'Seconds' ? xdr.ScVal.scvVec([sym('Seconds'), u64(p.seconds)]) : xdr.ScVal.scvVec([sym(p.kind)]);
+  if (p.kind === 'Seconds') return xdr.ScVal.scvVec([sym('Seconds'), u64(p.seconds)]);
+  if (p.kind === 'Months') return xdr.ScVal.scvVec([sym('Months'), u32(p.months)]);
+  return xdr.ScVal.scvVec([sym(p.kind)]);
+}
+
+/** A `kyros_types::Due`. */
+export function dueToScVal(d: Due): xdr.ScVal {
+  if ('after' in d) return xdr.ScVal.scvVec([sym('After'), u64(d.after)]);
+  if ('monthDay' in d) {
+    const m = d.monthDay;
+    return xdr.ScVal.scvVec([
+      sym('MonthDay'),
+      struct({ months: u32(m.months), day: u32(m.day), exception_month: u32(m.exceptionMonth), exception_months: u32(m.exceptionMonths), exception_day: u32(m.exceptionDay) }),
+    ]);
+  }
+  const y = d.yearDate;
+  return xdr.ScVal.scvVec([
+    sym('YearDate'),
+    struct({ fy_start_month: u32(y.fyStartMonth), fy_start_day: u32(y.fyStartDay), month: u32(y.month), day: u32(y.day), years_after: u32(y.yearsAfter) }),
+  ]);
+}
+
+/** The vault's `Dues`: a map keyed by bucket symbol, sorted as the host requires. */
+export function duesToScVal(d: Dues): xdr.ScVal {
+  const entries = Object.keys(d.buckets)
+    .sort()
+    .map((k) => new xdr.ScMapEntry({ key: sym(k), val: dueToScVal(d.buckets[k]) }));
+  return struct({ default: dueToScVal(d.default), buckets: xdr.ScVal.scvMap(entries) });
+}
+
+export function dueFromNative(v: unknown): Due {
+  const a = v as unknown[];
+  const tag = String(a[0]);
+  const n = (x: unknown) => Number(x as number);
+  if (tag === 'After') return { after: BigInt(a[1] as bigint) };
+  const f = a[1] as Record<string, unknown>;
+  if (tag === 'MonthDay') return { monthDay: { months: n(f.months), day: n(f.day), exceptionMonth: n(f.exception_month), exceptionMonths: n(f.exception_months), exceptionDay: n(f.exception_day) } };
+  if (tag === 'YearDate') return { yearDate: { fyStartMonth: n(f.fy_start_month), fyStartDay: n(f.fy_start_day), month: n(f.month), day: n(f.day), yearsAfter: n(f.years_after) } };
+  throw new Error(`unknown due rule ${tag}`);
+}
+
+export function duesFromNative(v: unknown): Dues {
+  const o = v as { default: unknown; buckets: Record<string, unknown> | Map<string, unknown> };
+  const entries = o.buckets instanceof Map ? [...o.buckets.entries()] : Object.entries(o.buckets ?? {});
+  return { default: dueFromNative(o.default), buckets: Object.fromEntries(entries.map(([k, x]) => [String(k), dueFromNative(x)])) };
 }
 
 export function splitFromScVal(v: xdr.ScVal): Split {
@@ -114,6 +158,7 @@ export function periodKindFromNative(v: unknown): PeriodKind {
   const a = v as unknown[];
   const tag = String(a[0]);
   if (tag === 'Seconds') return { kind: 'Seconds', seconds: BigInt(a[1] as bigint) };
+  if (tag === 'Months') return { kind: 'Months', months: Number(a[1]) };
   if (tag === 'Month' || tag === 'Quarter' || tag === 'Year') return { kind: tag };
   throw new Error(`unknown period kind ${tag}`);
 }

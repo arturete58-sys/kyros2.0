@@ -4,7 +4,7 @@
   "country": "GB",
   "name": "United Kingdom: sole traders",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "GBP",
   "vatName": "VAT",
   "vatRates": [
@@ -42,9 +42,39 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 396,
-  "dueNote": "VAT returns are quarterly, due one month and seven days after the period. Self Assessment payments on account fall on 31 January and 31 July, and the balancing payment on 31 January after the tax year (6 April to 5 April). The rest of a calendar year's reserve is released on 31 January two years later, after the last balancing payment it can include.",
+  "calendar": {
+    "period": "Quarter",
+    "fiscalYearStart": "04-06",
+    "vat": {
+      "monthsAfter": 1,
+      "day": 7
+    },
+    "income": {
+      "date": "01-31",
+      "yearsAfter": 2
+    },
+    "prepayments": [
+      {
+        "date": "01-31",
+        "what": "Self Assessment payment on account"
+      },
+      {
+        "date": "07-31",
+        "what": "Self Assessment payment on account"
+      }
+    ],
+    "note": "VAT returns and payment are due one calendar month and 7 days after each accounting period. Self Assessment payments on account fall on 31 January and 31 July, and the balancing payment on 31 January after the tax year (6 April to 5 April).",
+    "sources": [
+      {
+        "title": "GOV.UK: When to do a VAT Return",
+        "url": "https://www.gov.uk/submit-vat-return"
+      },
+      {
+        "title": "GOV.UK: Payments on account",
+        "url": "https://www.gov.uk/understand-self-assessment-bill/payments-on-account"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

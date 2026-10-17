@@ -29,7 +29,7 @@ Every behaviour that matters is enforced by a contract:
 | --- | --- |
 | Split in the payer's own transaction | Router `pay()`: one payer signature, net to the owner, reserve to the vault, or nothing at all |
 | Split payments from payers who know nothing about Kyros | Inbox: plain SEP-41 transfers, then a permissionless `sweep()` |
-| Reserve locked until the due date | Vault `release()` refuses before the period's due date |
+| Reserve locked until the due date | Vault `release()` returns only the buckets whose own due date has passed (VAT on its return date, income tax on the annual date) |
 | Before the due date, only to the tax account | Vault `pay_tax()` pays the registered destination only |
 | No instant redirection with a stolen key | New rule or destination waits for a notice period; both emit events |
 | Proof of reserve without personal data | Contract state and events; only addresses, amounts and an invoice-reference hash go onchain |

@@ -4,7 +4,7 @@
   "country": "PH",
   "name": "Philippines: self-employed and professionals",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "PHP",
   "vatName": "VAT",
   "vatRates": [
@@ -28,9 +28,44 @@
       "url": "https://taxsummaries.pwc.com/philippines/individual/residence"
     }
   },
-  "period": "Year",
-  "dueOffsetDays": 105,
-  "dueNote": "Quarterly returns are due on 15 May, 15 August and 15 November; the annual return and balance on 15 April.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 25
+    },
+    "income": {
+      "date": "04-15",
+      "yearsAfter": 1
+    },
+    "buckets": {
+      "percentage_tax": {
+        "monthsAfter": 0,
+        "day": 25
+      }
+    },
+    "prepayments": [
+      {
+        "date": "05-15",
+        "what": "Quarterly income tax (1701Q)"
+      },
+      {
+        "date": "08-15",
+        "what": "Quarterly income tax (1701Q)"
+      },
+      {
+        "date": "11-15",
+        "what": "Quarterly income tax (1701Q)"
+      }
+    ],
+    "note": "Quarterly VAT and percentage tax returns are due on the 25th day after each quarter. Quarterly income tax returns are due on 15 May, 15 August and 15 November, and the annual return and balance on 15 April.",
+    "sources": [
+      {
+        "title": "BIR",
+        "url": "https://www.bir.gov.ph"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "eight-percent",

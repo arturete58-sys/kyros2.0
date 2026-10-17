@@ -4,7 +4,7 @@
   "country": "CO",
   "name": "Colombia: trabajadores independientes",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "COP",
   "vatName": "IVA",
   "vatRates": [
@@ -32,9 +32,28 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 293,
-  "dueNote": "IVA returns are bimonthly or four-monthly. The income tax return is filed between August and October depending on the taxpayer's ID; the rest of a year's reserve is released after 20 October.",
+  "calendar": {
+    "period": "Months4",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "income": {
+      "date": "10-31",
+      "yearsAfter": 1
+    },
+    "note": "IVA is filed four-monthly (January-April, May-August, September-December) for most small taxpayers, between the middle and late part of the next month by NIT; bimonthly for larger ones. The annual income tax return of individuals is due between August and October by NIT (the vault uses 31 October).",
+    "sources": [
+      {
+        "title": "DIAN: IVA bimestral",
+        "url": "https://www.dian.gov.co/impuestos/sociedades/IVA/Paginas/Bimestral.aspx"
+      },
+      {
+        "title": "DIAN: Calendario tributario",
+        "url": "https://www.dian.gov.co/Calendarios/Calendario_Tributario_2025.pdf"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "responsable-iva",

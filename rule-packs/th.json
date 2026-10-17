@@ -4,7 +4,7 @@
   "country": "TH",
   "name": "Thailand: freelancers and sole proprietors",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "THB",
   "vatName": "VAT",
   "vatRates": [
@@ -49,9 +49,30 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 98,
-  "dueNote": "VAT returns are monthly. The annual personal income tax return is due on 31 March (8 April online), with a half-year return in September.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 23
+    },
+    "income": {
+      "date": "04-08",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "10-08",
+        "what": "Half-year income tax (PND 94, online)"
+      }
+    ],
+    "note": "VAT returns (PP.30) are due on the 15th of the following month, the 23rd when filed online (the vault uses the 23rd). The annual personal income tax return is due on 31 March, 8 April online, with a half-year return by 30 September (8 October online).",
+    "sources": [
+      {
+        "title": "Revenue Department",
+        "url": "https://www.rd.go.th"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "vat-registered",

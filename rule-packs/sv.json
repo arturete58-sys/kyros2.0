@@ -4,7 +4,7 @@
   "country": "SV",
   "name": "El Salvador: personas naturales con negocio",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "USD",
   "vatName": "IVA",
   "vatRates": [
@@ -38,9 +38,24 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 120,
-  "dueNote": "IVA and the 1.75% monthly payment on account are due monthly. The annual income tax return is due on 30 April.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 15
+    },
+    "income": {
+      "date": "04-30",
+      "yearsAfter": 1
+    },
+    "note": "IVA and the 1.75% monthly payment on account are filed and paid within the first ten business days of the following month (the vault uses the 15th). The annual income tax return is due on 30 April.",
+    "sources": [
+      {
+        "title": "Ministerio de Hacienda",
+        "url": "https://www.mh.gob.sv"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "iva",

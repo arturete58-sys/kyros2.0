@@ -4,7 +4,7 @@
   "country": "EE",
   "name": "Estonia: sole proprietors (FIE)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "EUR",
   "vatName": "Käibemaks",
   "vatRates": [
@@ -55,9 +55,34 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 274,
-  "dueNote": "VAT returns are monthly, due on the 20th of the following month. FIE income and social tax are paid in quarterly advances and settled after the annual return; the rest of a year's reserve is released after 1 October of the following year.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 20
+    },
+    "income": {
+      "date": "10-01",
+      "yearsAfter": 1
+    },
+    "prepayments": [
+      {
+        "date": "09-15",
+        "what": "Advance income tax"
+      },
+      {
+        "date": "12-15",
+        "what": "Advance income tax"
+      }
+    ],
+    "note": "VAT returns (KMD) and payment are due on the 20th of the following month. A self-employed person (FIE) files the annual return by 30 April and pays the remaining income and social tax by 1 October, with advances on 15 September and 15 December.",
+    "sources": [
+      {
+        "title": "EMTA: Self-employed person's tax calendar",
+        "url": "https://www.emta.ee/en/admin/content/handbook_article/84"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

@@ -4,7 +4,7 @@
   "country": "BR",
   "name": "Brazil: Simples Nacional and self-employed individuals",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "BRL",
   "vatName": "ISS / CBS / IBS",
   "enforcement": {
@@ -26,9 +26,30 @@
     },
     "inclusive": false
   },
-  "period": "Month",
-  "dueOffsetDays": 20,
-  "dueNote": "The Simples Nacional DAS is due on the 20th of the following month. Self-employed individuals pay the carnê-leão monthly and settle the annual return by the end of May.",
+  "calendar": {
+    "period": "Month",
+    "income": {
+      "date": "05-31",
+      "yearsAfter": 1
+    },
+    "buckets": {
+      "das": {
+        "monthsAfter": 0,
+        "day": 20
+      }
+    },
+    "note": "The Simples Nacional DAS (and DAS-MEI) is due on the 20th of the following month. Individuals pay carnê-leão monthly and settle the annual IRPF by the end of May (29 May in 2026).",
+    "sources": [
+      {
+        "title": "Simples Nacional: Agenda",
+        "url": "https://www8.receita.fazenda.gov.br/SimplesNacional/ConteudoApoio/agenda/agenda.aspx"
+      },
+      {
+        "title": "Receita Federal: IRPF 2026 deadline 29 May",
+        "url": "https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/marco/receita-comeca-a-receber-declaracoes-do-irpf-no-dia-23-de-marco-prazo-de-entrega-se-encerra-em-29-de-maio"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "simples-anexo-iii",
@@ -152,8 +173,14 @@
         "incomeTax",
         "social"
       ],
-      "period": "Year",
-      "dueOffsetDays": 151
+      "calendar": {
+        "buckets": {
+          "irpf_inss": {
+            "date": "05-31",
+            "yearsAfter": 1
+          }
+        }
+      }
     }
   ],
   "estimate": {

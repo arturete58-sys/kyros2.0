@@ -4,7 +4,7 @@
   "country": "PK",
   "name": "Pakistan: freelancers and IT exporters",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "PKR",
   "vatName": "Sales tax",
   "vatRates": [
@@ -32,9 +32,49 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 273,
-  "dueNote": "The tax year runs July to June and returns are due on 30 September; a calendar year's reserve is released on 30 September of the next year. Final tax on export proceeds is withheld or paid as the proceeds arrive.",
+  "calendar": {
+    "period": "Month",
+    "fiscalYearStart": "07-01",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 18
+    },
+    "income": {
+      "date": "09-30",
+      "yearsAfter": 1
+    },
+    "buckets": {
+      "final_tax": {
+        "monthsAfter": 0,
+        "day": 31
+      }
+    },
+    "prepayments": [
+      {
+        "date": "09-25",
+        "what": "Advance tax"
+      },
+      {
+        "date": "12-25",
+        "what": "Advance tax"
+      },
+      {
+        "date": "03-25",
+        "what": "Advance tax"
+      },
+      {
+        "date": "06-15",
+        "what": "Advance tax"
+      }
+    ],
+    "note": "Provincial sales tax on services is filed and paid monthly, around the 15th-18th of the following month (the vault uses the 18th). The tax year runs July to June; returns are due on 30 September, with advance tax in September, December, March and June. Final tax on export proceeds is withheld or paid as they arrive.",
+    "sources": [
+      {
+        "title": "FBR",
+        "url": "https://www.fbr.gov.pk"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "it-export-pseb",

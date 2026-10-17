@@ -4,7 +4,7 @@
   "country": "LI",
   "name": "Liechtenstein: self-employed",
   "version": "2026.3",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "CHF",
   "vatName": "MWST",
   "vatRates": [
@@ -52,9 +52,23 @@
     },
     "inclusive": false
   },
-  "period": "Year",
-  "dueOffsetDays": 120,
-  "dueNote": "VAT returns are quarterly, due 60 days after the quarter. Income tax (Erwerbssteuer) is assessed yearly.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "days": 60
+    },
+    "income": {
+      "date": "12-31",
+      "yearsAfter": 1
+    },
+    "note": "VAT returns and payment are due within 60 days after each quarter. Income tax is assessed yearly from the return; the vault keeps the reserve until the end of the following year.",
+    "sources": [
+      {
+        "title": "Liechtenstein tax administration",
+        "url": "https://www.llv.li/de/landesverwaltung/steuerverwaltung"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "standard",

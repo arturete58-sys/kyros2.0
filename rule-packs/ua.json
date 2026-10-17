@@ -4,7 +4,7 @@
   "country": "UA",
   "name": "Ukraine: individual entrepreneurs (FOP)",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "UAH",
   "vatName": "VAT (ПДВ)",
   "vatRates": [
@@ -34,9 +34,23 @@
     },
     "inclusive": false
   },
-  "period": "Quarter",
-  "dueOffsetDays": 50,
-  "dueNote": "Group 3 declarations are filed within 40 days after each quarter and the tax is paid within the next 10 days.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 30
+    },
+    "income": {
+      "days": 50
+    },
+    "note": "Group 3 single-tax payers file within 40 days after each quarter and pay within the next 10 days. VAT payers file monthly by the 20th and pay by the 30th of the following month.",
+    "sources": [
+      {
+        "title": "State Tax Service: group 3 deadlines",
+        "url": "https://tax.gov.ua/media-tsentr/novini/print-872363.html"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "fop-group-3",

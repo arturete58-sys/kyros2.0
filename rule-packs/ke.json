@@ -4,7 +4,7 @@
   "country": "KE",
   "name": "Kenya: freelancers and small businesses",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "KES",
   "vatName": "VAT",
   "vatRates": [
@@ -31,9 +31,30 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 181,
-  "dueNote": "Turnover tax and VAT are paid monthly, by the 20th. Annual income tax returns are due on 30 June.",
+  "calendar": {
+    "period": "Month",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 20
+    },
+    "income": {
+      "date": "06-30",
+      "yearsAfter": 1
+    },
+    "buckets": {
+      "turnover_tax": {
+        "monthsAfter": 0,
+        "day": 20
+      }
+    },
+    "note": "VAT and turnover tax are filed and paid by the 20th of the following month. Annual income tax returns and balances are due on 30 June.",
+    "sources": [
+      {
+        "title": "KRA",
+        "url": "https://www.kra.go.ke"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "turnover-tax",

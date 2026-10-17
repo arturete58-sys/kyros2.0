@@ -4,7 +4,7 @@
   "country": "SG",
   "name": "Singapore: sole proprietors",
   "version": "2026.2",
-  "reviewed": "2026-10-16",
+  "reviewed": "2026-10-17",
   "currency": "SGD",
   "vatName": "GST",
   "vatRates": [
@@ -49,9 +49,24 @@
     },
     "inclusive": true
   },
-  "period": "Year",
-  "dueOffsetDays": 365,
-  "dueNote": "GST returns are quarterly, due one month after the quarter. Income tax is assessed yearly after the return (due in April); the rest of a year's reserve is released one year after it ends.",
+  "calendar": {
+    "period": "Quarter",
+    "vat": {
+      "monthsAfter": 0,
+      "day": 31
+    },
+    "income": {
+      "date": "12-31",
+      "yearsAfter": 1
+    },
+    "note": "GST returns and payment are due one month after the end of each accounting period. Income tax returns are due on 18 April; tax is payable within one month of the notice of assessment (or in GIRO instalments), so the vault keeps the reserve until the end of the following year.",
+    "sources": [
+      {
+        "title": "IRAS: GST filing due dates",
+        "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/due-dates-and-requests-for-extension"
+      }
+    ]
+  },
   "presets": [
     {
       "id": "gst",
