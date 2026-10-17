@@ -113,7 +113,7 @@ async function main(): Promise<void> {
   log('issuing KUSD and deploying its Stellar Asset Contract');
   const asset = new Asset('KUSD', k.issuer.publicKey());
   for (const kp of [k.freelancer, k.client, k.taxAccount, k.newDestination]) await classic(c, kp, [Operation.changeTrust({ asset })]);
-  await classic(c, k.issuer, [Operation.payment({ destination: k.client.publicKey(), asset, amount: '10000' })]);
+  await classic(c, k.issuer, [Operation.payment({ destination: k.client.publicKey(), asset, amount: '30000' })]);
   await c.send(k.issuer, Operation.createStellarAssetContract({ asset }));
   const token = asset.contractId(PASS);
 
