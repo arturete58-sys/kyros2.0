@@ -56,8 +56,10 @@ export default function App() {
       setWallet(f.fixtureWallet);
       if (fixture === 'start') return;
       setVault(f.fixtureVault());
-      setSnap(f.fixtureSnapshot(pack, await loadHolidays('es')));
-      if (fixture) setScreen(fixture as Screen);
+      const snap = f.fixtureSnapshot(pack, await loadHolidays('es'));
+      setSnap(fixture.startsWith('empty') ? f.emptySnapshot(snap) : snap);
+      const screen = fixture.replace(/^empty-?/, '');
+      if (screen) setScreen(screen as Screen);
     })();
   }, [cfg, fixture]);
 

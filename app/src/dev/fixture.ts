@@ -69,3 +69,8 @@ export function fixtureSnapshot(pack: RulePack, holidays?: HolidayData): Snapsho
     ],
   } as unknown as Snapshot;
 }
+
+/** A vault just created: no payments yet. */
+export function emptySnapshot(s: Snapshot): Snapshot {
+  return { ...s, spendable: { usd: 0n, eur: 0n }, reserved: { usd: 0n, eur: 0n }, buckets: {}, held: [], figures: [], scheduled: [], events: [], feed: null };
+}
