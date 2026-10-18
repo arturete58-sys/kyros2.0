@@ -151,3 +151,17 @@ export function LangPicker(p: { compact?: boolean }) {
     </label>
   );
 }
+
+/** Rows of grey shapes while data loads, so no false zeros show. */
+export function Skeleton(p: { rows?: number }) {
+  return (
+    <div aria-busy="true" aria-label={t('loading')} style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '6px 0' }}>
+      {Array.from({ length: p.rows ?? 3 }, (_, i) => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span className="skel" style={{ width: `${70 - i * 9}%`, height: 14 }} />
+          <span className="skel" style={{ width: `${40 + i * 7}%`, height: 11 }} />
+        </div>
+      ))}
+    </div>
+  );
+}

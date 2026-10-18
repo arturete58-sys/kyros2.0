@@ -40,5 +40,17 @@ export default defineConfig({
     dedupe: ['@stellar/stellar-sdk'],
   },
   server: { fs: { allow: ['..'] } },
-  build: { target: 'es2022', chunkSizeWarningLimit: 4000 },
+  build: {
+    target: 'es2022',
+    chunkSizeWarningLimit: 4000,
+    rollupOptions: {
+      output: {
+        // Libraries change less often than the app: separate files stay cached across releases.
+        manualChunks: {
+          stellar: ['@stellar/stellar-sdk'],
+          react: ['react', 'react-dom'],
+        },
+      },
+    },
+  },
 });

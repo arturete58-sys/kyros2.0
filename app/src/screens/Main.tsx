@@ -3,7 +3,7 @@ import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv,
 import { convertNow, expectPayment, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
-import { Button, LangPicker, pct, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
+import { Button, LangPicker, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
 import { activityText, clientText } from './Start';
 import { fmtDate as fmtDay, fmtDateTime, fmtTime, locale, t, type Key } from '../i18n';
 
@@ -78,6 +78,26 @@ export function Home() {
   const otherUsd = other.reduce((a, [, v]) => a + v.usd, 0n);
   const otherEur = other.reduce((a, [, v]) => a + v.eur, 0n);
   const received = (s?.events ?? []).filter((e) => e.kind === 'received').slice(0, 4);
+  const loading = s === null;
+  const empty = !!s && s.spendable.usd + s.spendable.eur + reservedUsd + reservedEur === 0n && received.length === 0;
+  const simulate = (
+    <Button
+      kind={empty ? 'primary' : 'secondary'}
+      small={!empty}
+      testid="simulate-payment"
+      onClick={() =>
+        run(t('clientPaying'), async (step) => {
+          step(t('stepClient'));
+          const h = await simulateClientPayment(chain, vault.vault, 1210n * UNIT);
+          setLastTx(h);
+          step(t('stepReading'));
+          await refresh();
+        })
+      }
+    >
+      {t('simulate1210')}
+    </Button>
+  );
   return (
     <>
       <div className="content" style={{ paddingBottom: 90 }}>
@@ -87,6 +107,26 @@ export function Home() {
             {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]} · {wallet.label}
           </p>
         </div>
+        {empty && (
+          <section className="card start" data-testid="start-here">
+            <h2 style={{ margin: 0, fontSize: 18 }}>{t('startTitle')}</h2>
+            <p className="small muted">{t('startSub')}</p>
+            {simulate}
+            <button className="link" onClick={() => document.querySelector('[data-testid=pay-address]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+              {t('startShare')}
+            </button>
+            {lastTx && <TxLink hash={lastTx} />}
+          </section>
+        )}
+        {loading && (
+          <section className="vault" aria-busy="true" aria-label={t('loading')}>
+            <span className="skel" style={{ width: '38%', height: 14 }} />
+            <span className="skel" style={{ width: '62%', height: 40 }} />
+            <span className="skel" style={{ width: '100%', height: 14 }} />
+            <span className="skel" style={{ width: '80%', height: 28 }} />
+          </section>
+        )}
+        {!loading && (
         <section className="vault" aria-label={t('canSpend')}>
           <div data-testid="spendable" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span className="small muted">{t('canSpend')}</span>
@@ -104,7 +144,7 @@ export function Home() {
                 {t('setAside')}
                 {reservedEur > 0n ? t('inEuros') : ''}
               </span>
-              <span className="badge ok">{t('onTrack')}</span>
+              {reservedUsd + reservedEur > 0n && <span className="badge ok">{t('onTrack')}</span>}
             </div>
             <span className="amount">
               {reservedEur > 0n ? `${money(reservedEur)} €` : ''}
@@ -118,6 +158,7 @@ export function Home() {
                 ''
               )}
             </span>
+            {reservedUsd + reservedEur > 0n && (
             <div className="row tiny muted" style={{ gap: 16 }}>
               <span className="row" style={{ gap: 6 }}>
                 <i className="dot" style={{ background: 'var(--vat)' }} />
@@ -128,6 +169,7 @@ export function Home() {
                 {t('incomeTax')} <b className="num" style={{ color: 'var(--ink)' }}>{money(otherUsd + otherEur)}</b>
               </span>
             </div>
+            )}
             {s?.deadlines?.[0] && (
               <div className="row">
                 <Leaf iso={s.deadlines[0].date} />
@@ -151,6 +193,7 @@ export function Home() {
             )}
           </div>
         </section>
+        )}
         <PayAddress />
         {received.length > 0 && (
           <div className="list">
@@ -166,29 +209,16 @@ export function Home() {
             ))}
           </div>
         )}
-        <div className="card warn">
-          <p className="small" style={{ fontWeight: 600 }}>
-            {t('tryPayment')} <span className="badge warn">Testnet</span>
-          </p>
-          <p className="small muted">{t('tryPaymentSub')}</p>
-          <Button
-            kind="secondary"
-            small
-            testid="simulate-payment"
-            onClick={() =>
-              run(t('clientPaying'), async (step) => {
-                step(t('stepClient'));
-                const h = await simulateClientPayment(chain, vault.vault, 1210n * UNIT);
-                setLastTx(h);
-                step(t('stepReading'));
-                await refresh();
-              })
-            }
-          >
-            {t('simulate1210')}
-          </Button>
-          {lastTx && <TxLink hash={lastTx} />}
-        </div>
+        {!empty && !loading && (
+          <div className="card warn">
+            <p className="small" style={{ fontWeight: 600 }}>
+              {t('tryPayment')} <span className="badge warn">Testnet</span>
+            </p>
+            <p className="small muted">{t('tryPaymentSub')}</p>
+            {simulate}
+            {lastTx && <TxLink hash={lastTx} />}
+          </div>
+        )}
       </div>
       <Tabs current="home" />
     </>
@@ -380,7 +410,8 @@ export function Pay() {
         <ScheduledList />
         <div className="card">
           <p style={{ fontWeight: 600 }}>{t('setAsideByTax')}</p>
-          {held.length === 0 && <p className="small muted">{t('nothingYet')}</p>}
+          {!snap && <Skeleton rows={3} />}
+          {snap && held.length === 0 && <p className="small muted">{t('nothingYet')}</p>}
           {held.map((h) => {
             const past = h.dueAt > 0n && h.dueAt <= now;
             return (
@@ -628,7 +659,8 @@ export function Activity() {
     <>
       <div className="content">
         <h1>{t('movements')}</h1>
-        {ev.length === 0 && <p className="muted">{t('noMovements')}</p>}
+        {!snap && <Skeleton rows={4} />}
+        {snap && ev.length === 0 && <p className="muted">{t('noMovements')}</p>}
         {ev.length > 0 && (
           <div className="card" data-testid="exports">
             <p style={{ fontWeight: 600 }}>{t('exportTitle')}</p>
@@ -681,7 +713,8 @@ export function Alerts() {
     <>
       <div className="content">
         <h1>{t('alerts')}</h1>
-        {items.length === 0 && <p className="muted">{t('nothingPending')}</p>}
+        {!snap && <Skeleton rows={2} />}
+        {snap && items.length === 0 && <p className="muted">{t('nothingPending')}</p>}
         {items.map((i) => (
           <div key={i.title + i.body} className={`card ${i.tone}`}>
             <p className="tiny" style={{ fontWeight: 700 }}>

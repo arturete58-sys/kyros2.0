@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { split, type ActivityId, type ClientKind, type RulePack } from 'kyros-sdk';
 import { countries, countryName, loadPack } from '../packs';
 import { createVault, followLaw, makePlan, money, type Answers } from '../kyros';
-import { connectPasskeyWallet, createPasskeyWallet } from '../wallet/passkey';
 import { fmtNumber, t, type Key } from '../i18n';
 import { Button, LangPicker, Option, pct, Seg, Toggle, Top, useApp } from '../ui';
 
@@ -39,6 +38,11 @@ export function vatLabel(treatment: string, bps: number, name = t('vat')): strin
 export function Welcome() {
   const { chain, setWallet, run } = useApp();
   const [name, setName] = useState('');
+  // The passkey code is loaded while this screen shows, so it is ready when Face ID is tapped.
+  useEffect(() => {
+    void import('../wallet/passkey');
+  }, []);
+  const passkey = () => import('../wallet/passkey');
   const start = (f: () => Promise<import('../wallet/types').Wallet>, title: string) =>
     run(title, async (step) => {
       step(t('waitingFaceId'));
@@ -68,10 +72,10 @@ export function Welcome() {
         <p className="tiny muted" style={{ textAlign: 'center', marginTop: -4 }}>
           {t('walletList')}
         </p>
-        <Button kind="secondary" testid="create-passkey" onClick={() => start(() => createPasskeyWallet(chain, name.trim() || 'Kyros'), t('creatingWallet'))}>
+        <Button kind="secondary" testid="create-passkey" onClick={() => start(async () => (await passkey()).createPasskeyWallet(chain, name.trim() || 'Kyros'), t('creatingWallet'))}>
           {t('createFaceId')}
         </Button>
-        <button className="link" data-testid="connect-passkey" style={{ textAlign: 'center', padding: 8 }} onClick={() => start(() => connectPasskeyWallet(chain), t('enteringFaceId'))}>
+        <button className="link" data-testid="connect-passkey" style={{ textAlign: 'center', padding: 8 }} onClick={() => start(async () => (await passkey()).connectPasskeyWallet(chain), t('enteringFaceId'))}>
           {t('haveAccount')}
         </button>
         <p className="tiny muted" style={{ textAlign: 'center' }}>

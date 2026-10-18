@@ -3,9 +3,20 @@ import { Chain } from './chain';
 import { loadConfig, type AppConfig } from './config';
 import { runDueScheduled, savedVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
 import { AppCtx, type Ctx, type Screen } from './ui';
-import { Activity, Alerts, Home, Pay, Request, Settings } from './screens/Main';
-import { Onboarding, Welcome } from './screens/Start';
-import { PayLink } from './screens/PayLink';
+import { friendlyError } from './errors';
+import { lazy, Suspense } from 'react';
+
+// Screens load on demand: a client opening a payment link never downloads the owner's screens.
+const Main = () => import('./screens/Main');
+const Activity = lazy(() => Main().then((m) => ({ default: m.Activity })));
+const Alerts = lazy(() => Main().then((m) => ({ default: m.Alerts })));
+const Home = lazy(() => Main().then((m) => ({ default: m.Home })));
+const Pay = lazy(() => Main().then((m) => ({ default: m.Pay })));
+const Request = lazy(() => Main().then((m) => ({ default: m.Request })));
+const Settings = lazy(() => Main().then((m) => ({ default: m.Settings })));
+const Onboarding = lazy(() => import('./screens/Start').then((m) => ({ default: m.Onboarding })));
+const Welcome = lazy(() => import('./screens/Start').then((m) => ({ default: m.Welcome })));
+const PayLink = lazy(() => import('./screens/PayLink').then((m) => ({ default: m.PayLink })));
 import type { Wallet } from './wallet/types';
 import { getLang, setLang as applyLang, t, type Lang } from './i18n';
 
@@ -28,7 +39,7 @@ export default function App() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
   const [busy, setBusy] = useState<{ title: string; step: string } | null>(null);
-  const [toast, setToast] = useState<{ msg: string; error?: boolean } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; error?: boolean; detail?: string } | null>(null);
   const [lang, setLangState] = useState<Lang>(getLang());
   const payLink = payLinkFromHash();
 
@@ -57,8 +68,8 @@ export default function App() {
       if (fixture === 'start') return;
       setVault(f.fixtureVault());
       const snap = f.fixtureSnapshot(pack, await loadHolidays('es'));
-      setSnap(fixture.startsWith('empty') ? f.emptySnapshot(snap) : snap);
-      const screen = fixture.replace(/^empty-?/, '');
+      if (!fixture.startsWith('loading')) setSnap(fixture.startsWith('empty') ? f.emptySnapshot(snap) : snap);
+      const screen = fixture.replace(/^(empty|loading)-?/, '');
       if (screen) setScreen(screen as Screen);
     })();
   }, [cfg, fixture]);
@@ -142,9 +153,10 @@ export default function App() {
         const r = await f((step) => setBusy({ title, step }));
         return r;
       } catch (e) {
-        const m = (e as Error).message ?? String(e);
-        setToast({ msg: m.length > 240 ? `${m.slice(0, 240)}…` : m, error: true });
+        const raw = (e as Error).message ?? String(e);
         console.error(e);
+        // The end-to-end tests read the raw error to report it; people get it in plain words.
+        setToast({ msg: friendlyError(e), error: true, detail: raw.slice(0, 600) });
         return undefined;
       } finally {
         setBusy(null);
@@ -167,7 +179,7 @@ export default function App() {
     <AppCtx.Provider value={ctx}>
       <div className="phone">
         <div className="testnet">{t('testnetBanner')}</div>
-        {page}
+        <Suspense fallback={<div className="content" aria-busy="true" />}>{page}</Suspense>
       </div>
       {busy && (
         <div className="busy" role="status" data-testid="busy">
@@ -181,7 +193,7 @@ export default function App() {
         </div>
       )}
       {toast && (
-        <div className={`toast${toast.error ? ' error' : ''}`} role="alert" data-testid={toast.error ? 'error' : 'toast'}>
+        <div className={`toast${toast.error ? ' error' : ''}`} role="alert" aria-live="assertive" data-testid={toast.error ? 'error' : 'toast'} data-detail={toast.detail}>
           {toast.msg}
         </div>
       )}

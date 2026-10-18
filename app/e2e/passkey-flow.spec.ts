@@ -15,7 +15,7 @@ async function settle(page: Page) {
   await expect(page.getByTestId('busy')).toHaveCount(0, { timeout: 300_000 });
   const err = page.getByTestId('error');
   // The browser's errors go into the message, so CI shows them in the run's annotations.
-  if (await err.count()) throw new Error(`app error: ${await err.textContent()}\n${consoleErrors.slice(-5).join('\n')}`);
+  if (await err.count()) throw new Error(`app error: ${await err.textContent()} | ${await err.getAttribute('data-detail')}\n${consoleErrors.slice(-5).join('\n')}`);
 }
 
 const amountOf = async (page: Page, testid: string) => Number(((await page.getByTestId(testid).locator('.big, .amount').first().textContent()) ?? '0').replace(/[^\d,]/g, '').replace(',', '.'));

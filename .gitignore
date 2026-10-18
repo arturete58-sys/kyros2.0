@@ -4,3 +4,7 @@ sdk/dist/
 sdk/rule-packs/
 *.log
 .DS_Store
+
+# testnet keeper working files
+sdk/keeper-state.json
+sdk/keeper.md

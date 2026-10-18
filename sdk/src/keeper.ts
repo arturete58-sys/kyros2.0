@@ -6,7 +6,7 @@
  * `sweep` is permissionless, so anyone can run a keeper, and if every keeper
  * stops the money waits safely in the inbox.
  */
-import type { Keypair } from '@stellar/stellar-sdk';
+import { type Keypair, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { KyrosClient } from './client.js';
 
 export interface Watched {
@@ -130,4 +130,27 @@ export class Keeper {
   stop(): void {
     this.stopped = true;
   }
+}
+
+/**
+ * Vaults that scheduled a payment since `startLedger` (from their
+ * `payment_scheduled` events, across all contracts), for a keeper that does
+ * not know its vaults in advance.
+ */
+export async function vaultsWithScheduledPayments(server: rpc.Server, startLedger: number): Promise<string[]> {
+  const topic = [xdr.ScVal.scvSymbol('kyros_vault').toXDR('base64'), xdr.ScVal.scvSymbol('payment_scheduled').toXDR('base64'), '*'];
+  const found = new Set<string>();
+  let cursor: string | undefined;
+  for (let page = 0; page < 50; page++) {
+    const filters = [{ type: 'contract' as const, topics: [topic] }];
+    const req = cursor ? { filters, cursor, limit: 200 } : { filters, startLedger, limit: 200 };
+    const res = await server.getEvents(req as rpc.Server.GetEventsRequest);
+    for (const ev of res.events) {
+      const topics = ev.topic.map((t: xdr.ScVal) => scValToNative(t));
+      if (topics[0] === 'kyros_vault' && topics[1] === 'payment_scheduled') found.add(String(ev.contractId));
+    }
+    if (res.events.length < 200) break;
+    cursor = res.cursor;
+  }
+  return [...found];
 }

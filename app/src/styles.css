@@ -135,6 +135,12 @@ b { font-weight: 600; }
 .split .y { background: var(--yours); }
 .split .v { background: var(--vat); }
 .split .i { background: var(--income); }
+.split .none { background: repeating-linear-gradient(135deg, var(--line) 0 6px, transparent 6px 10px); box-shadow: inset 0 0 0 1px var(--line); }
+.card.start { background: var(--surface); box-shadow: inset 0 0 0 2px var(--action-soft); }
+
+/* Loading: shapes of what is coming, never zeros that are not true. */
+.skel { display: block; border-radius: 8px; background: linear-gradient(90deg, var(--line) 0%, color-mix(in srgb, var(--line) 45%, var(--surface)) 50%, var(--line) 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .legend div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }

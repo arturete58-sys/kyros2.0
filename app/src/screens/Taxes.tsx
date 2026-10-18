@@ -56,11 +56,19 @@ export function SplitBar({ yours, vat, income }: { yours: bigint; vat: bigint; i
   const w = (x: bigint) => (total > 0n ? Number((x * 10_000n) / total) : 1);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="split" role="img" aria-label={`${t('yoursShort')} ${money(yours)}, ${t('vat')} ${money(vat)}, ${t('incomeTax')} ${money(income)}`}>
-        <span className="y" style={{ flexGrow: w(yours) }} />
-        <span className="v" style={{ flexGrow: w(vat) }} />
-        <span className="i" style={{ flexGrow: w(income) }} />
+      <div className="split" role="img" aria-label={total > 0n ? `${t('yoursShort')} ${money(yours)}, ${t('vat')} ${money(vat)}, ${t('incomeTax')} ${money(income)}` : t('splitEmpty')}>
+        {total > 0n ? (
+          <>
+            <span className="y" style={{ flexGrow: w(yours) }} />
+            <span className="v" style={{ flexGrow: w(vat) }} />
+            <span className="i" style={{ flexGrow: w(income) }} />
+          </>
+        ) : (
+          <span className="none" style={{ flexGrow: 1 }} />
+        )}
       </div>
+      {total === 0n && <p className="tiny muted">{t('splitEmpty')}</p>}
+      {total > 0n && (
       <div className="legend">
         {(
           [
@@ -78,6 +86,7 @@ export function SplitBar({ yours, vat, income }: { yours: bigint; vat: bigint; i
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

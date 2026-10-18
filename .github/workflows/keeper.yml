@@ -1,0 +1,48 @@
+name: Testnet keeper
+
+# Every hour: runs the scheduled tax payments whose date has come in any Kyros
+# vault on Stellar testnet, so instalments go out even when nobody has the app
+# open. run_scheduled is permissionless and only pays a vault's own tax
+# destination; the keeper's throwaway key only pays network fees.
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: testnet-keeper
+  cancel-in-progress: false
+
+jobs:
+  keeper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: Vaults the keeper already knows
+        uses: actions/cache/restore@v4
+        with:
+          path: sdk/keeper-state.json
+          key: keeper-state-${{ github.run_id }}
+          restore-keys: keeper-state-
+      - name: Run due payments
+        working-directory: sdk
+        run: node scripts/testnet-keeper.mjs --state keeper-state.json --out keeper.md
+      - name: Summary
+        if: always()
+        run: if [ -f sdk/keeper.md ]; then cat sdk/keeper.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Remember the vaults
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: sdk/keeper-state.json
+          key: keeper-state-${{ github.run_id }}
