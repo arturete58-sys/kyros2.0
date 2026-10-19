@@ -492,3 +492,15 @@ test('a mainnet vault is never deployed with a notice shorter than a day', async
   assert.throws(() => c.deployVault(Keypair.random(), Buffer.alloc(32), v), /at least 86400 seconds/);
   assert.equal(MIN_MAINNET_NOTICE_SECS, 86_400n);
 });
+
+test('brief RPC failures are retried; contract errors are not', async () => {
+  const { retrying, KyrosError } = await import('../client.js');
+  let n = 0;
+  assert.equal(await retrying(async () => (++n < 3 ? Promise.reject(new Error('fetch failed')) : 'ok'), { attempts: 4 }), 'ok');
+  assert.equal(n, 3);
+  n = 0;
+  await assert.rejects(retrying(async () => { n++; throw new KyrosError('simulation failed: Error(Contract, #4)'); }), /Contract, #4/);
+  assert.equal(n, 1);
+  n = 0;
+  assert.equal(await retrying(async () => (++n < 2 ? Promise.reject(new Error('Account not found: G...')) : 'ok'), { alsoIf: (e) => /Account not found/.test(e.message) }), 'ok');
+});

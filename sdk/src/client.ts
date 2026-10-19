@@ -124,6 +124,30 @@ export interface Sent {
 
 export class KyrosError extends Error {}
 
+/** Network failures worth trying again: the RPC was briefly unreachable or overloaded. */
+const TRANSIENT = /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|network|status code (429|502|503|504)|Bad Gateway|Service Unavailable|Gateway Time-?out|TRY_AGAIN_LATER/i;
+
+/**
+ * Runs `f`, retrying transient network failures (and, when `alsoIf` says so,
+ * other errors such as an account friendbot has just created but the RPC does
+ * not show yet). Contract and simulation errors are never retried.
+ */
+export async function retrying<T>(f: () => Promise<T>, o: { attempts?: number; alsoIf?: (e: Error) => boolean } = {}): Promise<T> {
+  const attempts = o.attempts ?? 5;
+  for (let i = 1; ; i++) {
+    try {
+      return await f();
+    } catch (e) {
+      const err = e as Error;
+      const again = !(err instanceof KyrosError) && (TRANSIENT.test(String(err?.message ?? err)) || (o.alsoIf?.(err) ?? false));
+      if (!again || i >= attempts) throw e;
+      await new Promise((r) => setTimeout(r, Math.min(1000 * 2 ** (i - 1), 8000)));
+    }
+  }
+}
+
+const notFoundYet = (e: Error) => /Account not found/i.test(e.message);
+
 export class KyrosClient {
   readonly server: rpc.Server;
   constructor(readonly o: KyrosClientOptions) {
@@ -134,13 +158,13 @@ export class KyrosClient {
 
   /** Builds and simulates (prepares) a transaction with one operation, ready to sign. */
   async prepare(source: string, op: xdr.Operation): Promise<Transaction> {
-    const account = await this.server.getAccount(source);
+    const account = await retrying(() => this.server.getAccount(source), { alsoIf: notFoundYet });
     const tx = new TransactionBuilder(account, { fee: this.o.fee ?? BASE_FEE, networkPassphrase: this.o.networkPassphrase })
       .addOperation(op)
       .setTimeout(120)
       .build();
     try {
-      return await this.server.prepareTransaction(tx);
+      return await retrying(() => this.server.prepareTransaction(tx));
     } catch (e) {
       // Simulation failures carry the contract error, e.g. Error(Contract, #4) for NotDue.
       throw new KyrosError(`simulation failed: ${(e as Error).message}`);
@@ -150,9 +174,14 @@ export class KyrosClient {
   /** Signs with `signer` and submits; throws on failure. */
   async submit(tx: Transaction, signer: Keypair): Promise<Sent> {
     tx.sign(signer);
-    const sent = await this.server.sendTransaction(tx);
+    // Sending the same signed transaction again is safe: it has one hash and can only apply once.
+    const sent = await retrying(async () => {
+      const r = await this.server.sendTransaction(tx);
+      if (r.status === 'TRY_AGAIN_LATER') throw new Error('TRY_AGAIN_LATER');
+      return r;
+    });
     if (sent.status === 'ERROR') throw new KyrosError(`rejected: ${sent.errorResult?.toXDR('base64') ?? 'unknown'}`);
-    const done = await this.server.pollTransaction(sent.hash, { attempts: 40 });
+    const done = await retrying(() => this.server.pollTransaction(sent.hash, { attempts: 40 }));
     if (done.status !== 'SUCCESS') throw new KyrosError(`transaction ${sent.hash} ${done.status}`);
     return { hash: sent.hash, returnValue: (done as rpc.Api.GetSuccessfulTransactionResponse).returnValue };
   }
@@ -164,12 +193,12 @@ export class KyrosClient {
 
   /** Simulates a read-only call and returns its value. */
   async read(contractId: string, method: string, ...args: xdr.ScVal[]): Promise<xdr.ScVal> {
-    const source = this.o.readAs ? await this.server.getAccount(this.o.readAs) : new Account(Keypair.random().publicKey(), '0');
+    const source = this.o.readAs ? await retrying(() => this.server.getAccount(this.o.readAs!), { alsoIf: notFoundYet }) : new Account(Keypair.random().publicKey(), '0');
     const tx = new TransactionBuilder(source, { fee: BASE_FEE, networkPassphrase: this.o.networkPassphrase })
       .addOperation(new Contract(contractId).call(method, ...args))
       .setTimeout(60)
       .build();
-    const sim = await this.server.simulateTransaction(tx);
+    const sim = await retrying(() => this.server.simulateTransaction(tx));
     if (rpc.Api.isSimulationError(sim)) throw new KyrosError(`${method} failed: ${sim.error}`);
     return (sim as rpc.Api.SimulateTransactionSuccessResponse).result!.retval;
   }
