@@ -27,7 +27,7 @@
 //!
 //! No admin, no stored funds.
 #![no_std]
-use kyros_types::{split_withheld, Rule, Split, VaultClient};
+use kyros_types::{Split, VaultClient};
 use soroban_sdk::{
     address_payload::AddressPayload,
     auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
@@ -232,18 +232,7 @@ impl CctpPay {
         // The vault pulls the money from here; authorize exactly the two
         // transfers its split will make, nothing else.
         let v = VaultClient::new(&e, &p.vault);
-        let s = match v.invoice(&p.reference) {
-            Some(terms) => split_withheld(
-                &e,
-                &Rule {
-                    vat_bps: terms.vat_bps,
-                    buckets: terms.buckets,
-                },
-                terms.withholding_bps,
-                gross,
-            ),
-            None => v.quote(&gross),
-        };
+        let s = v.quote_for(&me, &p.reference, &gross);
         let owner = v.owner();
         let transfer = Symbol::new(&e, "transfer");
         let mut auths: Vec<InvokerContractAuthEntry> = Vec::new(&e);

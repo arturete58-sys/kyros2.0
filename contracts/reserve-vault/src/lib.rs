@@ -777,6 +777,33 @@ fn save_period(e: &Env, id: u32, token: &Address, s: &PeriodState) {
         .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
 }
 
+/// The terms for a payment (an invoice's own terms first, then the terms
+/// registered for its payer, else the rule) and the split they give.
+fn split_for(
+    e: &Env,
+    rule: &Rule,
+    from: &Address,
+    reference: &BytesN<32>,
+    gross: i128,
+) -> (Rule, Split) {
+    let terms: Option<InvoiceTerms> = e
+        .storage()
+        .persistent()
+        .get(&Key::Invoice(reference.clone()))
+        .or_else(|| e.storage().persistent().get(&Key::Payer(from.clone())));
+    match terms {
+        Some(t) => {
+            let r = Rule {
+                vat_bps: t.vat_bps,
+                buckets: t.buckets,
+            };
+            let s = split_withheld(e, &r, t.withholding_bps, gross);
+            (r, s)
+        }
+        None => (rule.clone(), split(e, rule, gross)),
+    }
+}
+
 fn check_rule(e: &Env, rule: &Rule) -> Result<(), VaultError> {
     validate(e, rule).map_err(|_| VaultError::InvalidRule)
 }
@@ -897,6 +924,13 @@ impl ReserveVault {
         split(&e, &effective(&e).rule, gross)
     }
 
+    /// The split `receive` will make for this payer and reference: an
+    /// invoice's terms, else the payer's, else the rule. Contracts that
+    /// authorize the exact transfers (the Inbox, the CCTP receiver) ask this.
+    pub fn quote_for(e: Env, from: Address, reference: BytesN<32>, gross: i128) -> Split {
+        split_for(&e, &effective(&e).rule, &from, &reference, gross).1
+    }
+
     pub fn current_period(e: Env) -> u32 {
         period_of(&stored_config(&e).period, now(&e))
     }
@@ -944,23 +978,8 @@ impl ReserveVault {
         if !c.tokens.contains(&token) {
             return Err(VaultError::TokenNotAccepted);
         }
-        // An invoice the owner registered splits by its own terms; anything else by the rule.
-        // An invoice's own terms first, then the terms registered for this payer.
-        let terms: Option<InvoiceTerms> = e
-            .storage()
-            .persistent()
-            .get(&Key::Invoice(reference.clone()))
-            .or_else(|| e.storage().persistent().get(&Key::Payer(from.clone())));
-        let s = match terms {
-            Some(t) => {
-                c.rule = Rule {
-                    vat_bps: t.vat_bps,
-                    buckets: t.buckets,
-                };
-                split_withheld(&e, &c.rule, t.withholding_bps, gross)
-            }
-            None => split(&e, &c.rule, gross),
-        };
+        let (rule, s) = split_for(&e, &c.rule, &from, &reference, gross);
+        c.rule = rule;
         let t = token::Client::new(&e, &token);
         if s.net > 0 {
             t.transfer(&from, &c.owner, &s.net);

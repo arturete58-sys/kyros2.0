@@ -388,6 +388,9 @@ pub trait VaultApi {
     fn owner(e: Env) -> Address;
     /// The split the current rule gives for `gross`.
     fn quote(e: Env, gross: i128) -> Split;
+    /// The split `receive` will make for this payer and reference (invoice
+    /// terms, then the payer's terms, then the rule).
+    fn quote_for(e: Env, from: Address, reference: BytesN<32>, gross: i128) -> Split;
     /// Whether the vault accepts `token`.
     fn accepts(e: Env, token: Address) -> bool;
     /// Pulls `gross` of `token` from `from`: the net amount to the owner, the

@@ -1,7 +1,7 @@
 extern crate std;
 use super::*;
 use kyros_reserve_vault::{ReserveVault, ReserveVaultClient};
-use kyros_types::{Bucket, InvoiceTerms, PeriodKind};
+use kyros_types::{Bucket, InvoiceTerms, PeriodKind, Rule};
 use soroban_sdk::{
     contract, contractimpl,
     testutils::{Address as _, Events, Ledger},

@@ -360,3 +360,35 @@ fn a_batch_is_all_or_nothing() {
     assert!(res.is_err());
     assert_eq!(bal(&w, &w.payer), 10_000 * UNIT);
 }
+
+#[test]
+fn an_inbox_for_clients_abroad_sweeps_by_its_own_terms() {
+    let w = world();
+    // A second inbox for clients abroad: the vault books its payments without VAT.
+    let abroad = InboxClient::new(&w.e, &w.e.register(Inbox, (w.vault.address.clone(),)));
+    w.vault.expect_payer(
+        &abroad.address,
+        &kyros_types::InvoiceTerms {
+            vat_bps: 0,
+            withholding_bps: 0,
+            buckets: vec![
+                &w.e,
+                Bucket {
+                    name: Symbol::new(&w.e, "irpf"),
+                    bps: 2000,
+                },
+            ],
+        },
+    );
+    TokenClient::new(&w.e, &w.token).transfer(&w.payer, &abroad.address, &(1_000 * UNIT));
+    // The inbox authorizes exactly the split the vault will make for it, with no mocked auths.
+    w.e.set_auths(&[]);
+    let s = abroad.sweep(&w.token);
+    assert_eq!((s.vat, s.net, s.reserve), (0, 800 * UNIT, 200 * UNIT));
+    assert_eq!(bal(&w, &w.owner), 800 * UNIT);
+    // The usual inbox still reserves VAT.
+    w.e.mock_all_auths();
+    TokenClient::new(&w.e, &w.token).transfer(&w.payer, &w.inbox.address, &(121 * UNIT));
+    w.e.set_auths(&[]);
+    assert_eq!(w.inbox.sweep(&w.token).vat, 21 * UNIT);
+}

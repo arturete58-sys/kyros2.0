@@ -186,7 +186,9 @@ impl Inbox {
         }
         let v = VaultClient::new(&e, &vault(&e));
         let owner = v.owner();
-        let s = v.quote(&gross);
+        let reference = BytesN::from_array(&e, &[0u8; 32]);
+        // The split the vault will make for this inbox (it may have its own terms, e.g. clients abroad).
+        let s = v.quote_for(&me, &reference, &gross);
         // The vault pulls the money from this inbox, so the inbox authorizes
         // exactly these two transfers for the vault's call, nothing else.
         let transfer = Symbol::new(&e, "transfer");
@@ -212,7 +214,6 @@ impl Inbox {
             }));
         }
         e.authorize_as_current_contract(auths);
-        let reference = BytesN::from_array(&e, &[0u8; 32]);
         let done = v.receive(&me, &token, &gross, &reference);
         let n: u32 = e.storage().instance().get(&Key::Swept).unwrap_or(0) + 1;
         e.storage().instance().set(&Key::Swept, &n);

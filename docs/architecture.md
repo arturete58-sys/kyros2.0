@@ -127,7 +127,7 @@ The contract checks:
 
 The chain does not say where a payer is, so the usual payment address keeps reserving VAT (the safe side) and clients abroad get a second one:
 
-- `expect_payer(payer, terms)` (owner) registers terms for a payer address, used by `receive` when a payment has no invoice terms. The app makes a second inbox on first use and registers it with no VAT and the same income-tax buckets; payments through it split that way. A client wallet can be registered the same way, so its payments through the Router or a payment link split by its terms. `forget_payer` removes them.
+- `expect_payer(payer, terms)` (owner) registers terms for a payer address, used by `receive` when a payment has no invoice terms. The app makes a second inbox on first use and registers it with no VAT and the same income-tax buckets; payments through it split that way. The Inbox and the CCTP receiver authorize exactly the transfers `quote_for(from, reference, gross)` returns, which applies the same terms as `receive`. A client wallet can be registered the same way, so its payments through the Router or a payment link split by its terms. `forget_payer` removes them.
 - When a wallet seen paying the address for clients abroad pays the usual one, the app offers to take that VAT back: `propose_correction(period, token, bucket, amount)` (owner, at most what the bucket holds) can be applied by anyone with `apply_correction` once the vault's notice has passed, and pays the owner at most what the bucket still holds; the owner can `cancel_correction` until then. The app and the keeper apply ready corrections. At most 20 are open at once.
 
 ## Euro reserve, yield and anchors
