@@ -170,6 +170,8 @@ sequenceDiagram
 
 - No admin keys over money and no upgrade path. A new version is a new contract the owner moves to by choice. The Rate Registry has a publisher but holds no money; it can only change the VAT of vaults that chose to follow it, never sooner than its fixed notice, never above each owner's ceiling, and owners can stop following at any time. Its holidays can only delay a release, by 14 days at most.
 - Scheduled payments can be run by anyone but only pay the tax destination in force, at most what each bucket holds.
+- Invoice and payer terms have their lifetime extended every time a payment uses them, so terms in use are never archived.
+- The SDK refuses to deploy a mainnet vault with a notice shorter than one day.
 - A correction takes reserve back to the owner only after the vault's full notice, so a stolen owner key cannot empty the reserve at once; anyone can apply it, and it only pays the owner.
 - Integer arithmetic in 128 bits; every bucket rounds down and the remainder goes to the net amount, so the parts always add up to the gross. Shared test vectors check the same results in Rust and TypeScript.
 - Each vault accepts an allow-list of tokens (USDC and EURC Stellar Asset Contracts).

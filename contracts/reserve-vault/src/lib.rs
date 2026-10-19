@@ -786,11 +786,18 @@ fn split_for(
     reference: &BytesN<32>,
     gross: i128,
 ) -> (Rule, Split) {
-    let terms: Option<InvoiceTerms> = e
-        .storage()
-        .persistent()
-        .get(&Key::Invoice(reference.clone()))
-        .or_else(|| e.storage().persistent().get(&Key::Payer(from.clone())));
+    // An invoice's own terms first, then the terms registered for this payer.
+    // Terms in use have their lifetime extended, so a payer's terms (e.g. the
+    // inbox for clients abroad) are never archived while payments keep coming.
+    let store = e.storage().persistent();
+    let mut terms: Option<InvoiceTerms> = None;
+    for k in [Key::Invoice(reference.clone()), Key::Payer(from.clone())] {
+        if let Some(t) = store.get::<Key, InvoiceTerms>(&k) {
+            store.extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+            terms = Some(t);
+            break;
+        }
+    }
     match terms {
         Some(t) => {
             let r = Rule {

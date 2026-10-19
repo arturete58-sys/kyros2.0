@@ -483,3 +483,12 @@ test('a client abroad gets its own terms and VAT not owed is taken back with a c
   assert.deepEqual(corr.args().map((a) => scValToNative(a)), [8108, vault, 'vat', 210n]);
   assert.equal(c.applyCorrectionOp(vault, 3).body().invokeHostFunctionOp().hostFunction().invokeContract().functionName().toString(), 'apply_correction');
 });
+
+test('a mainnet vault is never deployed with a notice shorter than a day', async () => {
+  const { KyrosClient, MIN_MAINNET_NOTICE_SECS } = await import('../client.js');
+  const c = new KyrosClient({ rpcUrl: 'https://example.invalid', networkPassphrase: Networks.PUBLIC });
+  const owner = Keypair.random().publicKey();
+  const v = { owner, rule: { vatBps: 2100, buckets: [] }, taxDestination: owner, noticeSecs: 120n, period: { kind: 'Quarter' as const }, dues: { default: { kind: 'AfterEnd' as const, secs: 0n } } as never, tokens: [] };
+  assert.throws(() => c.deployVault(Keypair.random(), Buffer.alloc(32), v), /at least 86400 seconds/);
+  assert.equal(MIN_MAINNET_NOTICE_SECS, 86_400n);
+});

@@ -11,6 +11,7 @@ import {
   Contract,
   hash,
   Keypair,
+  Networks,
   Operation,
   rpc,
   scValToNative,
@@ -87,6 +88,9 @@ export interface ScheduledPayment {
   /** The destination strkey (M... when it carries an anchor memo). */
   to: string;
 }
+
+/** The shortest notice period the SDK deploys on mainnet: every change and correction waits this long. */
+export const MIN_MAINNET_NOTICE_SECS = 86_400n;
 
 /** Tax taken back from a bucket, applied by anyone from `readyAt`. */
 export interface Correction {
@@ -193,6 +197,9 @@ export class KyrosClient {
     wasmHash: Buffer,
     v: { owner: string; rule: Rule; taxDestination: string; noticeSecs: bigint; period: PeriodKind; dues: Dues; tokens: string[] },
   ) {
+    // The notice is what protects the reserve if the owner's key is stolen: on mainnet it is at least a day.
+    if (this.o.networkPassphrase === Networks.PUBLIC && v.noticeSecs < MIN_MAINNET_NOTICE_SECS)
+      throw new KyrosError(`A mainnet vault needs a notice period of at least ${MIN_MAINNET_NOTICE_SECS} seconds (one day).`);
     return this.create(deployer, wasmHash, [
       addr(v.owner),
       ruleToScVal(v.rule),

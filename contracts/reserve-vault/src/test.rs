@@ -1228,3 +1228,45 @@ fn a_client_abroad_splits_by_its_own_terms_and_tax_not_owed_comes_back_after_not
         Err(Ok(VaultError::UnknownPayer))
     );
 }
+
+#[test]
+fn terms_in_use_are_never_archived_while_payments_keep_coming() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+    let w = world();
+    let client = Address::generate(&w.e);
+    StellarAssetClient::new(&w.e, &w.token).mint(&client, &(5_000 * UNIT));
+    w.v.expect_payer(
+        &client,
+        &InvoiceTerms {
+            vat_bps: 0,
+            withholding_bps: 0,
+            buckets: vec![
+                &w.e,
+                Bucket {
+                    name: symbol_short!("irpf"),
+                    bps: 2000,
+                },
+            ],
+        },
+    );
+    let ttl = |w: &W| {
+        w.e.as_contract(&w.v.address, || {
+            w.e.storage()
+                .persistent()
+                .get_ttl(&Key::Payer(client.clone()))
+        })
+    };
+    // The network caps how far ahead an entry can live (about a year).
+    let full = ttl(&w);
+    assert!(full > 300 * DAY_IN_LEDGERS);
+    // Most of a year later, a payment from that client extends its terms again.
+    let later = 300 * DAY_IN_LEDGERS;
+    w.e.ledger().with_mut(|l| {
+        l.sequence_number += later;
+        l.timestamp += 300 * 86_400;
+    });
+    assert_eq!(ttl(&w), full - later);
+    let s = w.v.receive(&client, &w.token, &(1_000 * UNIT), &r(&w));
+    assert_eq!(s.vat, 0);
+    assert_eq!(ttl(&w), full);
+}
