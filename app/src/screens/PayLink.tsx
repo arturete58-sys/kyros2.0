@@ -5,6 +5,7 @@ import { finishCrossChain, payFromOtherChain, pendingCrossChain, simulateClientP
 import { evmWallets, EvmWallet, type EvmWalletInfo } from '../wallet/evm';
 import { Button, LangPicker, TxLink, useApp } from '../ui';
 import { t } from '../i18n';
+import { Logo } from '../brand';
 
 /**
  * The page a client opens from a payment link. They pay the vault with the
@@ -37,7 +38,7 @@ export function PayLink(p: { vault: string; refHex: string; amount: bigint }) {
     <>
       <div className="content" style={{ justifyContent: 'center' }}>
         <LangPicker compact />
-        <div className="logo">Kyros</div>
+        <Logo />
         <h1>{t('invoicePayment')}</h1>
         <div className="card">
           <p className="small muted">{t('amount')}</p>

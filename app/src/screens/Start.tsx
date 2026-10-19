@@ -4,6 +4,7 @@ import { countries, countryName, loadPack } from '../packs';
 import { createVault, followLaw, makePlan, money, type Answers } from '../kyros';
 import { fmtNumber, t, type Key } from '../i18n';
 import { Button, LangPicker, Option, pct, Seg, Toggle, Top, useApp } from '../ui';
+import { Logo } from '../brand';
 
 export const ACTIVITIES: ActivityId[] = ['software', 'consulting', 'creative', 'web3', 'ecommerce', 'education', 'health', 'books', 'hospitality'];
 export const CLIENTS: ClientKind[] = ['business-local', 'consumer-local', 'business-eu', 'abroad'];
@@ -54,7 +55,7 @@ export function Welcome() {
     <>
       <div className="content" style={{ justifyContent: 'center' }}>
         <LangPicker compact />
-        <div className="logo">Kyros</div>
+        <Logo size={44} tagline />
         <h1>{t('heroTitle')}</h1>
         <p className="muted">{t('heroSub')}</p>
         <div className="card info">

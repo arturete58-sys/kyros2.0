@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chain } from './chain';
 import { loadConfig, type AppConfig } from './config';
-import { runDueScheduled, savedVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
+import { applyReadyCorrections, learnAbroadPayers, runDueScheduled, savedVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
 import { AppCtx, type Ctx, type Screen } from './ui';
 import { friendlyError } from './errors';
 import { lazy, Suspense } from 'react';
@@ -19,6 +19,7 @@ const Welcome = lazy(() => import('./screens/Start').then((m) => ({ default: m.W
 const PayLink = lazy(() => import('./screens/PayLink').then((m) => ({ default: m.PayLink })));
 import type { Wallet } from './wallet/types';
 import { getLang, setLang as applyLang, t, type Lang } from './i18n';
+import { Logo } from './brand';
 
 function payLinkFromHash(): { vault: string; refHex: string; amount: bigint } | null {
   const m = /^#pagar\?(.*)$/.exec(location.hash);
@@ -93,12 +94,15 @@ export default function App() {
     if (!chain || !vault || (import.meta.env.DEV && location.hash.startsWith('#fixture'))) return;
     const s = await snapshot(chain, vault);
     setSnap(s);
+    // Wallets that paid the address for clients abroad are remembered in this browser.
+    if (learnAbroadPayers(vault, s)) setVault({ ...vault });
     // Payments sent straight to the payment address are split here, by this browser's fee payer,
     // and scheduled tax payments whose date has come are sent (anyone may run them).
     if (sweeping.current || location.hash === '#ui-test') return;
     sweeping.current = true;
     try {
-      if ((await sweepInbox(chain, vault)) + (await runDueScheduled(chain, s, vault)) > 0) setSnap(await snapshot(chain, vault));
+      // Corrections whose notice has passed are applied too (VAT not owed goes back to the wallet).
+      if ((await sweepInbox(chain, vault)) + (await runDueScheduled(chain, s, vault)) + (await applyReadyCorrections(chain, s, vault)) > 0) setSnap(await snapshot(chain, vault));
     } catch (e) {
       console.error('sweep', e);
     } finally {
@@ -122,7 +126,7 @@ export default function App() {
     return (
       <div className="phone">
         <div className="content">
-          <div className="logo">Kyros</div>
+          <Logo />
           <p>{cfgError}</p>
         </div>
       </div>

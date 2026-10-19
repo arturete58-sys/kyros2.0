@@ -3,7 +3,7 @@
  * accountant's CSV export. Nothing personal is onchain: rows carry
  * addresses, amounts, the period and the invoice-reference hash.
  */
-import { rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { nativeToScVal, rpc, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { formatAmount } from './split.js';
 
 export interface VaultEventRow {
@@ -21,7 +21,8 @@ export interface VaultEventRow {
     | 'change_cancelled'
     | 'converted'
     | 'invested'
-    | 'harvested';
+    | 'harvested'
+    | 'correction_applied';
   token?: string;
   period?: number;
   gross?: bigint;
@@ -52,6 +53,7 @@ const KINDS = new Set([
   'converted',
   'invested',
   'harvested',
+  'correction_applied',
 ]);
 
 /** Every Kyros event of `vault` from `startLedger` on (RPC keeps a limited window of history). */
@@ -69,6 +71,10 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
       const v = scValToNative(ev.value) as Record<string, unknown>;
       const big = (x: unknown) => (x === undefined ? undefined : BigInt(x as bigint));
       const kind = topics[1] as VaultEventRow['kind'];
+      if (kind === 'correction_applied') {
+        rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, amount: big(v.amount) });
+        continue;
+      }
       if (kind === 'converted') {
         rows.push({
           ledger: ev.ledger,
@@ -101,6 +107,49 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
         reference: v.reference instanceof Uint8Array ? Buffer.from(v.reference).toString('hex') : undefined,
         memo: v.memo !== undefined && v.memo !== null ? BigInt(v.memo as bigint) : undefined,
       });
+    }
+    if (res.events.length < 200 || !res.cursor) break;
+    cursor = res.cursor;
+  }
+  return rows;
+}
+
+/** A token transfer into an address (who paid an inbox, and how much). */
+export interface Transfer {
+  /** The event's id: stable, to remember which transfers were handled. */
+  id: string;
+  ledger: number;
+  closedAt: string;
+  txHash: string;
+  token: string;
+  from: string;
+  amount: bigint;
+}
+
+/**
+ * Transfers of `tokens` into `to` from `startLedger` on: who paid a payment
+ * address. The chain does not say where a payer is; this only tells wallets apart.
+ */
+export async function transfersInto(server: rpc.Server, tokens: string[], to: string, startLedger: number): Promise<Transfer[]> {
+  const sym = xdr.ScVal.scvSymbol('transfer').toXDR('base64');
+  const dest = nativeToScVal(to, { type: 'address' }).toXDR('base64');
+  // Stellar asset contracts add the asset as a fourth topic; other tokens may not.
+  const topics = [
+    [sym, '*', dest, '*'],
+    [sym, '*', dest],
+  ];
+  const rows: Transfer[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < 20; page++) {
+    const filters = [{ type: 'contract' as const, contractIds: tokens, topics }];
+    const req = cursor ? { filters, cursor, limit: 200 } : { filters, startLedger, limit: 200 };
+    const res = await server.getEvents(req as rpc.Server.GetEventsRequest);
+    for (const ev of res.events) {
+      const t = ev.topic.map((x: xdr.ScVal) => scValToNative(x));
+      if (t[0] !== 'transfer' || String(t[2]) !== to) continue;
+      const v = scValToNative(ev.value) as unknown;
+      const amount = typeof v === 'object' && v !== null && 'amount' in (v as object) ? BigInt((v as { amount: bigint }).amount) : BigInt(v as bigint);
+      rows.push({ id: ev.id, ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, token: String(ev.contractId), from: String(t[1]), amount });
     }
     if (res.events.length < 200 || !res.cursor) break;
     cursor = res.cursor;

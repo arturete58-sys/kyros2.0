@@ -35,14 +35,14 @@ import { REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
 import { money, payableUnits, requestRef, requestTerms, requestTotals, type PaymentRequest } from '../payment-request.js';
 import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
 import { invoiceReference, KyrosClient, KyrosError } from '../client.js';
-import { vaultEvents, toCsv } from '../events.js';
+import { transfersInto, vaultEvents, toCsv } from '../events.js';
 import { Keeper } from '../keeper.js';
 import { periodLabel } from '../periods.js';
 import { loadRulePack, periodKindOf, termsFromPack, vatUpdatePlan } from '../rulepacks.js';
 import { duesAfter } from '../periods.js';
 import { nextOpen } from '../workdays.js';
 import { changeCountryPlan, registrySyncPlan } from '../registry.js';
-import { formatAmount, parseAmount } from '../split.js';
+import { abroadTerms, formatAmount, parseAmount } from '../split.js';
 
 const args = process.argv.slice(2);
 const flag = (n: string, d?: string) => {
@@ -256,6 +256,65 @@ async function main(): Promise<void> {
   const notYet = await expectRefusal(() => c.send(k.keeper, c.applyPendingOp(vault.contractId)), 'ChangeNotReady');
   steps.push({ step: 'Applying it before the notice has passed is refused', ok: true, detail: `refused by the contract: ${notYet}` });
 
+  log('clients abroad: a second inbox without VAT, client terms and a correction with notice');
+  // The chain does not say where a payer is: the freelancer gives clients abroad a second address,
+  // whose payments the vault books without VAT. A client abroad who pays the usual address by
+  // mistake reserves VAT that is not owed; the owner proposes a correction that anyone applies after the notice.
+  const abVault = await c.deployVault(k.keeper, vaultHash, {
+    owner: k.freelancer.publicKey(),
+    rule: terms.rule,
+    taxDestination: k.taxAccount.publicKey(),
+    noticeSecs: 120n,
+    period: { kind: 'Seconds', seconds: 3_600n },
+    dues: duesAfter(0n),
+    tokens: [token],
+  });
+  const abHome = await c.deployInbox(k.keeper, inboxHash, abVault.contractId);
+  const abAbroad = await c.deployInbox(k.keeper, inboxHash, abVault.contractId);
+  const noVat = abroadTerms(terms.rule);
+  const abExpect = await c.send(k.freelancer, c.expectPayerOp(abVault.contractId, abAbroad.contractId, noVat));
+  steps.push({ step: 'A second payment address for clients abroad: an inbox the vault books without VAT (expect_payer, owner-signed)', ok: true, tx: abExpect.hash, detail: abAbroad.contractId });
+  const abKeeper = new Keeper(c, k.keeper, [{ inbox: abAbroad.contractId, token }, { inbox: abHome.contractId, token }], () => {}, [abVault.contractId]);
+  const abT1 = await c.send(k.client, c.transferOp(token, k.client.publicKey(), abAbroad.contractId, parseAmount('1000')));
+  const abOwner0 = await c.balance(token, k.freelancer.publicKey());
+  const abVault0 = await c.balance(token, abVault.contractId);
+  await abKeeper.tick();
+  const abGot = { owner: (await c.balance(token, k.freelancer.publicKey())) - abOwner0, vault: (await c.balance(token, abVault.contractId)) - abVault0 };
+  steps.push({
+    step: 'A client abroad pays 1,000 KUSD to that address: no VAT reserved, income tax as usual',
+    ok: abGot.owner === parseAmount('800') && abGot.vault === parseAmount('200'),
+    tx: abT1.hash,
+    detail: `freelancer +${formatAmount(abGot.owner)}, vault +${formatAmount(abGot.vault)}`,
+  });
+  const abT2 = await c.send(k.client, c.transferOp(token, k.client.publicKey(), abHome.contractId, parseAmount('1210')));
+  await abKeeper.tick();
+  const latestAb = (await c.server.getLatestLedger()).sequence;
+  const seenAbroad = await transfersInto(c.server, [token], abAbroad.contractId, Math.max(latestAb - 200, 1));
+  const seenHome = await transfersInto(c.server, [token], abHome.contractId, Math.max(latestAb - 200, 1));
+  const known = new Set(seenAbroad.map((x) => x.from));
+  const suspect = seenHome.find((x) => known.has(x.from));
+  steps.push({
+    step: 'The same client then pays 1,210 KUSD to the usual address: 210 of VAT is reserved, and the app recognises the wallet from its payment to the address for clients abroad',
+    ok: !!suspect && suspect.amount === parseAmount('1210'),
+    tx: abT2.hash,
+    detail: suspect ? `payer ${suspect.from.slice(0, 8)}… seen paying both addresses` : 'not recognised',
+  });
+  const abPid = Number((await vaultEvents(c.server, abVault.contractId, Math.max(latestAb - 200, 1))).filter((e) => e.kind === 'received').pop()?.period ?? (await c.currentPeriod(abVault.contractId)));
+  const abVat = (await c.period(abVault.contractId, abPid, token)).buckets.vat ?? 0n;
+  const corr = await c.send(k.freelancer, c.proposeCorrectionOp(abVault.contractId, { period: abPid, token, bucket: 'vat', amount: abVat }));
+  const corrEarly = await expectRefusal(() => c.send(k.keeper, c.applyCorrectionOp(abVault.contractId, 1)), 'NotYet');
+  steps.push({ step: `The owner proposes taking that VAT back (${formatAmount(abVat)} KUSD); applying it before the 2-minute notice is refused`, ok: abVat === parseAmount('210'), tx: corr.hash, detail: `refused by the contract: ${corrEarly}` });
+  const abExpectClient = await c.send(k.freelancer, c.expectPayerOp(abVault.contractId, k.client.publicKey(), noVat));
+  const abOwner1 = await c.balance(token, k.freelancer.publicKey());
+  const abPaid = await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: abVault.contractId, token, amount: parseAmount('1000'), reference: invoiceReference('INV-ABROAD-7') }));
+  steps.push({
+    step: 'The owner registers the client wallet\'s terms: its next payment through the Router reserves no VAT',
+    ok: (await c.balance(token, k.freelancer.publicKey())) - abOwner1 === parseAmount('800'),
+    tx: abPaid.hash,
+    detail: `expect_payer ${abExpectClient.hash.slice(0, 10)}…; freelancer +800, vault +200`,
+  });
+  const abProposedAt = Date.now();
+
   log('euro reserve: Soroswap testnet pool at Reflector\'s EUR/USD price, swapper, conversion proposed');
   let euro: { vault: string; proposedAt: number; eurUsd: bigint } | null = null;
   let euroSkip = '';
@@ -404,6 +463,19 @@ async function main(): Promise<void> {
   const rel = await c.send(k.freelancer, c.releaseOp(vault.contractId, pid, token));
   const back = (await c.balance(token, k.freelancer.publicKey())) - before;
   steps.push({ step: 'After the due date the rest of the period is released to the freelancer', ok: back === state.buckets.irpf - instalment, tx: rel.hash, detail: `${formatAmount(back)} KUSD back to the freelancer` });
+
+  log('the correction is applied by the keeper after its notice');
+  const corrWait = abProposedAt + 125_000 - Date.now();
+  if (corrWait > 0) await sleep(corrWait);
+  const abOwner2 = await c.balance(token, k.freelancer.publicKey());
+  const corrRun = (await new Keeper(c, k.keeper, [], () => {}, [abVault.contractId]).runDue()).find((r) => r.kind === 'correction');
+  const abBack = (await c.balance(token, k.freelancer.publicKey())) - abOwner2;
+  steps.push({
+    step: 'After the notice the keeper applies the correction (no owner signature): the VAT not owed goes back to the freelancer',
+    ok: !corrRun?.error && abBack === abVat && (await c.corrections(abVault.contractId)).length === 0,
+    tx: corrRun?.hash,
+    detail: corrRun?.error ?? `${formatAmount(abBack)} KUSD back to the freelancer`,
+  });
 
   log('the same Router with vaults from other countries');
   for (const [pack, preset, amount, label] of [

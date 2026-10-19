@@ -138,6 +138,7 @@ The [testnet demo workflow](.github/workflows/testnet-demo.yml) deploys the cont
 - **Clients pay from any major chain.** A payment link can be paid from Ethereum, Base, Arbitrum, OP or Avalanche with MetaMask, Rabby, Coinbase Wallet or Phantom, through Circle's CCTP ([cross-chain payments](docs/cross-chain-payments.md)).
 - **Fees.** A throwaway testnet account created in the browser and funded by friendbot pays network fees and deploys the user's vault and inbox. It never owns anything.
 - **Test money.** The deployment's test-token issuer key is published in `testnet.json` on purpose, so the app can hand out test USDC. It exists only on testnet.
+- **Clients at home and abroad.** The payment address has a second form for clients abroad (no VAT), made on first use. Wallets that paid it are recognised: if one later pays the usual address, the app offers to take that VAT back, which returns by itself after the vault's notice.
 - **Languages.** Spanish, English, Portuguese, French, German and Italian. The app follows the browser's language until the user picks one on the first screen or in Settings; the choice is remembered, and country names, numbers and dates follow it.
 
 ## Stellar building blocks

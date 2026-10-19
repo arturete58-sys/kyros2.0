@@ -102,3 +102,11 @@ export function parseAmount(text: string, decimals = 7): bigint {
   if (frac.length > decimals) throw new Error(`more than ${decimals} decimals: ${text}`);
   return BigInt(m[1]) * 10n ** BigInt(decimals) + BigInt(frac || '0');
 }
+
+/**
+ * Terms for clients abroad: no VAT on the invoice (exports, reverse charge),
+ * nothing withheld, and the same income-tax buckets on the whole payment.
+ */
+export function abroadTerms(rule: Rule): { vatBps: number; withholdingBps: number; buckets: Bucket[] } {
+  return { vatBps: 0, withholdingBps: 0, buckets: rule.buckets.map((b) => ({ ...b })) };
+}

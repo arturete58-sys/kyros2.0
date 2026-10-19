@@ -88,6 +88,16 @@ export interface ScheduledPayment {
   to: string;
 }
 
+/** Tax taken back from a bucket, applied by anyone from `readyAt`. */
+export interface Correction {
+  id: number;
+  period: number;
+  token: string;
+  bucket: string;
+  amount: bigint;
+  readyAt: bigint;
+}
+
 /** A vault's yield strategy. */
 export interface Strategy {
   adapter: string;
@@ -344,6 +354,39 @@ export class KyrosClient {
     return new Contract(vault).call('forget_invoice', bytes32(reference));
   }
 
+  // Clients with their own terms: payments from a payer address (a client's
+  // wallet, or a second inbox for clients abroad) split by its terms.
+
+  /** Owner: payments from `payer` without invoice terms split by `t` (e.g. a client abroad: VAT 0). */
+  expectPayerOp(vault: string, payer: string, t: { vatBps: number; withholdingBps: number; buckets: Rule['buckets'] }): xdr.Operation {
+    return new Contract(vault).call('expect_payer', addr(payer), invoiceTermsToScVal(t));
+  }
+
+  forgetPayerOp(vault: string, payer: string): xdr.Operation {
+    return new Contract(vault).call('forget_payer', addr(payer));
+  }
+
+  async payerTerms(vault: string, payer: string): Promise<{ vatBps: number; withholdingBps: number; buckets: Rule['buckets'] } | null> {
+    const n = scValToNative(await this.read(vault, 'payer', addr(payer))) as { vat_bps: number; withholding_bps: number; buckets: { name: string; bps: number }[] } | null | undefined;
+    return n ? { vatBps: Number(n.vat_bps), withholdingBps: Number(n.withholding_bps), buckets: n.buckets.map((b) => ({ name: String(b.name), bps: Number(b.bps) })) } : null;
+  }
+
+  // Corrections: tax a payment did not owe goes back to the owner after the notice.
+
+  /** Owner: take `amount` of a period's bucket back; anyone applies it after the vault's notice. */
+  proposeCorrectionOp(vault: string, c: { period: number; token: string; bucket: string; amount: bigint }): xdr.Operation {
+    return new Contract(vault).call('propose_correction', u32(c.period), addr(c.token), xdr.ScVal.scvSymbol(c.bucket), i128(c.amount));
+  }
+
+  /** Anyone, once the correction's notice has passed: pays it to the owner. */
+  applyCorrectionOp(vault: string, id: number): xdr.Operation {
+    return new Contract(vault).call('apply_correction', u32(id));
+  }
+
+  cancelCorrectionOp(vault: string, id: number): xdr.Operation {
+    return new Contract(vault).call('cancel_correction', u32(id));
+  }
+
   // Reserve in the tax's currency: swap reserve received in USDC into EURC.
 
   /** Owner: how to convert (swapper, oracle, tolerance); applies after the notice. */
@@ -458,6 +501,17 @@ export class KyrosClient {
     for (const id of ids) {
       const s = scValToNative(await this.read(vault, 'scheduled', u32(id))) as { at: bigint; payments: { period: number; token: string; bucket: string; amount: bigint }[]; to: string } | null;
       if (s) out.push({ id, at: BigInt(s.at), to: String(s.to), payments: s.payments.map((p) => ({ period: Number(p.period), token: String(p.token), bucket: String(p.bucket), amount: BigInt(p.amount) })) });
+    }
+    return out;
+  }
+
+  /** Open corrections of a vault. */
+  async corrections(vault: string): Promise<Correction[]> {
+    const ids = (scValToNative(await this.read(vault, 'correction_ids')) as number[]).map(Number);
+    const out: Correction[] = [];
+    for (const id of ids) {
+      const c = scValToNative(await this.read(vault, 'correction', u32(id))) as { period: number; token: string; bucket: string; amount: bigint; ready_at: bigint } | null;
+      if (c) out.push({ id, period: Number(c.period), token: String(c.token), bucket: String(c.bucket), amount: BigInt(c.amount), readyAt: BigInt(c.ready_at) });
     }
     return out;
   }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Account, Keypair, Networks, scValToNative, nativeToScVal, TransactionBuilder, BASE_FEE, Contract, xdr } from '@stellar/stellar-sdk';
+import { Account, StrKey, Keypair, Networks, scValToNative, nativeToScVal, TransactionBuilder, BASE_FEE, Contract, xdr } from '@stellar/stellar-sdk';
 import { split, validateRule, RuleError, formatAmount, parseAmount } from '../split.js';
 import { periodOf, periodStart, periodEnd, periodLabel, dueDate, dueAt, duesAfter, validDue, civilFromDays, daysFromCivil, type Due, type PeriodKind } from '../periods.js';
 import { listRulePacks, loadRulePack, termsFromPack, vatRatesOn, presetVatBps, checkRuleVat, customRule, vatChanges, vatUpdatePlan, upcomingDeadlines, calendarOf } from '../rulepacks.js';
@@ -461,4 +461,25 @@ test('every pack calendar gives valid due rules and cites its sources', () => {
       }
     }
   }
+});
+
+test('a client abroad gets its own terms and VAT not owed is taken back with a correction', async () => {
+  const { KyrosClient } = await import('../client.js');
+  const { abroadTerms } = await import('../split.js');
+  const c = new KyrosClient({ rpcUrl: 'https://soroban-testnet.stellar.org', networkPassphrase: Networks.TESTNET });
+  const vault = StrKey.encodeContract(Buffer.alloc(32, 4));
+  const payer = Keypair.random().publicKey();
+  const rule = { vatBps: 2100, buckets: [{ name: 'irpf', bps: 2000 }] };
+  const t = abroadTerms(rule);
+  assert.deepEqual(t, { vatBps: 0, withholdingBps: 0, buckets: [{ name: 'irpf', bps: 2000 }] });
+  // The VAT a payment of 1,210 carried is what a correction takes back.
+  assert.equal(split(rule, 1_210n).vat, 210n);
+  const call = c.expectPayerOp(vault, payer, t).body().invokeHostFunctionOp().hostFunction().invokeContract();
+  assert.equal(call.functionName().toString(), 'expect_payer');
+  assert.equal(scValToNative(call.args()[0]), payer);
+  assert.deepEqual(scValToNative(call.args()[1]), { vat_bps: 0, withholding_bps: 0, buckets: [{ name: 'irpf', bps: 2000 }] });
+  const corr = c.proposeCorrectionOp(vault, { period: 8108, token: vault, bucket: 'vat', amount: 210n }).body().invokeHostFunctionOp().hostFunction().invokeContract();
+  assert.equal(corr.functionName().toString(), 'propose_correction');
+  assert.deepEqual(corr.args().map((a) => scValToNative(a)), [8108, vault, 'vat', 210n]);
+  assert.equal(c.applyCorrectionOp(vault, 3).body().invokeHostFunctionOp().hostFunction().invokeContract().functionName().toString(), 'apply_correction');
 });

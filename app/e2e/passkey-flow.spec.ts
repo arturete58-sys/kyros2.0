@@ -81,6 +81,14 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await page.getByTestId('scheduled').getByRole('button', { name: 'Cancelar' }).click();
   await settle(page);
   await expect(page.getByTestId('scheduled')).toHaveCount(0);
+
+  // Clients abroad: the second payment address is made on first use (the passkey signs that the
+  // vault books its payments without VAT).
+  await page.getByRole('button', { name: 'Inicio' }).click();
+  await page.getByTestId('addr-abroad').click();
+  await page.getByTestId('make-abroad').click();
+  await settle(page);
+  await expect(page.getByTestId('pay-address').getByTestId('address')).toHaveText(/^C[A-Z0-9]{7}…/);
 });
 
 test('the user picks the language and it is remembered', async ({ page }) => {

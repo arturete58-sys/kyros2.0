@@ -1,7 +1,8 @@
 /**
  * The Kyros keeper: watches inboxes and calls `sweep` when money arrives,
  * and runs the vaults' scheduled tax payments when their date comes
- * (`run_scheduled`, which only pays the vault's tax destination).
+ * (`run_scheduled`, which only pays the vault's tax destination) and their
+ * corrections once the notice has passed (`apply_correction`, which only pays the owner).
  * It holds no user funds and no user keys; its key only pays network fees.
  * `sweep` is permissionless, so anyone can run a keeper, and if every keeper
  * stops the money waits safely in the inbox.
@@ -35,6 +36,8 @@ export interface SweepResult {
 export interface ScheduledResult {
   vault: string;
   id: number;
+  /** A scheduled payment (default) or a correction. */
+  kind?: 'payment' | 'correction';
   hash?: string;
   error?: string;
 }
@@ -67,6 +70,21 @@ export class Keeper {
           out.push({ vault, id: s.id, hash: (await this.client.send(this.key, this.client.runScheduledOp(vault, s.id))).hash });
         } catch (e) {
           out.push({ vault, id: s.id, error: (e as Error).message });
+        }
+        this.onScheduled(out[out.length - 1]);
+      }
+      // Corrections whose notice has passed go back to the owner (anyone may apply them).
+      let ready: { id: number }[] = [];
+      try {
+        ready = (await this.client.corrections(vault)).filter((c) => c.readyAt <= now);
+      } catch {
+        ready = [];
+      }
+      for (const c of ready) {
+        try {
+          out.push({ vault, id: c.id, kind: 'correction', hash: (await this.client.send(this.key, this.client.applyCorrectionOp(vault, c.id))).hash });
+        } catch (e) {
+          out.push({ vault, id: c.id, kind: 'correction', error: (e as Error).message });
         }
         this.onScheduled(out[out.length - 1]);
       }
@@ -133,21 +151,22 @@ export class Keeper {
 }
 
 /**
- * Vaults that scheduled a payment since `startLedger` (from their
- * `payment_scheduled` events, across all contracts), for a keeper that does
+ * Vaults that scheduled a payment or proposed a correction since
+ * `startLedger` (from their events, across all contracts), for a keeper that does
  * not know its vaults in advance.
  */
 export async function vaultsWithScheduledPayments(server: rpc.Server, startLedger: number): Promise<string[]> {
-  const topic = [xdr.ScVal.scvSymbol('kyros_vault').toXDR('base64'), xdr.ScVal.scvSymbol('payment_scheduled').toXDR('base64'), '*'];
+  const names = ['payment_scheduled', 'correction_proposed'];
+  const topics = names.map((n) => [xdr.ScVal.scvSymbol('kyros_vault').toXDR('base64'), xdr.ScVal.scvSymbol(n).toXDR('base64'), '*']);
   const found = new Set<string>();
   let cursor: string | undefined;
   for (let page = 0; page < 50; page++) {
-    const filters = [{ type: 'contract' as const, topics: [topic] }];
+    const filters = [{ type: 'contract' as const, topics }];
     const req = cursor ? { filters, cursor, limit: 200 } : { filters, startLedger, limit: 200 };
     const res = await server.getEvents(req as rpc.Server.GetEventsRequest);
     for (const ev of res.events) {
-      const topics = ev.topic.map((t: xdr.ScVal) => scValToNative(t));
-      if (topics[0] === 'kyros_vault' && topics[1] === 'payment_scheduled') found.add(String(ev.contractId));
+      const t = ev.topic.map((x: xdr.ScVal) => scValToNative(x));
+      if (t[0] === 'kyros_vault' && names.includes(String(t[1]))) found.add(String(ev.contractId));
     }
     if (res.events.length < 200) break;
     cursor = res.cursor;

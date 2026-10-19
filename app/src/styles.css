@@ -4,29 +4,29 @@
  * Paper is a cool grey-green, never cream; ink is a green-black.
  */
 :root {
-  --paper: #f3f5f1;
+  --paper: #f2f4f7;
   --surface: #ffffff;
-  --raised: #fbfcfa;
-  --ink: #15201b;
-  --muted: #5a6761;
-  --faint: #8a958f;
-  --line: #e1e6e0;
+  --raised: #fafbfc;
+  --ink: #141b24;
+  --muted: #576272;
+  --faint: #8a93a1;
+  --line: #e0e5ec;
   --border: var(--line);
-  --action: #1d5a46;
-  --action-hover: #174a39;
-  --action-soft: #e2eee8;
-  --on-action: #f3f8f5;
-  --yours: #1d5a46;
-  --vat: #5b6bb0;
-  --vat-soft: #e9ecf7;
+  --action: #2e4a6c;
+  --action-hover: #253d5a;
+  --action-soft: #e4eaf2;
+  --on-action: #f5f8fc;
+  --yours: #2e4a6c;
+  --vat: #23776c;
+  --vat-soft: #e0f1ee;
   --income: #b98428;
   --income-soft: #f6eedd;
   --warn: #9a5a10;
   --warn-soft: #f5ecdf;
   --danger: #a93a3a;
   --danger-soft: #f8e7e6;
-  --focus: #2f7d63;
-  --shadow: 0 1px 2px rgba(21, 40, 31, 0.05), 0 8px 24px -12px rgba(21, 40, 31, 0.18);
+  --focus: #3f6c9f;
+  --shadow: 0 1px 2px rgba(20, 32, 50, 0.05), 0 8px 24px -12px rgba(20, 32, 50, 0.18);
   --r-sheet: 22px;
   --r-card: 16px;
   --r-field: 12px;
@@ -39,28 +39,28 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0e1412;
-    --surface: #161e1b;
-    --raised: #1b2521;
-    --ink: #e6ece9;
-    --muted: #9eaba5;
-    --faint: #75827c;
-    --line: #26312c;
+    --paper: #0c1117;
+    --surface: #141b24;
+    --raised: #19222d;
+    --ink: #e6ebf2;
+    --muted: #9ba6b5;
+    --faint: #737e8d;
+    --line: #243040;
     --border: var(--line);
-    --action: #7cc3a6;
-    --action-hover: #93d1b7;
-    --action-soft: #1d2d27;
-    --on-action: #0d1a15;
-    --yours: #7cc3a6;
-    --vat: #97a6e3;
-    --vat-soft: #1f2436;
+    --action: #93b5de;
+    --action-hover: #aac5e8;
+    --action-soft: #1a283a;
+    --on-action: #0b1420;
+    --yours: #93b5de;
+    --vat: #67c4b6;
+    --vat-soft: #14302c;
     --income: #ddb066;
     --income-soft: #2c2619;
     --warn: #e0a65e;
     --warn-soft: #2b2218;
     --danger: #ec8a84;
     --danger-soft: #2f1c1b;
-    --focus: #7cc3a6;
+    --focus: #93b5de;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px -14px rgba(0, 0, 0, 0.6);
     color-scheme: dark;
   }
@@ -184,7 +184,7 @@ select.input { background-color: var(--surface); color: var(--ink); }
 
 .seg { display: flex; gap: 4px; background: color-mix(in srgb, var(--paper) 70%, var(--line)); border-radius: 12px; padding: 4px; }
 .seg button { flex: 1; border: 0; background: none; padding: 9px; border-radius: 9px; color: var(--muted); font-weight: 500; cursor: pointer; transition: background-color 0.18s; }
-.seg button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(21, 40, 31, 0.08); }
+.seg button.on { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(20, 32, 50, 0.08); }
 
 .steps { display: flex; gap: 6px; flex: 1; }
 .steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); transition: background-color 0.3s var(--ease); }
@@ -217,12 +217,12 @@ select.input { background-color: var(--surface); color: var(--ink); }
 .list .item:last-child { border-bottom: 0; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
 .testnet { color: var(--warn); font-size: 12px; font-weight: 550; text-align: center; padding: 7px 12px; background: var(--warn-soft); }
-.logo { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 600; letter-spacing: -0.03em; color: var(--ink); }
-.logo::before { content: ''; width: 30px; height: 30px; border-radius: 9px; background:
-  linear-gradient(var(--on-action), var(--on-action)) 7px 8px / 9px 14px no-repeat,
-  linear-gradient(var(--vat), var(--vat)) 18px 8px / 5px 6px no-repeat,
-  linear-gradient(var(--income), var(--income)) 18px 16px / 5px 6px no-repeat,
-  var(--action); }
+.logo { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); }
+.logo .mark { color: var(--action); flex: none; display: block; }
+.logo .wordmark { display: block; }
+.logo-text { display: flex; flex-direction: column; gap: 6px; }
+.logo.hero { gap: 14px; }
+.logo .tagline { font-size: 13px; color: var(--muted); letter-spacing: 0.01em; }
 a { color: var(--action); text-underline-offset: 3px; }
 .lang { display: flex; flex-direction: column; gap: 4px; }
 .lang.compact { flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; }

@@ -123,6 +123,13 @@ The contract checks:
 
 `expect_invoice(reference, terms)` (owner) registers how the payments of one invoice split: its VAT, what the client withholds and pays to the tax authority itself (Spanish IRPF), and the reserve buckets. A payment carrying that reference is split with `split_withheld`; anything else follows the rule. Kyros does not issue invoices. See [expected-payments.md](expected-payments.md).
 
+## Clients abroad and corrections
+
+The chain does not say where a payer is, so the usual payment address keeps reserving VAT (the safe side) and clients abroad get a second one:
+
+- `expect_payer(payer, terms)` (owner) registers terms for a payer address, used by `receive` when a payment has no invoice terms. The app makes a second inbox on first use and registers it with no VAT and the same income-tax buckets; payments through it split that way. A client wallet can be registered the same way, so its payments through the Router or a payment link split by its terms. `forget_payer` removes them.
+- When a wallet seen paying the address for clients abroad pays the usual one, the app offers to take that VAT back: `propose_correction(period, token, bucket, amount)` (owner, at most what the bucket holds) can be applied by anyone with `apply_correction` once the vault's notice has passed, and pays the owner at most what the bucket still holds; the owner can `cancel_correction` until then. The app and the keeper apply ready corrections. At most 20 are open at once.
+
 ## Euro reserve, yield and anchors
 
 `convert(period)` swaps a period's reserve into the currency the tax is owed in, through the swapper and the SEP-40 oracle the owner chose with notice, never below the oracle price minus the owner's tolerance. A yield strategy chosen with notice can hold up to a share of the reserve; the buckets keep their amounts, the owner takes what it earns with `harvest`, and payments out withdraw what they need. `pay_tax_to` pays the tax destination with an anchor's memo as muxed id. See [euro-reserve-yield-anchors.md](euro-reserve-yield-anchors.md).
@@ -153,16 +160,17 @@ sequenceDiagram
 - Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination (in total and per bucket), released, converted, income booked and income tax withheld by clients. Extended on every write, to about 13 months.
 - Persistent: due dates set from a notice, per period and bucket, and scheduled payments; instance: the list of open scheduled payments (at most 40).
 - Instance: the conversion and the strategy, and their pending proposals.
-- Persistent: what the buckets hold per token across periods (for yield), and the terms of each registered invoice.
+- Persistent: what the buckets hold per token across periods (for yield), the terms of each registered invoice and payer, and open corrections; instance: the list of open corrections (at most 20).
 
 ## Errors
 
-`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice`, `InvalidPeriod`, `InvalidDue`, `DueTooSoon`, `UnknownPayment`, `NotYet`, `TooMany` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries`, `InvalidHolidays`, `YearStarted` (registry).
+`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice`, `InvalidPeriod`, `InvalidDue`, `DueTooSoon`, `UnknownPayment`, `NotYet`, `TooMany`, `UnknownPayer`, `UnknownCorrection` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries`, `InvalidHolidays`, `YearStarted` (registry).
 
 ## Security notes
 
 - No admin keys over money and no upgrade path. A new version is a new contract the owner moves to by choice. The Rate Registry has a publisher but holds no money; it can only change the VAT of vaults that chose to follow it, never sooner than its fixed notice, never above each owner's ceiling, and owners can stop following at any time. Its holidays can only delay a release, by 14 days at most.
 - Scheduled payments can be run by anyone but only pay the tax destination in force, at most what each bucket holds.
+- A correction takes reserve back to the owner only after the vault's full notice, so a stolen owner key cannot empty the reserve at once; anyone can apply it, and it only pays the owner.
 - Integer arithmetic in 128 bits; every bucket rounds down and the remainder goes to the net amount, so the parts always add up to the gross. Shared test vectors check the same results in Rust and TypeScript.
 - Each vault accepts an allow-list of tokens (USDC and EURC Stellar Asset Contracts).
 - The swapper, the oracle and the yield strategy can each decide where reserve goes, so each one takes the vault's notice to set; stopping them applies at once. A conversion is refused below the oracle price minus the owner's tolerance or with a stale price; a strategy must name the vault as its only owner.

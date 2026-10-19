@@ -3,6 +3,7 @@ import { Keypair, scValToNative } from '@stellar/stellar-sdk';
 import { fmtNumber, t } from './i18n';
 import { allowanceData, balanceOfData, burnCalls, fastFeeBps, fetchAttestation, mintAndPayOp, type EvmChain } from 'kyros-sdk';
 import {
+  abroadTerms,
   daysFromCivil,
   dayString,
   dueAt,
@@ -16,9 +17,12 @@ import {
   requestTerms,
   suggestSetup,
   taxYearStart,
+  split,
   termsFromPack,
+  transfersInto,
   upcomingDeadlines,
   vaultEvents,
+  type Correction,
   type ActivityId,
   type ClientKind,
   type Deadline,
@@ -32,6 +36,7 @@ import {
   type ScheduledItem,
   type ScheduledPayment,
   type Setup,
+  type Transfer,
   type VaultEventRow,
 } from 'kyros-sdk';
 import { loadHolidays, loadPack } from './packs';
@@ -71,6 +76,12 @@ export interface VaultInfo {
   deployedAt: string;
   /** Tax office notices read into the vault: a due date (and amount) for a bucket over a tax year. */
   notices?: TaxNotice[];
+  /** The payment address for clients abroad (an inbox the vault knows: no VAT), made on first use. */
+  abroadInbox?: string;
+  /** Wallets known to pay from abroad (seen paying the address for clients abroad, or confirmed by the user). */
+  abroadPayers?: string[];
+  /** Payments the user already settled (VAT taken back, or kept): their event ids. */
+  settled?: string[];
 }
 
 export interface TaxNotice {
@@ -213,6 +224,10 @@ export interface Snapshot {
   pendingConversionAt: bigint | null;
   feed: Awaited<ReturnType<Chain['client']['feed']>>;
   events: VaultEventRow[];
+  /** Tax being taken back, applied by itself once the notice has passed. */
+  corrections: Correction[];
+  /** Who paid each payment address lately (the address for clients abroad, if any). */
+  transfers: { general: Transfer[]; abroad: Transfer[] };
 }
 
 const configs = new Map<string, { period: PeriodKind; dues: Dues }>();
@@ -305,7 +320,14 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     scheduled,
   ]);
   const latest = await safe(() => chain.server.getLatestLedger(), { sequence: 0 } as { sequence: number });
-  const events = await safe(() => vaultEvents(chain.server, v.vault, Math.max(latest.sequence - 17_000, 1)), []);
+  const since = Math.max(latest.sequence - 17_000, 1);
+  const allTokens = [...dollars, eur.contract];
+  const [events, corrections, general, abroad] = await Promise.all([
+    safe(() => vaultEvents(chain.server, v.vault, since), []),
+    safe(() => c.corrections(v.vault), [] as Correction[]),
+    safe(() => transfersInto(chain.server, allTokens, v.inbox, since), [] as Transfer[]),
+    v.abroadInbox ? safe(() => transfersInto(chain.server, allTokens, v.abroadInbox!, since), [] as Transfer[]) : Promise.resolve([] as Transfer[]),
+  ]);
   return {
     spendable: { usd: sum(sUsds), eur: sEur },
     reserved: { usd: sum(pUsds.map((p) => p.held)), eur: pEur.held },
@@ -322,6 +344,8 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     pendingConversionAt: pending,
     feed,
     events: events.reverse(),
+    corrections,
+    transfers: { general, abroad },
   };
 }
 
@@ -514,16 +538,139 @@ export const formatUnits6 = (x: bigint) => fmtNumber(Number(x) / 1e6, { minimumF
  */
 export async function sweepInbox(chain: Chain, v: VaultInfo): Promise<number> {
   let n = 0;
-  for (const token of [...chain.dollarTokens, chain.cfg.tokens.eur.contract]) {
-    let bal = 0n;
-    try {
-      bal = await chain.client.balance(token, v.inbox);
-    } catch {
-      continue;
+  for (const inbox of [v.inbox, v.abroadInbox].filter((x): x is string => !!x))
+    for (const token of [...chain.dollarTokens, chain.cfg.tokens.eur.contract]) {
+      let bal = 0n;
+      try {
+        bal = await chain.client.balance(token, inbox);
+      } catch {
+        continue;
+      }
+      if (bal <= 0n) continue;
+      await chain.sendAs(chain.feePayer, chain.client.sweepOp(inbox, token));
+      n++;
     }
-    if (bal <= 0n) continue;
-    await chain.sendAs(chain.feePayer, chain.client.sweepOp(v.inbox, token));
+  return n;
+}
+
+// ---- Clients abroad ----
+//
+// The chain does not say where a payer is. So the user has two payment
+// addresses: the usual one (VAT reserved, the safe side) and one for clients
+// abroad (no VAT), made the first time it is needed. Wallets that pay the
+// second one are remembered; if one of them later pays the usual address, the
+// app offers to take that VAT back (a correction that applies by itself after
+// the vault's notice) and registers the wallet's terms in the vault, so its
+// payments through a link or from another chain split right from then on.
+
+/** Makes the address for clients abroad: a second inbox (fee payer) whose payments the vault books without VAT (owner signs). */
+export async function ensureAbroadInbox(chain: Chain, wallet: Wallet, v: VaultInfo, onStep: (s: string) => void): Promise<VaultInfo> {
+  if (v.abroadInbox) return v;
+  const cfg = chain.cfg;
+  onStep(t('stepInbox'));
+  await chain.ensureAccount(chain.feePayer.publicKey());
+  const inbox = await chain.client.deployInbox(chain.feePayer, Buffer.from(cfg.wasm.inbox, 'hex'), v.vault);
+  onStep(t('abroadSigning'));
+  await wallet.signAndSend(chain.client.expectPayerOp(v.vault, inbox.contractId, abroadTerms(v.rule)));
+  const next = { ...v, abroadInbox: inbox.contractId };
+  saveVault(next);
+  return next;
+}
+
+/** A payment from a wallet known to be abroad that came in with VAT reserved. */
+export interface AbroadSuspect {
+  id: string;
+  from: string;
+  token: string;
+  period: number;
+  gross: bigint;
+  /** The VAT reserved for it that can still be taken back (at most what the bucket holds). */
+  vat: bigint;
+  at: string;
+}
+
+/** Remembers the wallets that paid the address for clients abroad. Returns whether anything changed. */
+export function learnAbroadPayers(v: VaultInfo, s: Snapshot): boolean {
+  const known = new Set(v.abroadPayers ?? []);
+  const before = known.size;
+  for (const x of s.transfers.abroad) known.add(x.from);
+  if (known.size === before) return false;
+  v.abroadPayers = [...known];
+  saveVault(v);
+  return true;
+}
+
+/** Payments from wallets known to be abroad that reserved VAT, not yet settled. */
+export function abroadSuspects(v: VaultInfo, s: Snapshot): AbroadSuspect[] {
+  const abroad = new Set([...(v.abroadPayers ?? []), ...s.transfers.abroad.map((x) => x.from)]);
+  const settled = new Set(v.settled ?? []);
+  if (!abroad.size || !s.periodKind || v.rule.vatBps === 0) return [];
+  const kind = s.periodKind;
+  const out: AbroadSuspect[] = [];
+  // Held VAT left per period and token, so two suspects never ask for more than there is.
+  const left = new Map<string, bigint>();
+  for (const h of s.held) if (h.bucket === 'vat') left.set(`${h.period}|${h.token}`, (left.get(`${h.period}|${h.token}`) ?? 0n) + h.amount);
+  for (const c of s.corrections) if (c.bucket === 'vat') left.set(`${c.period}|${c.token}`, (left.get(`${c.period}|${c.token}`) ?? 0n) - c.amount);
+  const take = (id: string, from: string, token: string, period: number, gross: bigint, vat: bigint, at: string) => {
+    if (settled.has(id) || vat <= 0n) return;
+    const k = `${period}|${token}`;
+    const avail = left.get(k) ?? 0n;
+    const amount = vat < avail ? vat : avail;
+    if (amount <= 0n) return;
+    left.set(k, avail - amount);
+    out.push({ id, from, token, period, gross, vat: amount, at });
+  };
+  // Sent straight to the usual address (the inbox splits it by the vault's rule).
+  for (const x of s.transfers.general)
+    if (abroad.has(x.from)) take(x.id, x.from, x.token, periodOf(kind, BigInt(Math.floor(new Date(x.closedAt).getTime() / 1000))), x.amount, split(v.rule, x.amount).vat, x.closedAt);
+  // Paid through a link or the Router from that wallet.
+  for (const e of s.events)
+    if (e.kind === 'received' && e.from && abroad.has(e.from) && e.token && e.period !== undefined)
+      take(`${e.txHash}:${e.from}`, e.from, e.token, e.period, e.gross ?? 0n, e.vat ?? 0n, e.closedAt);
+  return out;
+}
+
+function settle(v: VaultInfo, id: string): void {
+  v.settled = [...new Set([...(v.settled ?? []), id])].slice(-200);
+  saveVault(v);
+}
+
+/** Owner: takes a suspect's VAT back (after the notice) and books that wallet's next payments without VAT. */
+export async function reclaimAbroadVat(chain: Chain, wallet: Wallet, v: VaultInfo, x: AbroadSuspect, onStep: (s: string) => void): Promise<void> {
+  onStep(t('reclaiming'));
+  await wallet.signAndSend(chain.client.proposeCorrectionOp(v.vault, { period: x.period, token: x.token, bucket: 'vat', amount: x.vat }));
+  settle(v, x.id);
+  let known = null;
+  try {
+    known = await chain.client.payerTerms(v.vault, x.from);
+  } catch {
+    known = null;
+  }
+  if (!known) {
+    onStep(t('rememberClient'));
+    await wallet.signAndSend(chain.client.expectPayerOp(v.vault, x.from, abroadTerms(v.rule)));
+  }
+  v.abroadPayers = [...new Set([...(v.abroadPayers ?? []), x.from])];
+  saveVault(v);
+}
+
+/** The user says this payment did owe VAT: keep it, and stop treating that wallet as abroad. */
+export function keepVat(v: VaultInfo, x: AbroadSuspect): void {
+  v.abroadPayers = (v.abroadPayers ?? []).filter((a) => a !== x.from);
+  settle(v, x.id);
+}
+
+/** Anyone (here, this browser's fee payer): applies the corrections whose notice has passed. */
+export async function applyReadyCorrections(chain: Chain, s: Snapshot, v: VaultInfo): Promise<number> {
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  let n = 0;
+  for (const c of s.corrections.filter((x) => x.readyAt <= now)) {
+    await chain.sendAs(chain.feePayer, chain.client.applyCorrectionOp(v.vault, c.id));
     n++;
   }
   return n;
+}
+
+export function cancelCorrection(chain: Chain, wallet: Wallet, v: VaultInfo, id: number): Promise<string> {
+  return wallet.signAndSend(chain.client.cancelCorrectionOp(v.vault, id));
 }

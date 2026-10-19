@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
-import { convertNow, expectPayment, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
+import { abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
 import { Button, LangPicker, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
@@ -16,53 +16,149 @@ const fmtDate = (secs: bigint) => fmtDay(new Date(Number(secs) * 1000));
 const short = (a: string) => (a.length > 20 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a);
 
 function PayAddress() {
-  const { vault, go } = useApp();
+  const { vault, setVault, wallet, chain, run, go } = useApp();
+  const [which, setWhich] = useState<'home' | 'abroad'>('home');
   const [qr, setQr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const address = which === 'abroad' ? vault?.abroadInbox : vault?.inbox;
   useEffect(() => {
-    if (!vault) return;
-    import('qrcode').then((q) => q.toDataURL(vault.inbox, { margin: 1, width: 240 }).then(setQr)).catch(() => setQr(null));
-  }, [vault?.inbox]);
+    if (!address) return setQr(null);
+    import('qrcode').then((q) => q.toDataURL(address, { margin: 1, width: 240 }).then(setQr)).catch(() => setQr(null));
+  }, [address]);
   if (!vault) return null;
   const copy = async () => {
+    if (!address) return;
     try {
-      await navigator.clipboard.writeText(vault.inbox);
+      await navigator.clipboard.writeText(address);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* the address is selectable below */
     }
   };
-  const share = () => navigator.share?.({ title: 'Kyros', text: t('shareText', { address: vault.inbox }) }).catch(() => {});
+  const share = () => address && navigator.share?.({ title: 'Kyros', text: t('shareText', { address }) }).catch(() => {});
+  const make = () =>
+    wallet &&
+    run(t('abroadMaking'), async (step) => {
+      setVault(await ensureAbroadInbox(chain, wallet, vault, step));
+    });
+  // Without VAT there is nothing to tell apart: one address does it all.
+  const twoAddresses = vault.rule.vatBps > 0;
   return (
     <div className="card" data-testid="pay-address">
       <div className="row spread">
         <span style={{ fontWeight: 600 }}>{t('payAddress')}</span>
         <span className="badge ok">{t('automatic')}</span>
       </div>
-      <p className="small muted">{t('payAddressSub')}</p>
-      <div className="row" style={{ alignItems: 'flex-start' }}>
-        {qr && <img src={qr} alt={t('payAddress')} width={112} height={112} style={{ borderRadius: 8, flex: 'none' }} />}
-        <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
-          <span className="tiny mono" style={{ wordBreak: 'break-all' }} title={vault.inbox}>
-            {short(vault.inbox)}
-          </span>
-          <div className="row">
-            <Button small kind="secondary" onClick={copy}>
-              {copied ? t('copied') : t('copy')}
-            </Button>
-            {'share' in navigator && (
-              <Button small kind="secondary" onClick={share}>
-                {t('share')}
+      {twoAddresses && (
+        <div className="seg" role="tablist" aria-label={t('payAddress')}>
+          <button role="tab" aria-selected={which === 'home'} className={which === 'home' ? 'on' : ''} onClick={() => setWhich('home')} data-testid="addr-home">
+            {t('clientsHome')}
+          </button>
+          <button role="tab" aria-selected={which === 'abroad'} className={which === 'abroad' ? 'on' : ''} onClick={() => setWhich('abroad')} data-testid="addr-abroad">
+            {t('clientsAbroad')}
+          </button>
+        </div>
+      )}
+      <p className="small muted">{which === 'abroad' ? t('abroadSub') : t('payAddressSub')}</p>
+      {address ? (
+        <div className="row" style={{ alignItems: 'flex-start' }}>
+          {qr && <img src={qr} alt={t('payAddress')} width={112} height={112} style={{ borderRadius: 8, flex: 'none' }} />}
+          <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+            <span className="tiny mono" style={{ wordBreak: 'break-all' }} title={address} data-testid="address">
+              {short(address)}
+            </span>
+            <div className="row">
+              <Button small kind="secondary" onClick={copy}>
+                {copied ? t('copied') : t('copy')}
               </Button>
-            )}
+              {'share' in navigator && (
+                <Button small kind="secondary" onClick={share}>
+                  {t('share')}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <Button testid="make-abroad" onClick={make}>
+          {t('abroadMake')}
+        </Button>
+      )}
       <button className="link small" data-testid="request" onClick={() => go('request')}>
         {t('specialPayment')}
       </button>
     </div>
+  );
+}
+
+/**
+ * Payments from clients abroad that reserved VAT, and VAT on its way back.
+ * One tap fixes it; the money comes back by itself after the vault's notice.
+ */
+function AbroadFixes({ pending = false }: { pending?: boolean }) {
+  const { snap, vault, wallet, chain, run, refresh, setVault } = useApp();
+  if (!snap || !vault || !wallet) return null;
+  const suspects = abroadSuspects(vault, snap);
+  const corrections = pending ? snap.corrections.filter((c) => c.bucket === 'vat') : [];
+  const cur = (token: string) => (token === chain.cfg.tokens.eur.contract ? 'EURC' : 'USDC');
+  if (!suspects.length && !corrections.length) return null;
+  const back = BigInt(Math.floor(Date.now() / 1000)) + BigInt(chain.cfg.noticeSecs);
+  return (
+    <>
+      {suspects.map((x) => (
+        <section key={x.id} className="card warn" data-testid="abroad-suspect">
+          <p className="small" style={{ fontWeight: 600 }}>
+            {t('abroadPaidHome')}
+          </p>
+          <p className="small muted">{t('abroadPaidHomeSub', { gross: money(x.gross, cur(x.token)), who: short(x.from), vat: money(x.vat, cur(x.token)), date: fmtDate(back) })}</p>
+          <div className="row">
+            <Button
+              small
+              testid="reclaim-vat"
+              onClick={() =>
+                run(t('reclaiming'), async (step) => {
+                  await reclaimAbroadVat(chain, wallet, vault, x, step);
+                  setVault({ ...vault });
+                  await refresh();
+                })
+              }
+            >
+              {t('reclaimVat', { vat: money(x.vat, cur(x.token)) })}
+            </Button>
+            <Button
+              small
+              kind="secondary"
+              onClick={() => {
+                keepVat(vault, x);
+                setVault({ ...vault });
+              }}
+            >
+              {t('keepVat')}
+            </Button>
+          </div>
+        </section>
+      ))}
+      {corrections.map((c) => (
+        <section key={c.id} className="card info" data-testid="correction">
+          <p className="small" style={{ fontWeight: 600 }}>
+            {t('vatComingBack', { vat: money(c.amount, cur(c.token)) })}
+          </p>
+          <p className="small muted">{t('vatComingBackSub', { date: fmtDateTime(new Date(Number(c.readyAt) * 1000)) })}</p>
+          <button
+            className="link small"
+            onClick={() =>
+              run(t('cancelling'), async () => {
+                await cancelCorrection(chain, wallet, vault, c.id);
+                await refresh();
+              })
+            }
+          >
+            {t('cancelPayment')}
+          </button>
+        </section>
+      ))}
+    </>
   );
 }
 
@@ -107,6 +203,7 @@ export function Home() {
             {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]} · {wallet.label}
           </p>
         </div>
+        <AbroadFixes />
         {empty && (
           <section className="card start" data-testid="start-here">
             <h2 style={{ margin: 0, fontSize: 18 }}>{t('startTitle')}</h2>
@@ -635,7 +732,7 @@ export function Settings() {
   );
 }
 
-const KNOWN_EVENTS = ['received', 'tax_paid', 'released', 'converted', 'invested', 'harvested'];
+const KNOWN_EVENTS = ['received', 'tax_paid', 'released', 'converted', 'invested', 'harvested', 'correction_applied'];
 const eventText = (kind: string) => t((KNOWN_EVENTS.includes(kind) ? `ev_${kind}` : 'ev_change') as Key);
 
 function download(name: string, text: string) {
@@ -695,7 +792,7 @@ export function Activity() {
 }
 
 export function Alerts() {
-  const { snap } = useApp();
+  const { snap, vault } = useApp();
   const now = BigInt(Math.floor(Date.now() / 1000));
   const items: { tone: string; title: string; body: string }[] = [];
   if (snap?.pendingConversionAt && snap.pendingConversionAt > now)
@@ -714,7 +811,8 @@ export function Alerts() {
       <div className="content">
         <h1>{t('alerts')}</h1>
         {!snap && <Skeleton rows={2} />}
-        {snap && items.length === 0 && <p className="muted">{t('nothingPending')}</p>}
+        <AbroadFixes pending />
+        {snap && items.length === 0 && !abroadSuspects(vault!, snap).length && !snap.corrections.length && <p className="muted">{t('nothingPending')}</p>}
         {items.map((i) => (
           <div key={i.title + i.body} className={`card ${i.tone}`}>
             <p className="tiny" style={{ fontWeight: 700 }}>
