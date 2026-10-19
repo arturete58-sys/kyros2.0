@@ -18,6 +18,12 @@
 //!   the tax destination on a date (`schedule`); anyone can then run it on
 //!   or after that date (`run_scheduled`), so instalments go out on time
 //!   without the owner online. The money can only go to the destination.
+//! - **Clients with their own terms.** The owner can register terms for a
+//!   payer address (a client's wallet, or a second payment address for
+//!   clients abroad): its payments split by them with no invoice reference.
+//! - **Corrections, with notice.** If a payment was split with tax it did
+//!   not owe (a client abroad paid the general address), the owner can
+//!   propose to take that amount back; it applies only after the notice period.
 //! - **Destination.** Before that date reserve can only leave for the
 //!   registered tax-payment destination (`pay_tax`), e.g. the owner's anchor
 //!   account used to pay the tax in euros.
@@ -125,6 +131,22 @@ pub enum VaultError {
     NotYet = 32,
     /// Too many payments or periods in one call.
     TooMany = 33,
+    UnknownPayer = 34,
+    UnknownCorrection = 35,
+}
+
+/// Most corrections waiting at once.
+pub const MAX_CORRECTIONS: u32 = 20;
+
+/// Part of a bucket the owner takes back after the notice period (tax it did not owe).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Correction {
+    pub period: u32,
+    pub token: Address,
+    pub bucket: Symbol,
+    pub amount: i128,
+    pub ready_at: u64,
 }
 
 /// Most periods `set_due` changes at once, and most items in one scheduled payment.
@@ -360,6 +382,10 @@ enum Key {
     Scheduled(u32),
     ScheduledIds,
     NextScheduled,
+    Payer(Address),
+    Correction(u32),
+    CorrectionIds,
+    NextCorrection,
 }
 
 #[contractevent(topics = ["kyros_vault", "received"])]
@@ -390,6 +416,30 @@ pub struct TaxPaid {
     pub destination: Address,
     /// The muxed id (anchor memo) the payment carried, if any.
     pub memo: Option<u64>,
+}
+
+#[contractevent(topics = ["kyros_vault", "payer_expected"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PayerExpected {
+    #[topic]
+    pub payer: Address,
+    pub terms: InvoiceTerms,
+}
+
+#[contractevent(topics = ["kyros_vault", "correction_proposed"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CorrectionProposed {
+    #[topic]
+    pub id: u32,
+    pub correction: Correction,
+}
+
+#[contractevent(topics = ["kyros_vault", "correction_applied"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CorrectionApplied {
+    #[topic]
+    pub id: u32,
+    pub amount: i128,
 }
 
 #[contractevent(topics = ["kyros_vault", "due_set"])]
@@ -895,10 +945,12 @@ impl ReserveVault {
             return Err(VaultError::TokenNotAccepted);
         }
         // An invoice the owner registered splits by its own terms; anything else by the rule.
+        // An invoice's own terms first, then the terms registered for this payer.
         let terms: Option<InvoiceTerms> = e
             .storage()
             .persistent()
-            .get(&Key::Invoice(reference.clone()));
+            .get(&Key::Invoice(reference.clone()))
+            .or_else(|| e.storage().persistent().get(&Key::Payer(from.clone())));
         let s = match terms {
             Some(t) => {
                 c.rule = Rule {
@@ -1347,6 +1399,153 @@ impl ReserveVault {
         Ok(())
     }
 
+    // ---- Clients with their own terms ----
+
+    /// Registers terms for a payer address: its payments without invoice
+    /// terms split by these (e.g. a client abroad, VAT 0). Applies at once:
+    /// it only changes how future payments are booked, and the owner signs it.
+    pub fn expect_payer(e: Env, payer: Address, terms: InvoiceTerms) -> Result<(), VaultError> {
+        stored_config(&e).owner.require_auth();
+        let rule = Rule {
+            vat_bps: terms.vat_bps,
+            buckets: terms.buckets.clone(),
+        };
+        check_rule(&e, &rule)?;
+        if !validate_withholding(&rule, terms.withholding_bps) {
+            return Err(VaultError::InvalidTerms);
+        }
+        let k = Key::Payer(payer.clone());
+        e.storage().persistent().set(&k, &terms);
+        e.storage()
+            .persistent()
+            .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+        PayerExpected { payer, terms }.publish(&e);
+        Ok(())
+    }
+
+    pub fn payer(e: Env, payer: Address) -> Option<InvoiceTerms> {
+        e.storage().persistent().get(&Key::Payer(payer))
+    }
+
+    pub fn forget_payer(e: Env, payer: Address) -> Result<(), VaultError> {
+        stored_config(&e).owner.require_auth();
+        let k = Key::Payer(payer);
+        if !e.storage().persistent().has(&k) {
+            return Err(VaultError::UnknownPayer);
+        }
+        e.storage().persistent().remove(&k);
+        Ok(())
+    }
+
+    // ---- Corrections, with notice ----
+
+    /// Proposes taking `amount` of a period's bucket back (tax a payment did
+    /// not owe). Anyone can apply it once the notice period has passed;
+    /// the owner can cancel it until then.
+    pub fn propose_correction(
+        e: Env,
+        period: u32,
+        token: Address,
+        bucket: Symbol,
+        amount: i128,
+    ) -> Result<u32, VaultError> {
+        let c = active(&e);
+        c.owner.require_auth();
+        if amount <= 0 {
+            return Err(VaultError::InvalidAmount);
+        }
+        let held_now = load_period(&e, period, &token)
+            .buckets
+            .get(bucket.clone())
+            .ok_or(VaultError::UnknownBucket)?;
+        if amount > held_now {
+            return Err(VaultError::ExceedsReserve);
+        }
+        let mut ids: Vec<u32> = e
+            .storage()
+            .instance()
+            .get(&Key::CorrectionIds)
+            .unwrap_or(Vec::new(&e));
+        if ids.len() >= MAX_CORRECTIONS {
+            return Err(VaultError::TooMany);
+        }
+        let id: u32 = e
+            .storage()
+            .instance()
+            .get(&Key::NextCorrection)
+            .unwrap_or(1);
+        e.storage().instance().set(&Key::NextCorrection, &(id + 1));
+        let correction = Correction {
+            period,
+            token,
+            bucket,
+            amount,
+            ready_at: now(&e) + c.notice_secs,
+        };
+        let k = Key::Correction(id);
+        e.storage().persistent().set(&k, &correction);
+        e.storage()
+            .persistent()
+            .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+        ids.push_back(id);
+        e.storage().instance().set(&Key::CorrectionIds, &ids);
+        bump_instance(&e);
+        CorrectionProposed { id, correction }.publish(&e);
+        Ok(id)
+    }
+
+    pub fn correction(e: Env, id: u32) -> Option<Correction> {
+        e.storage().persistent().get(&Key::Correction(id))
+    }
+
+    pub fn correction_ids(e: Env) -> Vec<u32> {
+        e.storage()
+            .instance()
+            .get(&Key::CorrectionIds)
+            .unwrap_or(Vec::new(&e))
+    }
+
+    /// Applies a correction whose notice has passed: at most what the bucket
+    /// still holds goes back to the owner. Anyone can call it.
+    pub fn apply_correction(e: Env, id: u32) -> Result<i128, VaultError> {
+        let c = active(&e);
+        let x: Correction = e
+            .storage()
+            .persistent()
+            .get(&Key::Correction(id))
+            .ok_or(VaultError::UnknownCorrection)?;
+        if now(&e) < x.ready_at {
+            return Err(VaultError::NotYet);
+        }
+        let mut p = load_period(&e, x.period, &x.token);
+        let held_now = p.buckets.get(x.bucket.clone()).unwrap_or(0);
+        let amount = x.amount.min(held_now);
+        Self::drop_correction(&e, id);
+        if amount > 0 {
+            p.buckets.set(x.bucket.clone(), held_now - amount);
+            p.released += amount;
+            save_period(&e, x.period, &x.token, &p);
+            add_held(&e, &x.token, -amount);
+            ensure_liquid(&e, &x.token, amount)?;
+            token::Client::new(&e, &x.token).transfer(
+                &e.current_contract_address(),
+                &c.owner,
+                &amount,
+            );
+        }
+        CorrectionApplied { id, amount }.publish(&e);
+        Ok(amount)
+    }
+
+    pub fn cancel_correction(e: Env, id: u32) -> Result<(), VaultError> {
+        stored_config(&e).owner.require_auth();
+        if !e.storage().persistent().has(&Key::Correction(id)) {
+            return Err(VaultError::UnknownCorrection);
+        }
+        Self::drop_correction(&e, id);
+        Ok(())
+    }
+
     // ---- Reserve in the tax's currency ----
 
     /// The conversion in force now, if any.
@@ -1686,6 +1885,20 @@ impl ReserveVault {
         }
         .publish(e);
         Ok(())
+    }
+
+    fn drop_correction(e: &Env, id: u32) {
+        e.storage().persistent().remove(&Key::Correction(id));
+        let mut ids: Vec<u32> = e
+            .storage()
+            .instance()
+            .get(&Key::CorrectionIds)
+            .unwrap_or(Vec::new(e));
+        if let Some(i) = ids.first_index_of(id) {
+            ids.remove(i);
+        }
+        e.storage().instance().set(&Key::CorrectionIds, &ids);
+        bump_instance(e);
     }
 
     fn drop_scheduled(e: &Env, id: u32) {

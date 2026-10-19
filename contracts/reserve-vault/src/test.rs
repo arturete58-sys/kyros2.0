@@ -1157,3 +1157,74 @@ fn periods_record_income_and_what_clients_withheld() {
     assert_eq!(p.income, 2_000 * UNIT);
     assert_eq!(p.withheld, 150 * UNIT);
 }
+
+#[test]
+fn a_client_abroad_splits_by_its_own_terms_and_tax_not_owed_comes_back_after_notice() {
+    let w = world();
+    let client = Address::generate(&w.e);
+    StellarAssetClient::new(&w.e, &w.token).mint(&client, &(5_000 * UNIT));
+    let abroad = InvoiceTerms {
+        vat_bps: 0,
+        withholding_bps: 0,
+        buckets: vec![
+            &w.e,
+            Bucket {
+                name: symbol_short!("irpf"),
+                bps: 2000,
+            },
+        ],
+    };
+    w.v.expect_payer(&client, &abroad);
+    assert_eq!(w.v.payer(&client), Some(abroad));
+    // The client abroad pays without invoice terms: no VAT, income tax as usual.
+    let s = w.v.receive(&client, &w.token, &(1_000 * UNIT), &r(&w));
+    assert_eq!((s.vat, s.reserve, s.net), (0, 200 * UNIT, 800 * UNIT));
+    // Anyone else still follows the rule.
+    let s2 = w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    assert_eq!(s2.vat, 210 * UNIT);
+    let q = w.v.current_period();
+    let vat = symbol_short!("vat");
+    // That 210 was not owed (say the second payer was abroad too): take it back, with notice.
+    assert_eq!(
+        w.v.try_propose_correction(&q, &w.token, &vat, &(211 * UNIT)),
+        Err(Ok(VaultError::ExceedsReserve))
+    );
+    assert_eq!(
+        w.v.try_propose_correction(&q, &w.token, &symbol_short!("nope"), &1),
+        Err(Ok(VaultError::UnknownBucket))
+    );
+    let id = w.v.propose_correction(&q, &w.token, &vat, &(210 * UNIT));
+    assert_eq!(w.v.correction_ids(), vec![&w.e, id]);
+    assert_eq!(w.v.correction(&id).unwrap().ready_at, FEB_10_2027 + NOTICE);
+    assert_eq!(w.v.try_apply_correction(&id), Err(Ok(VaultError::NotYet)));
+    // After the notice anyone can apply it; the money goes to the owner.
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    let before = bal(&w, &w.owner);
+    w.e.set_auths(&[]);
+    assert_eq!(w.v.apply_correction(&id), 210 * UNIT);
+    assert_eq!(bal(&w, &w.owner), before + 210 * UNIT);
+    let p = w.v.period(&q, &w.token);
+    assert_eq!(p.buckets.get(vat.clone()).unwrap(), 0);
+    assert_eq!(p.released, 210 * UNIT);
+    assert_eq!(w.v.correction(&id), None);
+    assert_eq!(
+        w.v.try_apply_correction(&id),
+        Err(Ok(VaultError::UnknownCorrection))
+    );
+    // The owner can cancel a correction before it applies, and forget a payer once.
+    w.e.mock_all_auths();
+    let id2 =
+        w.v.propose_correction(&q, &w.token, &symbol_short!("irpf"), &UNIT);
+    w.v.cancel_correction(&id2);
+    assert_eq!(w.v.correction_ids().len(), 0);
+    assert_eq!(
+        w.v.try_cancel_correction(&id2),
+        Err(Ok(VaultError::UnknownCorrection))
+    );
+    w.v.forget_payer(&client);
+    assert_eq!(w.v.payer(&client), None);
+    assert_eq!(
+        w.v.try_forget_payer(&client),
+        Err(Ok(VaultError::UnknownPayer))
+    );
+}
