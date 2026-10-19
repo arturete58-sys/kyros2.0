@@ -84,7 +84,7 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
 
   // Clients abroad: the second payment address is made on first use (the passkey signs that the
   // vault books its payments without VAT).
-  await page.getByRole('button', { name: 'Inicio' }).click();
+  await page.locator('button.back').click();
   await page.getByTestId('addr-abroad').click();
   await page.getByTestId('make-abroad').click();
   await settle(page);
