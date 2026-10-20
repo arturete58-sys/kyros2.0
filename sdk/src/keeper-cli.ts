@@ -3,9 +3,13 @@
  * kyros-keeper: sweep Kyros inboxes as payments arrive.
  *
  *   KEEPER_SECRET=S... kyros-keeper --rpc https://soroban-testnet.stellar.org \
- *     --network testnet --watch <inbox>:<token> [--watch ...] [--vault <vault> ...] [--interval 5000]
+ *     --network testnet --watch <inbox>:<token>[:<min>] [--watch ...] [--vault <vault> ...] [--interval 5000]
  *
- * With --vault it also runs that vault's scheduled tax payments on their date.
+ * An inbox is swept when it holds at least <min> (in whole token units,
+ * default: anything), every --interval milliseconds: thousands of small
+ * payments (x402 micropayments, for example) become one split.
+ * With --vault it also runs that vault's scheduled tax payments and ready
+ * corrections on their date.
  *
  * Finish a payment made from another chain (if the payer's page closed
  * before Circle's attestation arrived):
@@ -18,6 +22,7 @@
 import { Keypair, Networks } from '@stellar/stellar-sdk';
 import { KyrosClient } from './client.js';
 import { Keeper } from './keeper.js';
+import { parseAmount } from './split.js';
 import { fetchAttestation, mintAndPayOp } from './cctp.js';
 
 const args = process.argv.slice(2);
@@ -52,9 +57,9 @@ if (relay) {
   process.exit(0);
 }
 const watched = all('watch').map((w) => {
-  const [inbox, token] = w.split(':');
-  if (!inbox || !token) throw new Error(`--watch takes <inbox>:<token>, got ${w}`);
-  return { inbox, token };
+  const [inbox, token, min] = w.split(':');
+  if (!inbox || !token) throw new Error(`--watch takes <inbox>:<token>[:<min>], got ${w}`);
+  return min ? { inbox, token, min: parseAmount(min) } : { inbox, token };
 });
 const vaults = all('vault');
 if (watched.length === 0 && vaults.length === 0) {
