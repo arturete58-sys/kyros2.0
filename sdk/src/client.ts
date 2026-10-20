@@ -181,7 +181,14 @@ export class KyrosClient {
       return r;
     });
     if (sent.status === 'ERROR') throw new KyrosError(`rejected: ${sent.errorResult?.toXDR('base64') ?? 'unknown'}`);
-    const done = await retrying(() => this.server.pollTransaction(sent.hash, { attempts: 40 }));
+    // On a busy network a transaction can be dropped before it is included: send it again
+    // (same hash, it can only apply once) until it lands or its time bounds expire.
+    const deadline = Number(tx.timeBounds?.maxTime ?? 0) * 1000 || Date.now() + 120_000;
+    let done = await retrying(() => this.server.pollTransaction(sent.hash, { attempts: 30 }));
+    while (done.status === 'NOT_FOUND' && Date.now() < deadline) {
+      await retrying(() => this.server.sendTransaction(tx));
+      done = await retrying(() => this.server.pollTransaction(sent.hash, { attempts: 30 }));
+    }
     if (done.status !== 'SUCCESS') throw new KyrosError(`transaction ${sent.hash} ${done.status}`);
     return { hash: sent.hash, returnValue: (done as rpc.Api.GetSuccessfulTransactionResponse).returnValue };
   }
