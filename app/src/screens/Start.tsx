@@ -36,6 +36,44 @@ export function vatLabel(treatment: string, bps: number, name = t('vat')): strin
   }
 }
 
+/** What Kyros does, shown rather than told: one payment, split on arrival. */
+function SplitPreview() {
+  const n = (x: number) => fmtNumber(x, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <figure className="preview" aria-label={t('previewPaid')}>
+      <div className="preview-head">
+        <span className="small muted">{t('previewPaid')}</span>
+        <span className="preview-amount">
+          {n(1210)} <small>USDC</small>
+        </span>
+      </div>
+      <div className="split grow-in" aria-hidden>
+        <span className="y" style={{ flexGrow: 800 }} />
+        <span className="v" style={{ flexGrow: 210 }} />
+        <span className="i" style={{ flexGrow: 200 }} />
+      </div>
+      <ul className="preview-rows">
+        <li>
+          <span className="dot" style={{ background: 'var(--yours)' }} />
+          <span className="grow">{t('previewYours')}</span>
+          <b>{n(800)}</b>
+        </li>
+        <li>
+          <span className="dot" style={{ background: 'var(--vat)' }} />
+          <span className="grow">{t('previewVat')}</span>
+          <b>{n(210)}</b>
+        </li>
+        <li>
+          <span className="dot" style={{ background: 'var(--income)' }} />
+          <span className="grow">{t('previewIncome')}</span>
+          <b>{n(200)}</b>
+        </li>
+      </ul>
+      <figcaption className="tiny muted">{t('previewLocked')}</figcaption>
+    </figure>
+  );
+}
+
 export function Welcome() {
   const { chain, setWallet, run } = useApp();
   const [name, setName] = useState('');
@@ -53,35 +91,40 @@ export function Welcome() {
     });
   return (
     <>
-      <div className="content" style={{ justifyContent: 'center' }}>
-        <LangPicker compact />
-        <Logo size={44} tagline />
-        <h1>{t('heroTitle')}</h1>
-        <p className="muted">{t('heroSub')}</p>
-        <div className="card info">
-          <p className="small" dangerouslySetInnerHTML={{ __html: t('yourMoney') }} />
+      <div className="content welcome">
+        <div className="welcome-top">
+          <Logo size={34} />
+          <LangPicker compact />
         </div>
+        <div className="hero">
+          <h1 className="display">{t('heroTitle')}</h1>
+          <p className="lead muted">{t('heroSub')}</p>
+        </div>
+        <SplitPreview />
+        <p className="trust small">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
+            <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+          </svg>
+          <span dangerouslySetInnerHTML={{ __html: t('yourMoney') }} />
+        </p>
         <div className="field">
           <label htmlFor="name">{t('nameForPasskey')}</label>
           <input id="name" className="input" value={name} placeholder="Lucía" onChange={(e) => setName(e.target.value)} />
         </div>
+        <p className="tiny muted">{t('walletList')}</p>
+        <p className="tiny muted">{t('testnetNote')}</p>
       </div>
       <div className="footer">
         <Button testid="connect-wallet" onClick={() => start(async () => (await import('../wallet/classic')).connectClassicWallet(chain), t('connectingWallet'))}>
           {t('connectWallet')}
         </Button>
-        <p className="tiny muted" style={{ textAlign: 'center', marginTop: -4 }}>
-          {t('walletList')}
-        </p>
         <Button kind="secondary" testid="create-passkey" onClick={() => start(async () => (await passkey()).createPasskeyWallet(chain, name.trim() || 'Kyros'), t('creatingWallet'))}>
           {t('createFaceId')}
         </Button>
-        <button className="link" data-testid="connect-passkey" style={{ textAlign: 'center', padding: 8 }} onClick={() => start(async () => (await passkey()).connectPasskeyWallet(chain), t('enteringFaceId'))}>
+        <button className="link" data-testid="connect-passkey" style={{ textAlign: 'center', padding: '6px 8px 0' }} onClick={() => start(async () => (await passkey()).connectPasskeyWallet(chain), t('enteringFaceId'))}>
           {t('haveAccount')}
         </button>
-        <p className="tiny muted" style={{ textAlign: 'center' }}>
-          {t('testnetNote')}
-        </p>
       </div>
     </>
   );

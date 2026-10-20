@@ -75,11 +75,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .phone { max-width: 440px; min-height: 100dvh; margin: 0 auto; background: var(--paper); display: flex; flex-direction: column; position: relative; }
 @media (min-width: 560px) {
-  html, body { background: color-mix(in srgb, var(--paper) 86%, var(--ink)); }
-  .phone { margin: 28px auto; min-height: calc(100dvh - 56px); border-radius: 36px; overflow: hidden; box-shadow: var(--shadow); }
+  html, body { background: radial-gradient(1100px 700px at 50% -10%, color-mix(in srgb, var(--action) 16%, var(--paper)) 0%, color-mix(in srgb, var(--paper) 88%, var(--ink)) 70%) fixed; }
+  .phone { margin: 28px auto; height: calc(100dvh - 56px); min-height: 640px; border-radius: 36px; overflow: hidden; box-shadow: var(--shadow); }
+  .phone > .content { min-height: 0; }
 }
 .content { flex: 1; padding: 22px 20px 28px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
-.footer { padding: 12px 20px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+.footer { padding: 12px 20px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; position: sticky; bottom: 0; z-index: var(--z-tabs); background: linear-gradient(to bottom, color-mix(in srgb, var(--paper) 0%, transparent), var(--paper) 18px); }
 
 /* Type: one family; weight and size carry hierarchy. Figures are tabular wherever money shows. */
 h1 { font-size: 28px; line-height: 1.15; margin: 2px 0 0; font-weight: 600; letter-spacing: -0.025em; text-wrap: balance; }
@@ -115,8 +116,8 @@ b { font-weight: 600; }
 /* Surfaces: no borders; hierarchy from tone. Tinted notes are tighter than sheets. */
 .card { background: var(--surface); border-radius: var(--r-sheet); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
 .card.warn, .card.info, .card.ok { border-radius: var(--r-card); padding: 14px 16px; gap: 8px; }
-.card.warn { background: var(--warn-soft); }
-.card.info { background: var(--action-soft); }
+.card.warn { background: color-mix(in srgb, var(--warn-soft) 70%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 14%, transparent); }
+.card.info { background: color-mix(in srgb, var(--action-soft) 70%, var(--surface)); }
 .card.ok { background: var(--action-soft); }
 .card.hero { background: var(--surface); gap: 6px; }
 .card .label, .card .note { color: var(--muted); }
@@ -216,7 +217,8 @@ select.input { background-color: var(--surface); color: var(--ink); }
 .list .item { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); min-width: 0; }
 .list .item:last-child { border-bottom: 0; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
-.testnet { color: var(--warn); font-size: 12px; font-weight: 550; text-align: center; padding: 7px 12px; background: var(--warn-soft); }
+.testnet { display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: 0.01em; padding: 9px 12px 0; }
+.testnet::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--income); box-shadow: 0 0 0 3px color-mix(in srgb, var(--income) 22%, transparent); }
 .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); }
 .logo .mark { color: var(--action); flex: none; display: block; }
 .logo .wordmark { display: block; }
@@ -231,3 +233,32 @@ a { color: var(--action); text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Welcome: the product shown, not described. */
+.welcome { gap: 22px; padding-top: 18px; }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.welcome-top .lang.compact .tiny { display: none; }
+.hero { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+h1.display { font-size: 34px; line-height: 1.06; letter-spacing: -0.035em; font-weight: 600; }
+.lead { font-size: 16.5px; line-height: 1.5; max-width: 34ch; }
+.preview { margin: 0; background: var(--surface); border-radius: var(--r-sheet); padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 color-mix(in srgb, var(--line) 70%, transparent), 0 18px 40px -28px color-mix(in srgb, var(--action) 45%, transparent); }
+.preview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.preview-amount { font-size: 26px; font-weight: 550; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.preview-amount small { font-size: 13px; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+.preview-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+.preview-rows li { display: flex; align-items: center; gap: 10px; }
+.preview-rows b { font-weight: 550; }
+.split.grow-in span { transform-origin: left center; animation: grow-in 0.9s var(--ease) both; }
+.split.grow-in span:nth-child(2) { animation-delay: 0.25s; }
+.split.grow-in span:nth-child(3) { animation-delay: 0.45s; }
+@keyframes grow-in { from { transform: scaleX(0); opacity: 0.3; } to { transform: scaleX(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .split.grow-in span { animation: none; } }
+.trust { display: flex; gap: 10px; align-items: flex-start; color: var(--muted); }
+.trust svg { flex: none; color: var(--action); margin-top: 1px; }
+.trust b { color: var(--ink); }
+
+/* Home greeting: the person, then where they are taxed. */
+.greet { display: flex; align-items: center; gap: 14px; }
+.greet h1 { font-size: 26px; }
+.avatar { flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--action-soft); color: var(--action); font-weight: 600; font-size: 16px; display: flex; align-items: center; justify-content: center; letter-spacing: 0.02em; }
+.content { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 35%, transparent) transparent; }

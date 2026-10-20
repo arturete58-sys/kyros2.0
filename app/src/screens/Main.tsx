@@ -15,6 +15,13 @@ const fmtDate = (secs: bigint) => fmtDay(new Date(Number(secs) * 1000));
 /** CBVAULT…AAAA: an address shortened in the middle (the full one is in the title and copied whole). */
 const short = (a: string) => (a.length > 20 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a);
 
+/** A person's first name from the wallet label, if it is one (not an address or the default). */
+const firstName = (label: string) => (/^[GC][A-Z0-9]{20,}/.test(label) || label === 'Kyros' || label.startsWith('Test') ? '' : label.trim().split(/\s+/)[0]);
+const initials = (label: string) => {
+  const n = firstName(label) ? label.trim().split(/\s+/) : ['K'];
+  return (n[0][0] + (n[1]?.[0] ?? '')).toUpperCase();
+};
+
 function PayAddress() {
   const { vault, setVault, wallet, chain, run, go } = useApp();
   const [which, setWhich] = useState<'home' | 'abroad'>('home');
@@ -197,12 +204,17 @@ export function Home() {
   return (
     <>
       <div className="content" style={{ paddingBottom: 90 }}>
-        <div>
-          <h1 style={{ fontSize: 24 }}>{t('hello')}</h1>
-          <p className="small muted">
-            {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]} · {wallet.label}
-          </p>
-        </div>
+        <header className="greet">
+          <div className="grow">
+            <h1>{firstName(wallet.label) ? `${t('hello')}, ${firstName(wallet.label)}` : t('hello')}</h1>
+            <p className="small muted">
+              {countryName(vault.answers.packId.toUpperCase())} · {activityText(vault.answers.activity)[0]}
+            </p>
+          </div>
+          <span className="avatar" aria-hidden>
+            {initials(wallet.label)}
+          </span>
+        </header>
         <AbroadFixes />
         {empty && (
           <section className="card start" data-testid="start-here">
@@ -802,7 +814,7 @@ export function Alerts() {
   for (const d of snap?.deadlines ?? []) {
     const days = Math.ceil((new Date(`${d.date}T23:59:59Z`).getTime() - Date.now()) / 86_400_000);
     if (days > 30) break;
-    items.push({ tone: days <= 7 ? 'warn' : 'info', title: t('al_deadline', { days }), body: t('al_deadlineBody', { what: deadlineText(d), date: fmtDay(new Date(`${d.date}T12:00:00Z`)) }) });
+    items.push({ tone: days <= 7 ? 'warn' : 'info', title: days <= 0 ? t('al_deadlineToday') : days === 1 ? t('al_deadline1') : t('al_deadline', { days }), body: t('al_deadlineBody', { what: deadlineText(d), date: fmtDay(new Date(`${d.date}T12:00:00Z`)) }) });
   }
   const paid = snap?.events.filter((e) => e.kind === 'tax_paid') ?? [];
   if (paid.length) items.push({ tone: 'ok', title: t('al_paid'), body: t('al_paidBody', { n: paid.length }) });
