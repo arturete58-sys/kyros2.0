@@ -1,87 +1,87 @@
 {
   "network": "testnet",
-  "startedAt": "2026-10-20T10:29:29.345Z",
-  "finishedAt": "2026-10-20T10:40:04.583Z",
-  "token": "CCZG25URS3H4EQ3UVO5LX7R3L3BQUQGENH6TOFPNJUAFT7RAQYB4ZJWT",
+  "startedAt": "2026-10-20T12:09:25.802Z",
+  "finishedAt": "2026-10-20T12:20:41.948Z",
+  "token": "CA7FXU2T7VDU75JIVYTDR3TZ27NC56CNEB5BSH4V7PRUEID57NGTAQG2",
   "contracts": {
-    "router": "CC3M43HEK363GHWVSFIOBGMS55TSZTDEDSDMDIJG2DUVB62X4AVZ5KPZ",
-    "vault": "CA4LTC2WSSKSF2YVS5KWGR5XKNOYO5ADT5YLJKHVJGGHQIQQY7UBEPKT",
-    "inbox": "CABGN3HZUWKYLUFNCWEQULRFJ6XWCSV263JVYTC5JSZC63PFRLE7EV5I"
+    "router": "CDQTLMH6GJLF4EYJ3RLHBAV5QNEPQXNF3IMCKNLUFRCV6XR6A6L772XW",
+    "vault": "CAZVVU3LWEIXXY64BSX4XJPDNWFNMIAJHERDPSQP7OJGWNAZAHC2HSAZ",
+    "inbox": "CC55ZDI7NU3K7JTYZQHRTESUSHODKPAYANHWW7FHUBKPVYSCOK3C5WT3"
   },
   "accounts": {
-    "issuer": "GAN7IRBGFZGR76OQ7BN5ZMNR2KUEKGZJAIFQADNWZSN2WZBR5BLYL2VW",
-    "freelancer": "GBTX2C2JDNVOYC3YV3XX5YODAL6OTBELYE7RWYO24XDLCYDWXQHRWNWL",
-    "client": "GCMAIE5PDQPITGHZ5H3DSOOM5VL4723HAZ7JAH3VYEQOD7LUIQ3M5NS4",
-    "taxAccount": "GDXHDFTGIXE7TXPJHNJTNTMSTOZNQLBCXDSV5J4DCRGF2H2M3VHTUC7S",
-    "keeper": "GAZOSHIK46X6C5XS2QEHCGWIUD4QFLASQU7SCZ55GSZCHKE6MDUS2HV4",
-    "newDestination": "GDL4LS5YGHIF5HVAPIL4IWODXBUJJOUWFU3BERANXXDSDPYSBHR436KD",
-    "lp": "GBNMSVEX5ILLR7ELA2LTCQPC7L6V67CNQ4DYGMDW7NUXMZXU2IRKMOYN"
+    "issuer": "GC37VKX3WDXQK4X2O3MYPLKKVOAZYMIXQ2D6REBTHW3R5OL2HLMBLB4V",
+    "freelancer": "GA45JPRNCBR26ED27DQJTLBHLN6KTAHHWYDTPML32MQ26TZPZ7FPVQMD",
+    "client": "GA6AYVVD7D332M3KCM4VTJJOD6KAXPYDQC7H4HS4AZ22I75IGVAM5JB5",
+    "taxAccount": "GAYCVWY5I3GMWH2MHHVO2FI4AABB5SDZKERD6B3WZARLNNDY7DWKFOGH",
+    "keeper": "GAV54XKFCHCY5RB5WSLOL2JDC3H5BAAIO2RLVHDYHBRSCAHANG4GE5HD",
+    "newDestination": "GCCF4H66BQ5VHDZ75IBEVMTAID35STKMKHT4PGAAELFQXOC3KNAA3M4B",
+    "lp": "GBCDIUQ5HVIMTECFL6HUFZIRIDM3CFR5IMXYGAKFQWMWA2SXWT34XQQD"
   },
   "steps": [
     {
       "step": "Deploy Reserve Vault (Spain pack, general: VAT 21% + income tax 20%)",
       "ok": true,
-      "tx": "4b9c6e33c24c3261a6710ceb55289c8fef60cf2624d2643cbae469035d53701d",
-      "detail": "CA4LTC2WSSKSF2YVS5KWGR5XKNOYO5ADT5YLJKHVJGGHQIQQY7UBEPKT"
+      "tx": "218b3657d8e5c8f71b845369288f3aaef3fc861c8019f4e8bacf0e3345c92b03",
+      "detail": "CAZVVU3LWEIXXY64BSX4XJPDNWFNMIAJHERDPSQP7OJGWNAZAHC2HSAZ"
     },
     {
       "step": "Deploy Inbox for the vault",
       "ok": true,
-      "tx": "ffc29eff55680b48e0d6678d617aacf38465d0fee33df793ad85f9be5f61a45c",
-      "detail": "CABGN3HZUWKYLUFNCWEQULRFJ6XWCSV263JVYTC5JSZC63PFRLE7EV5I"
+      "tx": "ef7ab343d974c9e8ef44787a82e5ac2ba0fbc4229b526cfea4720a7790211ac4",
+      "detail": "CC55ZDI7NU3K7JTYZQHRTESUSHODKPAYANHWW7FHUBKPVYSCOK3C5WT3"
     },
     {
       "step": "Deploy Router",
       "ok": true,
-      "tx": "7734f953e64747856f4ecb48d71b74ccf33ecd185fbd105ae3eec5a585f86e1c",
-      "detail": "CC3M43HEK363GHWVSFIOBGMS55TSZTDEDSDMDIJG2DUVB62X4AVZ5KPZ"
+      "tx": "03c1c10fa3d24484d2a0bec263adb34e422e7f7376ab96f6dfb73919711b4460",
+      "detail": "CDQTLMH6GJLF4EYJ3RLHBAV5QNEPQXNF3IMCKNLUFRCV6XR6A6L772XW"
     },
     {
       "step": "Client pays invoice INV-2027-001 (1,210 KUSD) through the Router",
       "ok": true,
-      "tx": "a6e874bceb121ca13306ae272d62738a7f2d0efb804c3e66d36551b0abadcc41",
+      "tx": "8a0a3ebbd37c3e912db26283215a62b3a2af299a3b781c2b6f6edda7476604c0",
       "detail": "freelancer +800, vault +410 (VAT 210, income tax 200)"
     },
     {
       "step": "Client sends 121 KUSD to the inbox with a plain SEP-41 transfer",
       "ok": true,
-      "tx": "b8c3264a621b6650339e00b16a6abff416808b48ae0fd15edf77f4aac86a707a",
-      "detail": "CABGN3HZUWKYLUFNCWEQULRFJ6XWCSV263JVYTC5JSZC63PFRLE7EV5I"
+      "tx": "40e2ff83db8f4af58933adfc4d89fc2cbcec06710d7c19538da10f4200577d28",
+      "detail": "CC55ZDI7NU3K7JTYZQHRTESUSHODKPAYANHWW7FHUBKPVYSCOK3C5WT3"
     },
     {
       "step": "Keeper sweeps the inbox (permissionless)",
       "ok": true,
-      "tx": "7f50a2623b53f9fe95e4070b77ea3bc4cc6289c1e797224f369bcdd3ef342e64",
+      "tx": "dcb079aa3e4f4d33c3d7c8c79091f9e79a1039f26d9e426c96ecef80191632f9",
       "detail": "freelancer +80, vault +41"
     },
     {
       "step": "Expected payment for invoice KYR-2027-003 (base 1,000, VAT 21%, IRPF 15% withheld by the client): the freelancer registers its terms in the vault",
       "ok": true,
-      "tx": "0dc3cd2dd05232d8ea532c96a8de8ea0653be5b1a1a556558e663d51f71f89b8",
+      "tx": "5e9f07ab81e5bd92c8d1ec175cfcfcf3effa516a660644596e185ca2ed13b5c3",
       "detail": "the client pays 1060.00"
     },
     {
       "step": "The client pays 1,060 KUSD with the invoice reference: the vault applies the invoice terms, not the default rule",
       "ok": true,
-      "tx": "bc1a00437057861fdb6beab5cc43b92315115962a81dd56fc3258bb1293dd098",
+      "tx": "3c0919abf9a255c753ebcc6b55b833bec53f089e804c0e623465e37d52205c54",
       "detail": "freelancer +800, vault +260 (VAT 210, income-tax reserve 50; the default rule would have reserved only 184 of VAT)"
     },
     {
       "step": "Freelancer pays the VAT bucket to the tax destination with an anchor-style memo (muxed address, id 4242), before the due date",
       "ok": true,
-      "tx": "0b893de2cc467a20102fc572acf0d8c0391ed72df2d02c399535b5c020137729",
-      "detail": "441 KUSD to MDXHDFTGIXE7…"
+      "tx": "ea074525d799922655e273be91ed9cc170f7ac37c0f5078c401e0ffbbba79c41",
+      "detail": "441 KUSD to MAYCVWY5I3GM…"
     },
     {
       "step": "Freelancer schedules a 50 KUSD income-tax instalment to the tax destination; running it before its time is refused",
       "ok": true,
-      "tx": "315499069188dddc5758d4130406b92bff2e848510d616570fbcc87981a0bfc1",
+      "tx": "a644267917115f1fabfe986788d2992f0d00e89f6771d1645073520082783d7d",
       "detail": "refused by the contract: NotYet (contract error #32)"
     },
     {
       "step": "On its date the keeper runs it (no owner signature): the instalment goes only to the tax destination",
       "ok": true,
-      "tx": "2e79a0b879710db00551cc72e28baee427bf4e19f059c10ecfbba4aeaba7cdb9",
+      "tx": "744e1b51c4bd30e1a0fd271c03795076def4d24dcad4dab960d7018bb4a1132e",
       "detail": "50 KUSD to the tax destination"
     },
     {
@@ -92,8 +92,8 @@
     {
       "step": "Freelancer proposes a new tax destination (2-minute notice in this demo)",
       "ok": true,
-      "tx": "2f444e5a2b74a279e6bc235283a4402c1dfcbf0224a22b456477a8a55db520a8",
-      "detail": "GDL4LS5YGHIF5HVAPIL4IWODXBUJJOUWFU3BERANXXDSDPYSBHR436KD"
+      "tx": "44922b1d85892c758ed6f6b1df5c11e17ea35fd1b608a4341ae8abf402573611",
+      "detail": "GCCF4H66BQ5VHDZ75IBEVMTAID35STKMKHT4PGAAELFQXOC3KNAA3M4B"
     },
     {
       "step": "Applying it before the notice has passed is refused",
@@ -103,61 +103,61 @@
     {
       "step": "A second payment address for clients abroad: an inbox the vault books without VAT (expect_payer, owner-signed)",
       "ok": true,
-      "tx": "3b64745c2502ef82cf56c3dc4de6a6c3ed1ab05c8af41210ae29afd09f92c696",
-      "detail": "CBIZRIGUPBQDQSX7HWJKY425MH5R77BGYAQPKS2W7KBUI4WJ3NCF54U5"
+      "tx": "5595745d59e7ba6598fd3cd0164809d3884f069c3d38005e02226c74ce02e459",
+      "detail": "CDUJSQV4VGNA5OBMVCYMLD74ODUSN4RKUPW4X54YVRA2AIY3O6R7OSVJ"
     },
     {
       "step": "A client abroad pays 1,000 KUSD to that address: no VAT reserved, income tax as usual",
       "ok": true,
-      "tx": "9ca818d9c36d00d83514948ec34cb96fc98a6316c396cf475d9e95cf39270eb2",
+      "tx": "d5f6bacd7ae215d8b0a728fffef4ad7e01821e1da3f9a7470ccf6b7b0fd6a3d7",
       "detail": "freelancer +800, vault +200"
     },
     {
       "step": "The same client then pays 1,210 KUSD to the usual address: 210 of VAT is reserved, and the app recognises the wallet from its payment to the address for clients abroad",
       "ok": true,
-      "tx": "410c0be849b4790952f418fd8ecd68b2009792ad3820c7dc7dece5fc974bb559",
-      "detail": "payer GCMAIE5P… seen paying both addresses"
+      "tx": "7b2a77081755916f80b695a23918e465c0e79dda2d8e8da5ee48ff85bb0ea00c",
+      "detail": "payer GA6AYVVD… seen paying both addresses"
     },
     {
       "step": "The owner proposes taking that VAT back (210 KUSD); applying it before the 2-minute notice is refused",
       "ok": true,
-      "tx": "57494ffb11e8153211bad01a519cf4409249d6f4a7d0979ab30abca5dd8bdf1f",
+      "tx": "c8a6e5560d6f25efa00cdeb1b3dac686f6cba03160939e962e2b20674546dc23",
       "detail": "refused by the contract: NotYet (contract error #32)"
     },
     {
       "step": "The owner registers the client wallet's terms: its next payment through the Router reserves no VAT",
       "ok": true,
-      "tx": "e86b696dd06c1e88a7c5993eccc8b4821c6d9e794d318e11bc802beedd489d54",
-      "detail": "expect_payer 9e8b227c64…; freelancer +800, vault +200"
+      "tx": "880829b0580b4163a8117b49ab5eb61957816f756210b0af8547a185425cb648",
+      "detail": "expect_payer 0f5600b7db…; freelancer +800, vault +200"
     },
     {
       "step": "Euro reserve: a vault taking KUSD and KEUR proposes converting its reserve to KEUR through the Soroswap testnet router (2-minute notice)",
       "ok": true,
-      "tx": "d9c96fcf1c78af7db76ef9b6ca0dd44bcbe31ad0f8f568d8a80b2cd196560e92",
-      "detail": "Reflector testnet EUR = 1.1221467 USD (price 33s old); pool 1,160,000 KUSD / 1033732.8933575 KEUR; swapper CBDKXRBZT5TAN6MB2MEUOXQZJD5METFGHSTB3RGZOGDT4D34576G4TEI; vault CCMZ6B5ULSJZVKD42BHIXWSO3VXP2LQ7M5QISNWSQNSTFB6FT77VP3RO"
+      "tx": "02ba91679497c8e55ee11d7aad5734bd8f9e48a4d0d606f066bfbdce9179fd87",
+      "detail": "Reflector testnet EUR = 1.1221027 USD (price 72s old); pool 1,160,000 KUSD / 1033773.4467929 KEUR; swapper CASJXKIXX5DXRD6LOKDR45GN4ALEVU5EA7W2DTTSXTWXOJG7R2ZUM5UP; vault CBRESRCPDT5MRGENGKRMSAZDB55M5PDO6PLFT2OEDM6NLLQWLQCBEXUW"
     },
     {
       "step": "Thailand vault: the owner signs the scheduled VAT change (7% to 10%) ahead of its date with propose_rule_at",
       "ok": true,
-      "tx": "3880210b5a2d7816c2b4860a2849f4788c386d15f3eb38fab12bf7845fa7ff63",
-      "detail": "VAT changes from 7% to 10% on 2027-10-01: sign once and the vault switches that day. Demo date: 2026-10-20T10:38:32.000Z; before it, 1,070 still splits as VAT 70 (vault CD2KFV3N4QS6VRBGIFIRNMJTVXCJEU5CITFRNXORXDZ5SLU5K2NI4ZNU)"
+      "tx": "d623e8729c7ab114a0574f64538d4e7f2db17e8f860c65f66754b84741a3ec3a",
+      "detail": "VAT changes from 7% to 10% on 2027-10-01: sign once and the vault switches that day. Demo date: 2026-10-20T12:19:27.000Z; before it, 1,070 still splits as VAT 70 (vault CDEFXYWHEXADU45CIP65R4W6CLMHDIBOZD257UK2V7QG5ANYZQ4SE5KD)"
     },
     {
       "step": "Rate Registry deployed and seeded from the Spain rule pack (21%); the Spanish vault follows ES/standard, ceiling 25%",
       "ok": true,
-      "tx": "0abacb8c0b0d816af6a2bd96614896999f7bc8eaa65885f5b38ce5bb452a4683",
-      "detail": "registry CCXANQF426ZGHIDL62VX5PNMXFQA6LW7MIRWSQXFF7RV2DMOS25MT2RO"
+      "tx": "d905aaacb2ccc8b42450980a4f3e9d9a47e8ad789ee28fe23323a06ece592836",
+      "detail": "registry CCXMZWCN6633GD3MD3NBHFZC4W3BBHGKDX7Y34QEMWDPOYUPQDQ4IRXS"
     },
     {
       "step": "The registry publishes a VAT change (demo: 21% to 22%), at least its 2-minute notice ahead",
       "ok": true,
-      "tx": "5a4ef65f877177c453ceab6f83b4d46c86250a2ed0a3c84bb1b6d685bcfbba0c",
-      "detail": "applies from 2026-10-20T10:39:03.000Z; until then the vault still charges 21%"
+      "tx": "0564d09b5141108f7e9c184406db41ed6bdb6b066556bf8264cee454836d9610",
+      "detail": "applies from 2026-10-20T12:20:02.000Z; until then the vault still charges 21%"
     },
     {
       "step": "Germany: the owner sets the income-tax due date from the tax office's notice (set_due); a later date applies at once, moved past the weekend",
       "ok": true,
-      "tx": "abc6e6fee78b8da6fc7ba76923b9e598bb813793b95fd4f320a058191b5e567c",
+      "tx": "2abca4335f325bec86369171a1132c0753c0cc50193035364385798b2e4689a6",
       "detail": "due 2027-11-24, lock opens 2027-11-25"
     },
     {
@@ -168,68 +168,68 @@
     {
       "step": "The owner moves to Germany: a vault from the German pack, and propose_vault on the same inbox (2-minute notice)",
       "ok": true,
-      "tx": "b3d2763c6e6cecf2a94f6deb87305e49dd2112d60675f54e3f0db948a64e50ca",
-      "detail": "new vault CA5BUMU53USU6KBBHBVF6LSOKAYLPAYY3EOZQODK7DJNPPEBSNUAFJPD; 5 steps in the plan; until the notice ends the inbox still pays the Spanish vault"
+      "tx": "0f5a65a1ad8787f665cc6f44c5678219f052d969027bd51d5eb4946d3c946a97",
+      "detail": "new vault CDTOFFGP6PPY3R3ZDCNOSTEEWJ5YVDIBIIDBMEI3TMWHFIXAQWRIRFXU; 5 steps in the plan; until the notice ends the inbox still pays the Spanish vault"
     },
     {
       "step": "After the due date the rest of the period is released to the freelancer",
       "ok": true,
-      "tx": "dbefe4cf88f9cfe1c5bf18c1824dff5d8daf2cef48198a551fc37ae5f6ee9d63",
+      "tx": "f629e176083f00ba7058e207152e9536dfe6b620a971df9422ae0f6af37434d3",
       "detail": "220 KUSD back to the freelancer"
     },
     {
       "step": "After the notice the keeper applies the correction (no owner signature): the VAT not owed goes back to the freelancer",
       "ok": true,
-      "tx": "a1086979e14aba29a2b44c722b9df34d6a78ffe31107d8bd7ff92a09dc1d8b24",
+      "tx": "bb4cbdd8451d9534d5d972a0163080ddbeaaf88946433d34bc549f1ac0223d4b",
       "detail": "210 KUSD back to the freelancer"
     },
     {
       "step": "Germany: VAT 19% + income tax reserve 30%: 1190 KUSD paid through the same Router",
       "ok": true,
-      "tx": "b00daaab747168a9067aa8d0f6a77c088ba31aa7a1668270d871144f666dd7c0",
-      "detail": "net 700, VAT 190, other reserve 300 (vault CBZL7RNNROMGYXAHCMOTVIN6CVA3ZAOY36PHOXNCNDLZQLAEDXVWY5DB)"
+      "tx": "b1a5ac1cbaefed188ac00d9b7eec0904aab3c46f20a1d3c36d9911f41c97f476",
+      "detail": "net 700, VAT 190, other reserve 300 (vault CBNGZGK3IAIEZACVXDQWVTV666LIXUWVIZU7PCTR3DJW2IQIYA4TJHSG)"
     },
     {
       "step": "United States: no VAT, federal and self-employment reserve 30%: 1000 KUSD paid through the same Router",
       "ok": true,
-      "tx": "4f0712b9ddb8ebdc9e20e7984235f46ae73a33dafc7903f6b7a223baa5fdc96f",
-      "detail": "net 700, VAT 0, other reserve 300 (vault CDCDI3Z5SJWJJOIX4IUPAKMGHDLMHOSBLNDGSJMTFMSARJF5QDURNPDZ)"
+      "tx": "b2df699b8cfca1295b909cc4505b4eba579ee7ac3b42e1551f593543bdcd3fac",
+      "detail": "net 700, VAT 0, other reserve 300 (vault CBBW7J63CVJHRPF5EHZ6FBFXFZISGLMOKCX4JFK2FVFO7JCJCTAVQT3P)"
     },
     {
       "step": "United Arab Emirates: VAT 5%, no income tax: 1050 KUSD paid through the same Router",
       "ok": true,
-      "tx": "316568fc67b68eeadff5f17100ffaaf9b8fd87863a3973770a36ab5daa5bd19a",
-      "detail": "net 1000, VAT 50, other reserve 0 (vault CA5JQJNCP2AAYLSEINKCLLIVIBD4QZCAZJYKNHLNPS2DIEEFJAXYT5NC)"
+      "tx": "8b7dbfa2a38ecc45ce705a055c9bb08eeef9c71c7ba1b52437f0ee9d36291ac7",
+      "detail": "net 1000, VAT 50, other reserve 0 (vault CA6S7PYTVQRZLQ3SSVTCDZSJYOAXSNFYVPDLBRE2OI7W2BDI7A4OURKV)"
     },
     {
       "step": "After the change time the same vault charges 10% VAT on its own, with no new signature",
       "ok": true,
-      "tx": "86ca84b5dcf0cf13204de0d8a350df5f1822c4683e4b427ec1cd21b3ef5c6492",
+      "tx": "9466e9383f54d3dd3e51c67a96fb8c18a5de7e1ca9e2cab4cc0bceea1f60d281",
       "detail": "1,100 KUSD: net 800, VAT 100, income tax reserve 200"
     },
     {
       "step": "A platform pays two freelancers in one call (pay_many); each payment is split by its own vault",
       "ok": true,
-      "tx": "890f78717d03005c21bf5fd90c6fe0295587699b706b656b24cce694f2c14ec8",
+      "tx": "dd92f7cd0051a5fcac878946ad901d2c45bc2c74f27315ac00b0f16834a83b47",
       "detail": "121 KUSD to the Spanish vault (reserve 41), 110 KUSD to the Thai vault (reserve 30)"
     },
     {
       "step": "After the legal date the Spanish vault charges 22% on its own: the owner signed nothing",
       "ok": true,
-      "tx": "ac71b20e102292584e66f6fe1f41cb8737754553dea9f0b65f29fb59cb7b0641",
+      "tx": "0f5364684f8da0c56438274ddafd5a79db9a2f1a182a80a32f506ba432995954",
       "detail": "1,220 KUSD: net 800, VAT 220, income tax 200"
     },
     {
       "step": "After the notice the same inbox pays into the German vault (19% VAT + 30% reserve); the Spanish vault keeps what it holds",
       "ok": true,
-      "tx": "5bdce094e95964838a39e3b7149397eba5eb904044b0064c29a99517e9d1a707",
+      "tx": "97ecf09bea9563671f82a2930cc8fc826556d224e5c036a0f7c3840d8ba5d4fb",
       "detail": "1,190 KUSD to the inbox: German vault +490 (VAT 190, reserve 300)"
     },
     {
       "step": "A client pays 1,210 KUSD; the keeper converts the 410 reserve to KEUR through Soroswap, at no less than the oracle price minus 1%",
       "ok": true,
-      "tx": "e4942acf1f50b2e71adfd96733be4cb99a4a6d1ec7a20f108235a53f4510e419",
-      "detail": "364.1466746 KEUR (oracle fair value 365.3711088): VAT 186.5141505, income tax 177.6325241"
+      "tx": "a1718201233a998c418b69ec0ba6bd67b78ce72a6b89173460821bb7531f911b",
+      "detail": "364.1609601 KEUR (oracle fair value 365.3854424): VAT 186.5214674, income tax 177.6394927"
     },
     {
       "step": "Vault history read back from contract events and exported as CSV",
