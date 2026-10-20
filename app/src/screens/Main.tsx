@@ -738,6 +738,11 @@ export function Settings() {
             {t('signOut')}
           </button>
         </div>
+        <h2>{t('privacyTitle')}</h2>
+        <div className="card" data-testid="privacy">
+          <p className="small">{t('privacyBody')}</p>
+          <p className="small muted">{t('privacyChain')}</p>
+        </div>
       </div>
       <Tabs current="settings" />
     </>

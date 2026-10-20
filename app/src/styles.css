@@ -194,7 +194,7 @@ select.input { background-color: var(--surface); color: var(--ink); }
 .back { background: none; border: 0; font-size: 28px; line-height: 1; padding: 0 8px 2px 0; cursor: pointer; color: var(--ink); min-width: 32px; min-height: 32px; }
 
 .tabs { display: flex; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 -1px 0 var(--line); padding: 8px 6px calc(10px + env(safe-area-inset-bottom)); position: sticky; bottom: 0; z-index: var(--z-tabs); }
-.tabs button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11.5px; color: var(--faint); font-weight: 500; cursor: pointer; padding: 6px 0; min-height: 44px; transition: color 0.15s; }
+.tabs button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11.5px; color: var(--muted); font-weight: 500; cursor: pointer; padding: 6px 0; min-height: 44px; transition: color 0.15s; }
 .tabs button.on { color: var(--ink); font-weight: 600; }
 .tabs button.on svg { color: var(--action); }
 .tabs svg { width: 23px; height: 23px; }
@@ -217,7 +217,7 @@ select.input { background-color: var(--surface); color: var(--ink); }
 .list .item { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); min-width: 0; }
 .list .item:last-child { border-bottom: 0; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
-.testnet { display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: 0.01em; padding: 9px 12px 0; }
+.testnet { margin: 0; display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: 0.01em; padding: 9px 12px 0; }
 .testnet::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--income); box-shadow: 0 0 0 3px color-mix(in srgb, var(--income) 22%, transparent); }
 .logo { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); }
 .logo .mark { color: var(--action); flex: none; display: block; }

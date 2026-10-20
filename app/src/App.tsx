@@ -124,14 +124,14 @@ export default function App() {
 
   if (cfgError)
     return (
-      <div className="phone">
+      <main className="phone">
         <div className="content">
           <Logo />
           <p>{cfgError}</p>
         </div>
-      </div>
+      </main>
     );
-  if (!chain) return <div className="phone" />;
+  if (!chain) return <main className="phone" aria-busy="true" />;
 
   const ctx: Ctx = {
     chain,
@@ -181,10 +181,10 @@ export default function App() {
 
   return (
     <AppCtx.Provider value={ctx}>
-      <div className="phone">
-        <div className="testnet">{t('testnetBanner')}</div>
+      <main className="phone">
+        <p className="testnet" role="status">{t('testnetBanner')}</p>
         <Suspense fallback={<div className="content" aria-busy="true" />}>{page}</Suspense>
-      </div>
+      </main>
       {busy && (
         <div className="busy" role="status" data-testid="busy">
           <div className="card">
