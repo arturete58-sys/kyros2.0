@@ -3,8 +3,8 @@
   "id": "fr",
   "country": "FR",
   "name": "France: micro-entrepreneurs (auto-entrepreneurs)",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "EUR",
   "vatName": "TVA",
   "vatRates": [
@@ -320,6 +320,7 @@
     "2026 URSSAF rates on turnover: 25.6% + 0.2% CFP for non-regulated liberal professions (BNC), 21.2% + up to 0.3% CFP for BIC services. The versement libératoire is optional and depends on household income.",
     "Under the VAT franchise no VAT is charged; above it the standard rate is 20% (reduced 10%, 5.5%, 2.1%).",
     "The micro presets reserve the URSSAF contributions; income tax under the progressive scale is due separately unless the versement libératoire is chosen. The reserve check shows both.",
+    "E-invoicing reform: every VAT-registered business, micro-entrepreneurs under the VAT franchise included, must be able to receive electronic invoices from 1 September 2026; large and mid-sized companies issue them from 1 September 2026, SMEs and micro-entrepreneurs from 1 September 2027, through an approved platform (plateforme agréée), with e-reporting of B2C and international sales.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -336,6 +337,16 @@
       "title": "European Commission: VAT rates in EU member states",
       "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en",
       "official": true
+    },
+    {
+      "title": "CCI Paris Île-de-France: facturation électronique, une obligation pour toutes les entreprises (calendrier 2026-2027)",
+      "url": "https://www.entreprises.cci-paris-idf.fr/actualites/facturation-electronique-une-obligation-pour-toutes-les-entreprises",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "impots.gouv.fr, fiche 1: les entreprises en franchise en base reçoivent et émettent aussi des factures électroniques",
+      "url": "https://impots.gouv.fr/fiche-1-que-va-t-il-se-passer-pour-mon-entreprise-en-matiere-de-facturation-electronique",
+      "checked": "2026-10-21"
     }
   ]
 }

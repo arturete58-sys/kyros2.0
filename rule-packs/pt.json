@@ -3,8 +3,8 @@
   "id": "pt",
   "country": "PT",
   "name": "Portugal: self-employed (trabalhadores independentes)",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -247,6 +247,7 @@
   },
   "notes": [
     "Mainland rates: 23%, 13%, 6% (Madeira and the Azores are lower). IRS is progressive, and social security applies to self-employed income; 30% is a suggested reserve.",
+    "IRS 2027: the bracket limits rise 3.88% under the automatic annual update (portaria signed 12 October 2026): 8,666; 13,075; 18,530; 23,985; 30,538; 44,762; 48,373; 89,995. The rates are set in the 2027 State Budget, still in parliament; the estimate keeps the 2026 scale until then.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -259,6 +260,11 @@
       "title": "Portal das Finanças",
       "url": "https://www.portaldasfinancas.gov.pt",
       "official": true
+    },
+    {
+      "title": "dnoticias.pt: Portaria confirma actualização de escalões de IRS em 3,88% (13 October 2026)",
+      "url": "https://www.dnoticias.pt/2026/10/13/508841-portaria-confirma-actualizacao-de-escaloes-de-irs-em-388/",
+      "checked": "2026-10-21"
     }
   ]
 }

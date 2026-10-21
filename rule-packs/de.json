@@ -3,8 +3,8 @@
   "id": "de",
   "country": "DE",
   "name": "Germany: freelancers (Freiberufler) and sole traders",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "EUR",
   "vatName": "USt",
   "vatRates": [
@@ -264,6 +264,8 @@
   },
   "notes": [
     "Income tax is progressive (up to 45%) plus solidarity surcharge and, if applicable, church tax; 30% of the base is a suggested reserve, not a calculation.",
+    "E-invoicing between businesses: every business must be able to receive e-invoices since 1 January 2025; issuing them is mandatory from 1 January 2027 if the previous year's turnover exceeded EUR 800,000, and for everyone from 1 January 2028. Kleinunternehmer (§19 UStG) do not have to issue them.",
+    "The estimate uses the 2026 tariff. A draft income tax reform for 2027 (higher basic allowance, new top rates) is not law yet; the pack changes when it is enacted.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -286,6 +288,11 @@
       "title": "§ 32a EStG and § 3 SolZG 1995 (official texts)",
       "url": "https://www.gesetze-im-internet.de/estg/__32a.html",
       "official": true
+    },
+    {
+      "title": "IHK Stuttgart: E-Rechnungen, Übergangsfristen bis 2027 und 2028, Kleinunternehmer",
+      "url": "https://www.ihk.de/stuttgart/fuer-unternehmen/recht-und-steuern/steuerrecht/steuermeldungen/e-rechnungen-5864496",
+      "checked": "2026-10-21"
     }
   ],
   "regions": [

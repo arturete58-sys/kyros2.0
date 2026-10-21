@@ -3,8 +3,8 @@
   "id": "lu",
   "country": "LU",
   "name": "Luxembourg: self-employed and sole traders",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "EUR",
   "vatName": "TVA",
   "vatRates": [
@@ -174,9 +174,144 @@
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "cotisations_sociales",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            2398
+          ]
+        ],
+        "label": "Social contributions of the self-employed (CCSS 2026): pension 17%, health 5.6% + 0.5% cash benefits, accident 0.65%, mutualité class 1 0.23%, on net profit between the social minimum wage and five times it",
+        "min": 7780.28,
+        "max": 38901.41
+      },
+      {
+        "name": "assurance_dependance",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            140
+          ]
+        ],
+        "label": "Long-term care insurance (assurance dépendance) 1.4% of income, no ceiling"
+      },
+      {
+        "name": "impot_revenu",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            13230,
+            0
+          ],
+          [
+            15435,
+            800
+          ],
+          [
+            17640,
+            900
+          ],
+          [
+            19845,
+            1000
+          ],
+          [
+            22050,
+            1100
+          ],
+          [
+            24255,
+            1200
+          ],
+          [
+            26550,
+            1400
+          ],
+          [
+            28845,
+            1600
+          ],
+          [
+            31140,
+            1800
+          ],
+          [
+            33435,
+            2000
+          ],
+          [
+            35730,
+            2200
+          ],
+          [
+            38025,
+            2400
+          ],
+          [
+            40320,
+            2600
+          ],
+          [
+            42615,
+            2800
+          ],
+          [
+            44910,
+            3000
+          ],
+          [
+            47205,
+            3200
+          ],
+          [
+            49500,
+            3400
+          ],
+          [
+            51795,
+            3600
+          ],
+          [
+            54090,
+            3800
+          ],
+          [
+            117450,
+            3900
+          ],
+          [
+            176160,
+            4000
+          ],
+          [
+            234870,
+            4100
+          ],
+          [
+            null,
+            4200
+          ]
+        ],
+        "surchargeBps": 700,
+        "scope": "central",
+        "label": "Income tax, tax class 1 (single), scale in force since 1 January 2025 (art. 118 LIR), plus the 7% employment fund contribution"
+      }
+    ],
+    "notes": [
+      "Tax class 1 (single, no children). Classes 1a and 2 (married or partnered, joint taxation) pay less on the same income. Above EUR 150,000 of taxable income (class 1) the employment fund contribution is 9% instead of 7%; the estimate keeps 7%.",
+      "Social contributions are deducted from profit before income tax; the dependency insurance is paid on income with an allowance of a quarter of the minimum wage, not included."
+    ]
+  },
   "notes": [
     "Rates: 17% standard, 14% intermediate, 8% reduced, 3% super-reduced. Income tax is progressive and social contributions apply; 30% is a suggested reserve.",
-    "No reserve estimate yet: Luxembourg's income tax has 23 brackets by tax class. Compare the reserve with your adviser's figure.",
+    "The reserve estimate uses tax class 1. From the 2028 tax year a single tax class (Tarif U) replaces classes 1, 1a and 2 (bill presented on 6 January 2026).",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -188,6 +323,21 @@
     {
       "title": "Administration de l'enregistrement, des domaines et de la TVA (AED)",
       "url": "https://aed.public.lu"
+    },
+    {
+      "title": "Administration des contributions directes: barème de l'impôt sur le revenu (art. 118 LIR) and newsletter 2026",
+      "url": "https://impotsdirects.public.lu/fr/archive/newsletter/2026.html",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "Taxx.lu: Luxembourg tax rates in plain English (2025 scale, class 1, employment fund 7% / 9%)",
+      "url": "https://taxx.lu/en/articles/luxembourg-tax-rates-in-plain-english",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "CCSS: avis aux non-salariés, taux et assiette cotisable au 1 January 2026 (13 March 2026)",
+      "url": "https://ccss.public.lu/dam-assets/publications/2026/ccss-20260313-avis-60-fr-de.pdf",
+      "checked": "2026-10-21"
     }
   ]
 }

@@ -3,8 +3,8 @@
   "id": "us",
   "country": "US",
   "name": "United States: self-employed (federal)",
-  "version": "2026.3",
-  "reviewed": "2026-10-17",
+  "version": "2026.4",
+  "reviewed": "2026-10-21",
   "currency": "USD",
   "enforcement": {
     "level": "standard",
@@ -273,10 +273,10 @@
       "url": "https://beancount.io/blog/2026/06/01/section-199a-qbi-deduction-pass-through-owners-obbba-permanent-2026-thresholds-sstb-phase-out-w2-wages-ubia-form-8995-aggregation-guide"
     },
     {
-      "title": "IRS Publication 505, figure 4-A: do you have to pay estimated tax? (official)",
-      "url": "https://irs.gov/media/167296",
+      "title": "IRS Publication 505 (2026), Tax Withholding and Estimated Tax: figure 4-A, do you have to pay estimated tax? (official)",
+      "url": "https://www.irs.gov/pub/irs-prior/p505--2026.pdf",
       "official": true,
-      "checked": "2026-10-16"
+      "checked": "2026-10-21"
     }
   ],
   "regions": [

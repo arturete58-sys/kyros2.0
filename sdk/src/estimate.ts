@@ -35,6 +35,16 @@ export interface EstimateItem {
   zeroUpTo?: number;
   /** Share of the basis that is relieved before the brackets apply, in bps (e.g. a profit exemption). */
   reliefBps?: number;
+  /** A fixed annual amount by band of the basis, `[upTo, amount]` (last `upTo` null): replaces the brackets (Spain's RETA fee by band of net income). */
+  steps?: [number | null, number][];
+  /** Share of the basis that picks the band, in bps (Spain: 9300, net income minus the 7% general deduction). */
+  stepBasisBps?: number;
+}
+
+/** The amount of the band `x` falls in. */
+function stepAmount(x: number, steps: [number | null, number][]): number {
+  for (const [upTo, amount] of steps) if (upTo === null || x <= upTo) return amount;
+  return steps[steps.length - 1][1];
 }
 
 export interface Estimate {
@@ -219,7 +229,7 @@ export function estimateTaxes(est: Estimate, input: ReserveInput): EstimateResul
   const lines: EstimateResult['lines'] = [];
   const amountOf = (it: EstimateItem, taxableBasis: number): number => {
     const basis = (it.basis === 'revenue' ? revenue : taxableBasis) * (1 - (it.reliefBps ?? 0) / 10_000);
-    let amount = it.zeroUpTo !== undefined && basis <= it.zeroUpTo ? 0 : applyBrackets(basis, it.brackets, it.mode ?? 'marginal');
+    let amount = it.zeroUpTo !== undefined && basis <= it.zeroUpTo ? 0 : it.steps ? stepAmount((basis * (it.stepBasisBps ?? 10_000)) / 10_000, it.steps) : applyBrackets(basis, it.brackets, it.mode ?? 'marginal');
     if (it.credit) amount = Math.max(0, amount - it.credit);
     if (it.surchargeBps) amount *= 1 + it.surchargeBps / 10_000;
     if (it.max !== undefined) amount = Math.min(amount, it.max);

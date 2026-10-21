@@ -3,8 +3,8 @@
   "id": "es",
   "country": "ES",
   "name": "Spain: self-employed (autónomos) and small companies",
-  "version": "2026.3",
-  "reviewed": "2026-10-17",
+  "version": "2026.4",
+  "reviewed": "2026-10-21",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -250,12 +250,73 @@
         "brackets": [
           [
             null,
-            3140
+            0
           ]
         ],
-        "label": "Social security for the self-employed (RETA), about 31.4% of net income",
-        "min": 2400,
-        "max": 7100
+        "steps": [
+          [
+            8040,
+            2470.57
+          ],
+          [
+            10800,
+            2717.63
+          ],
+          [
+            14000.4,
+            3211.75
+          ],
+          [
+            15600,
+            3594.7
+          ],
+          [
+            18000,
+            3631.75
+          ],
+          [
+            20400,
+            3631.75
+          ],
+          [
+            22200,
+            4323.53
+          ],
+          [
+            24360,
+            4570.59
+          ],
+          [
+            27960,
+            4817.65
+          ],
+          [
+            33120,
+            5126.47
+          ],
+          [
+            38280,
+            5435.3
+          ],
+          [
+            43440,
+            5744.13
+          ],
+          [
+            48600,
+            6052.95
+          ],
+          [
+            72000,
+            6547.07
+          ],
+          [
+            null,
+            7288.22
+          ]
+        ],
+        "stepBasisBps": 9300,
+        "label": "RETA 2026: the fee of your band of monthly net income (net profit minus the 7% general deduction), at the band's minimum base and 31.5% (Orden PJC/297/2026)"
       },
       {
         "name": "irpf_estatal",
@@ -322,7 +383,7 @@
     "notes": [
       "Estimación directa simplificada: 5% of net profit is deducted as hard-to-justify expenses, up to EUR 2,000 (art. 30 RIRPF). In estimación directa normal there is no such deduction; the estimate is then slightly low. Estimación objetiva (módulos) does not apply to professional services.",
       "IRPF is the state scale plus the scale of the community where you lived most of the year; Navarra and the Basque Country apply their own foral IRPF. The reduction for low business income (art. 32.2 LIRPF) and family minimums are not included.",
-      "RETA is paid monthly by direct debit, outside the vault, unless the reserve is meant to cover it; the estimate deducts it from profit before IRPF."
+      "RETA 2026 (Orden PJC/297/2026, BOE 31 March 2026): 15 bands of monthly net income, each with a minimum base; the estimate uses the minimum base of your band at 31.5% (28.3% common contingencies, 1.3% professional, 0.9% MEI, 0.9% cessation, 0.1% training). A higher chosen base raises the fee. RETA is paid monthly by direct debit and regularised later with the declared income; the estimate deducts it from profit before IRPF."
     ],
     "profitReliefBps": 500,
     "profitReliefMax": 2000
@@ -335,6 +396,7 @@
   "notes": [
     "Rates named regional_* are not VAT: IGIC applies in the Canary Islands (7% general, 3% reduced) instead of IVA; Ceuta and Melilla apply IPSI.",
     "The income-tax prepayment of modelo 130 is 20% of the quarter's net profit (income minus deductible expenses). Kyros reserves 20% of the taxable base of each payment, which is never less than what is due; the surplus is released after the due date.",
+    "Verifactu (invoicing software that records each invoice and can send it to the AEAT): mandatory from 1 January 2027 for corporate-tax payers and from 1 July 2027 for everyone else, including autónomos (Real Decreto-ley 15/2025). It changes how invoices are issued, not the tax due.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -467,6 +529,16 @@
       "title": "Quipu: tipos de IGIC en Canarias (7% general, 3% reducido)",
       "url": "https://getquipu.com/blog/tipos-igic/",
       "checked": "2026-10-16"
+    },
+    {
+      "title": "Orden PJC/297/2026, de 30 de marzo: bases y tipos de cotización 2026 (BOE 31 March 2026)",
+      "url": "https://www.boe.es/eli/es/o/2026/03/30/pjc297",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "AEAT: Sistemas Informáticos de Facturación y VERI*FACTU",
+      "url": "https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu.html",
+      "checked": "2026-10-21"
     }
   ],
   "regions": [

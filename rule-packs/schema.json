@@ -568,6 +568,26 @@
             "central"
           ],
           "description": "The national (central government) scale, compared with the OECD Tax Database"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "description": "A fixed annual amount by band of the basis: [upTo, amount], the last upTo null (Spain's RETA fee by band of net income). Replaces the brackets."
+        },
+        "stepBasisBps": {
+          "$ref": "#/$defs/bps",
+          "description": "Share of the basis that sets the band (Spain: 93%, net income minus the 7% general deduction)"
         }
       }
     },

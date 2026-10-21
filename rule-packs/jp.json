@@ -3,8 +3,8 @@
   "id": "jp",
   "country": "JP",
   "name": "Japan: sole proprietors (kojin jigyo)",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "JPY",
   "vatName": "Consumption tax",
   "vatRates": [
@@ -22,7 +22,7 @@
         "standard": 1000,
         "reduced": 100
       },
-      "note": "Government plan (Cabinet decision of 15 September 2026): food at 1% from 1 April 2027 to 31 March 2029; the bill goes to the autumn 2026 Diet session"
+      "note": "Bill approved by the Cabinet on 9 October 2026: food at 1% from 1 April 2027 for two years (to 31 March 2029), as a temporary measure; it must still pass the Diet"
     },
     {
       "from": "2029-04-01",
@@ -31,7 +31,7 @@
         "standard": 1000,
         "reduced": 800
       },
-      "note": "Back to 8% after the two-year cut, under the same plan"
+      "note": "Back to 8% after the two-year cut, under the same bill"
     }
   ],
   "enforcement": {
@@ -280,6 +280,11 @@
       "title": "Income tax rate table (平成27年分以降), as published by the NTA",
       "url": "https://www.naist.jp/kikin/pdf/sokusanhyou.pdf",
       "checked": "2026-10-16"
+    },
+    {
+      "title": "Kumamoto Nichinichi / Kyodo: 食品消費税1%法案を閣議決定 (9 October 2026)",
+      "url": "https://kumanichi.com/articles/2044798",
+      "checked": "2026-10-21"
     }
   ]
 }

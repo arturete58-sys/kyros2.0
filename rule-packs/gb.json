@@ -3,8 +3,8 @@
   "id": "gb",
   "country": "GB",
   "name": "United Kingdom: sole traders",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "GBP",
   "vatName": "VAT",
   "vatRates": [
@@ -212,6 +212,7 @@
   },
   "notes": [
     "Income tax is progressive (20%, 40%, 45%) after the personal allowance; 30% is a suggested reserve.",
+    "Making Tax Digital for Income Tax: sole traders and landlords with gross income from self-employment and property over £50,000 keep digital records and send quarterly updates from 6 April 2026, over £30,000 from 6 April 2027 and over £20,000 from 6 April 2028. The payment dates (31 January and 31 July) do not change.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -231,6 +232,16 @@
       "url": "https://www.gov.scot/publications/scottish-income-tax-rates-and-bands/pages/2026-to-2027/",
       "official": true,
       "checked": "2026-10-16"
+    },
+    {
+      "title": "GOV.UK: Making Tax Digital for Income Tax for sole traders and landlords, step by step",
+      "url": "https://www.gov.uk/government/collections/making-tax-digital-for-income-tax-for-businesses-step-by-step",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "LITRG (CIOT): when does Making Tax Digital for Income Tax start for me? (£50k 2026, £30k 2027, £20k 2028)",
+      "url": "https://www.litrg.org.uk/tax-nic/making-tax-digital-income-tax/when-does-making-tax-digital-start-me",
+      "checked": "2026-10-21"
     }
   ],
   "regions": [

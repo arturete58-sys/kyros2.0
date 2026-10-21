@@ -238,15 +238,17 @@ test('VAT tables follow their dates; a vault learns when its rate changes', () =
 
 test('reserve check: short, ok, generous, and exact regimes', () => {
   // Spain, EUR 80,000 a year with EUR 8,000 of expenses: 5% hard-to-justify expenses (capped at EUR 2,000)
-  // leave EUR 70,000; RETA (capped at EUR 7,100) is deducted, and IRPF on EUR 62,900 is the state scale
-  // (EUR 9,076) plus the default regional scale (EUR 9,076): EUR 18,152, about 22.7% of revenue.
+  // leave EUR 70,000. RETA 2026: 70,000 less the 7% general deduction is EUR 5,425 a month, band 11
+  // (4,050 to 6,000), minimum base EUR 1,732.03 at 31.5%: EUR 6,547.07 a year. IRPF on EUR 63,452.93 is the
+  // state scale (EUR 9,200) plus the default regional scale (EUR 9,200): EUR 18,401, about 23% of revenue.
   const es = loadRulePack('es');
   const a = checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000 });
-  assert.equal(Math.round(a.incomeTax!), 18_152);
+  assert.equal(a.lines!.find((l) => l.name === 'reta')!.amount, 6547.07);
+  assert.equal(Math.round(a.incomeTax!), 18_401);
   assert.equal(a.status, 'short');
-  assert.equal(a.requiredBps, 2269);
-  // Madrid's own scale: EUR 8,323 instead of 9,076; the Basque foral system replaces both scales.
-  assert.equal(Math.round(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'MD' }).incomeTax!), 17_399);
+  assert.equal(a.requiredBps, 2301);
+  // Madrid's own scale is lower; the Basque foral system replaces both scales.
+  assert.equal(Math.round(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'MD' }).incomeTax!), 17_637);
   assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'BI' }).lines!.filter((l) => l.kind === 'incomeTax').length, 1);
   assert.equal(es.regions!.length, 21);
   assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, reserveBps: 3000 }).status, 'ok');
@@ -269,9 +271,16 @@ test('reserve check: short, ok, generous, and exact regimes', () => {
   // India, presumptive: 50% of INR 20 lakh is taxable; under the INR 12 lakh rebate nothing is due.
   assert.equal(checkReserve(loadRulePack('in'), 'presumptive-gst', { revenue: 2_000_000 }).owed, 0);
 
-  // The Bahamas: no income tax. Switzerland: no estimate, so the check says it cannot tell.
+  // The Bahamas: no income tax. Liechtenstein: no estimate, so the check says it cannot tell.
   assert.equal(checkReserve(loadRulePack('bs'), 'vat-only', { revenue: 100_000 }).requiredBps, 0);
-  assert.equal(checkReserve(loadRulePack('lu'), 'standard', { revenue: 100_000 }).status, 'unknown');
+  assert.equal(checkReserve(loadRulePack('li'), 'standard', { revenue: 100_000 }).status, 'unknown');
+  // Luxembourg, class 1: EUR 80,000 of profit pays 23.98% social contributions and 1.4% dependency
+  // (EUR 20,304), and income tax on the remaining EUR 59,696 with the 7% employment fund contribution.
+  const lu = checkReserve(loadRulePack('lu'), 'standard', { revenue: 100_000, expenses: 20_000 });
+  assert.equal(Math.round(lu.lines!.find((l) => l.name === 'cotisations_sociales')!.amount), 19_184);
+  assert.equal(Math.round(lu.incomeTax!), 11_819);
+  // The minimum base (the social minimum wage) applies to small profits.
+  assert.equal(Math.round(checkReserve(loadRulePack('lu'), 'standard', { revenue: 20_000, expenses: 0 }).lines!.find((l) => l.name === 'cotisations_sociales')!.amount), 7780);
 
   // Extra regional tax and fixed contributions entered by the user.
   const us = checkReserve(loadRulePack('us'), 'self-employed', { revenue: 100_000, activity: 'software' });
@@ -392,6 +401,17 @@ test('where do I pay? residence from days, homes and citizenship', async () => {
   for (const p of packs) assert.ok(p.residence && p.residence.tests.length > 0, p.id);
 });
 
+test('Spain RETA 2026: the fee follows the band of monthly net income, from the reduced table to the top band', () => {
+  const es = loadRulePack('es');
+  const reta = (revenue: number) => checkReserve(es, 'general', { revenue, expenses: 0 }).lines!.find((l) => l.name === 'reta')!.amount;
+  // 12,000 - 5% = 11,400; less 7% = 10,602 a year (EUR 883.50 a month): reduced table, band 2, base 718.95.
+  assert.equal(reta(12_000), 2717.63);
+  // 30,000 - 5% = 28,500; less 7% = 26,505 (EUR 2,208.75 a month): general band 6, base 1,274.51.
+  assert.equal(reta(30_000), 4817.65);
+  // Above EUR 6,000 a month the top band applies: base 1,928.10 at 31.5%.
+  assert.equal(reta(200_000), 7288.22);
+});
+
 test('safety margin: strict countries and rough estimates need more than the estimate', () => {
   const es = loadRulePack('es');
   // Spain is strict and IRPF is an estimate: 4 points over the need.
@@ -400,7 +420,7 @@ test('safety margin: strict countries and rough estimates need more than the est
   assert.equal(t.marginBps, 400);
   assert.equal(t.recommendedBps, t.requiredBps! + 400);
   assert.equal(t.status, 'tight');
-  assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'MD', reserveBps: 2600 }).status, 'ok');
+  assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, region: 'MD', reserveBps: 2700 }).status, 'ok');
   // An exact regime needs no margin.
   assert.equal(checkReserve(loadRulePack('it'), 'forfettario', { revenue: 50_000 }).marginBps, 0);
 });
