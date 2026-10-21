@@ -271,9 +271,21 @@ test('reserve check: short, ok, generous, and exact regimes', () => {
   // India, presumptive: 50% of INR 20 lakh is taxable; under the INR 12 lakh rebate nothing is due.
   assert.equal(checkReserve(loadRulePack('in'), 'presumptive-gst', { revenue: 2_000_000 }).owed, 0);
 
-  // The Bahamas: no income tax. Liechtenstein: no estimate, so the check says it cannot tell.
+  // The Bahamas: no income tax. A US person in the Cayman Islands owes US tax the pack cannot estimate.
   assert.equal(checkReserve(loadRulePack('bs'), 'vat-only', { revenue: 100_000 }).requiredBps, 0);
-  assert.equal(checkReserve(loadRulePack('li'), 'standard', { revenue: 100_000 }).status, 'unknown');
+  assert.equal(checkReserve(loadRulePack('ky'), 'us-person', { revenue: 100_000 }).status, 'unknown');
+  // Liechtenstein: CHF 100,000 of profit pays 12.285% AHV/IV/FAK, then the Art. 19 tariff with a 180% communal surcharge.
+  const li = checkReserve(loadRulePack('li'), 'standard', { revenue: 100_000, expenses: 0 });
+  assert.equal(Math.round(li.lines!.find((l) => l.name === 'ahv_iv_fak')!.amount), 12_290);
+  assert.equal(Math.round(li.incomeTax!), 7_396);
+  // Argentina: the monotributo is the fee of the category (services, August 2026): ARS 40 million is category F.
+  assert.equal(checkReserve(loadRulePack('ar'), 'monotributo', { revenue: 40_000_000 }).lines![0].amount, 1_809_410.52);
+  assert.equal(checkReserve(loadRulePack('ar'), 'monotributo', { revenue: 40_000_000 }).precision, 'exact');
+  // Ganancias: nothing until the ganancia no imponible plus the special deduction (ARS 27,088,521.14).
+  assert.equal(checkReserve(loadRulePack('ar'), 'responsable-inscripto', { revenue: 27_000_000, expenses: 0 }).incomeTax, 0);
+  // United Arab Emirates: Small Business Relief up to AED 3 million of revenue (to 2029), 9% above AED 375,000 of profit beyond it.
+  assert.equal(checkReserve(loadRulePack('ae'), 'vat-and-corporate-tax', { revenue: 2_900_000 }).incomeTax, 0);
+  assert.ok(checkReserve(loadRulePack('ae'), 'vat-and-corporate-tax', { revenue: 3_100_000 }).incomeTax! > 0);
   // Luxembourg, class 1: EUR 80,000 of profit pays 23.98% social contributions and 1.4% dependency
   // (EUR 20,304), and income tax on the remaining EUR 59,696 with the 7% employment fund contribution.
   const lu = checkReserve(loadRulePack('lu'), 'standard', { revenue: 100_000, expenses: 20_000 });

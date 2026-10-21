@@ -3,8 +3,8 @@
   "id": "li",
   "country": "LI",
   "name": "Liechtenstein: self-employed",
-  "version": "2026.3",
-  "reviewed": "2026-10-17",
+  "version": "2026.4",
+  "reviewed": "2026-10-21",
   "currency": "CHF",
   "vatName": "MWST",
   "vatRates": [
@@ -147,9 +147,72 @@
       ]
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "ahv_iv_fak",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            1229
+          ]
+        ],
+        "label": "AHV/IV/FAK of the self-employed 2026: AHV 8.25%, IV 1.35%, FAK 2.1% and administrative costs 0.585% (12.285% of income)"
+      },
+      {
+        "name": "erwerbssteuer",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            15855,
+            0
+          ],
+          [
+            21140,
+            280
+          ],
+          [
+            42280,
+            840
+          ],
+          [
+            73990,
+            1120
+          ],
+          [
+            105700,
+            1400
+          ],
+          [
+            137410,
+            1680
+          ],
+          [
+            169120,
+            1820
+          ],
+          [
+            211400,
+            1960
+          ],
+          [
+            null,
+            2240
+          ]
+        ],
+        "label": "Income tax (Erwerbssteuer), Art. 19 SteG single tariff (1% to 8% above CHF 15,855), with a 180% communal surcharge, the highest: up to 22.4%"
+      }
+    ],
+    "notes": [
+      "The communal surcharge is 150% to 180% depending on the commune; the estimate uses 180%, so in a 150% commune the income tax is about 11% lower. Wealth (taxed through a 4% notional return) and joint taxation of couples are not included."
+    ]
+  },
   "notes": [
     "VAT rates are the Swiss ones: Liechtenstein must adopt Swiss VAT changes under its VAT treaty with Switzerland.",
-    "No reserve estimate: the national income tax is multiplied by a communal surcharge that each of the 11 communes sets. Compare the reserve with your adviser's figure.",
+    "The reserve estimate uses the single tariff of Art. 19 SteG (version of 1 July 2026) and a 180% communal surcharge, the highest of the 11 communes (they range from 150% to 180%).",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -158,6 +221,28 @@
       "url": "https://www.llv.li/files/srk/bua_019_2023_bua_abanderung-der-mehrwertsteuer.pdf",
       "official": true,
       "checked": "2026-10-16"
+    },
+    {
+      "title": "Steuergesetz (SteG), LGBl. 2010 Nr. 340, Art. 19 Tarif, version of 1 July 2026 (official)",
+      "url": "https://gesetze.li/konso/pdf/2010340000?version=38",
+      "official": true,
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "PwC Worldwide Tax Summaries: Liechtenstein, taxes on personal income (communal surcharge 150% to 180%, top rate 22.4%)",
+      "url": "https://taxsummaries.pwc.com/liechtenstein/individual/taxes-on-personal-income",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "LIREX: wichtige Kennzahlen Liechtenstein 2026 (self-employed AHV/IV/FAK/VK 12.285%)",
+      "url": "https://lirex.one/wp-content/uploads/2026/01/Newsletter-2026_Kennzahlen_Liechtenstein.pdf",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "AHV-IV-FAK: Verwaltungskostenbeitrag 2026, 0.585% (official)",
+      "url": "https://www.ahv.li/fileadmin/user_upload/Dokumente/Ueber/VKV/AHV-IV-FAK-VKV--2026.pdf",
+      "official": true,
+      "checked": "2026-10-21"
     }
   ]
 }

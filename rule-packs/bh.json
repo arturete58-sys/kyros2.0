@@ -3,8 +3,8 @@
   "id": "bh",
   "country": "BH",
   "name": "Bahrain: self-employed and small businesses",
-  "version": "2026.3",
-  "reviewed": "2026-10-17",
+  "version": "2026.4",
+  "reviewed": "2026-10-21",
   "currency": "BHD",
   "vatName": "VAT",
   "vatRates": [
@@ -82,6 +82,7 @@
   "notes": [
     "Bahrain has no personal income tax. Corporate income tax applies to oil and gas companies, and a 15% domestic minimum top-up tax to large multinational groups only.",
     "VAT registration is mandatory above BHD 37,500 of taxable supplies a year and voluntary from BHD 18,750.",
+    "A draft corporate income tax law (10% on local businesses) was sent to the legislature on 29 December 2025 and went to consultation in February 2026; it is not law, and its scope for individuals and small businesses is not public yet. The pack changes when it is enacted.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -94,6 +95,11 @@
       "title": "ClearTax: VAT in Bahrain (10% from 1 January 2022, thresholds)",
       "url": "https://www.cleartax.com/bh/vat-in-bahrain",
       "checked": "2026-10-16"
+    },
+    {
+      "title": "KPMG Bahrain: GCC tax news, 9 August 2026 (draft corporate income tax law, no VAT change)",
+      "url": "https://assets.kpmg.com/content/dam/kpmgsites/bh/pdf/2026/08/kpmg-bahrain-gcc-tax-news-09082026.pdf",
+      "checked": "2026-10-21"
     }
   ]
 }

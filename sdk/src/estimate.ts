@@ -246,7 +246,8 @@ export function estimateTaxes(est: Estimate, input: ReserveInput): EstimateResul
     lines.push({ name: it.name, label: it.label, kind: it.kind, amount });
   }
   const deductibleShare = est.socialDeductibleBps !== undefined ? est.socialDeductibleBps / 10_000 : est.socialDeductible ? 1 : 0;
-  const incomeBasis = Math.max(0, taxable - socialTotal * deductibleShare);
+  // Fixed contributions the user entered (e.g. Argentina's autónomos) are deductible like the pack's own.
+  const incomeBasis = Math.max(0, taxable - (socialTotal + (input.fixedSocial ?? 0)) * deductibleShare);
   for (const it of est.items) {
     if (it.kind !== 'incomeTax' || !applies(it)) continue;
     lines.push({ name: it.name, label: it.label, kind: it.kind, amount: amountOf(it, incomeBasis) });

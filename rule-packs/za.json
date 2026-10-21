@@ -3,8 +3,8 @@
   "id": "za",
   "country": "ZA",
   "name": "South Africa: sole proprietors",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "ZAR",
   "vatName": "VAT",
   "vatRates": [
@@ -174,7 +174,7 @@
     ]
   },
   "notes": [
-    "The 2026 Budget raises the compulsory VAT registration threshold from R1 million to R2.3 million once legislated; the VAT rate stays at 15%.",
+    "Since 1 April 2026 VAT registration is compulsory above R2.3 million of taxable supplies in 12 months (it was R1 million) and voluntary from R120,000 (it was R50,000); the VAT rate stays at 15%.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -198,6 +198,17 @@
       "url": "https://www.sars.gov.za/tax-rates/income-tax/rates-of-tax-for-individuals/",
       "official": true,
       "checked": "2026-10-16"
+    },
+    {
+      "title": "SARS FAQ: what is the new threshold for VAT registration? (R2.3 million from 1 April 2026)",
+      "url": "https://www.sars.gov.za/faq/what-is-the-new-threshold-for-vat-registration/",
+      "official": true,
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "Cliffe Dekker Hofmeyr: VAT threshold increased (voluntary R120,000 from 1 April 2026)",
+      "url": "https://www.cliffedekkerhofmeyr.com/en/news/publications/2026/South-Africa/Tax-Exchange-Control/tax-and-exchange-control-alert-19-march-VAT-threshold-increased-Should-SMEs-remain-registered",
+      "checked": "2026-10-21"
     }
   ]
 }

@@ -3,8 +3,8 @@
   "id": "ar",
   "country": "AR",
   "name": "Argentina: monotributistas and responsables inscriptos",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "ARS",
   "vatName": "IVA",
   "vatRates": [
@@ -105,7 +105,7 @@
     },
     {
       "id": "monotributo",
-      "label": "Monotributo: reserve 10% for the monthly fee",
+      "label": "Monotributo: reserve 10%; the check uses the fee of your category",
       "vatBps": 0,
       "buckets": [
         {
@@ -117,11 +117,146 @@
       "covers": [
         "incomeTax",
         "social"
-      ]
+      ],
+      "estimate": {
+        "year": 2026,
+        "items": [
+          {
+            "name": "monotributo",
+            "kind": "social",
+            "basis": "revenue",
+            "brackets": [
+              [
+                null,
+                0
+              ]
+            ],
+            "steps": [
+              [
+                12009410.45,
+                594326.16
+              ],
+              [
+                17595182.74,
+                676548.96
+              ],
+              [
+                24670494.31,
+                792241.44
+              ],
+              [
+                30628651.43,
+                1015355.16
+              ],
+              [
+                36028231.33,
+                1437737.4
+              ],
+              [
+                45151659.41,
+                1809410.52
+              ],
+              [
+                53995798.87,
+                2763755.28
+              ],
+              [
+                81924660.37,
+                6272480.16
+              ],
+              [
+                91699761.9,
+                11564974.32
+              ],
+              [
+                105012519.2,
+                14007597.12
+              ],
+              [
+                null,
+                19373352.48
+              ]
+            ],
+            "label": "Monotributo, services: 12 times the monthly fee of the category for your annual revenue (categories A to K, values from August 2026: tax, SIPA pension and health insurance)"
+          }
+        ],
+        "notes": [
+          "Fees and caps are updated every February and August with inflation; these are the August 2026 to January 2027 values. Above ARS 126,610,838.75 a year (category K) the monotributo no longer applies and the general regime (IVA and Ganancias) does."
+        ]
+      }
     }
   ],
+  "estimate": {
+    "year": 2026,
+    "socialDeductible": true,
+    "items": [
+      {
+        "name": "autonomos",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            0
+          ]
+        ],
+        "min": 939258.72,
+        "label": "Autónomos (SIPA pension): at least category I, ARS 78,271.56 a month from October 2026; categories II to V pay ARS 109,578.51 to 344,390.34"
+      },
+      {
+        "name": "ganancias",
+        "kind": "incomeTax",
+        "brackets": [
+          [
+            27088521.14,
+            0
+          ],
+          [
+            29425474.83,
+            500
+          ],
+          [
+            31762428.5,
+            900
+          ],
+          [
+            34099382.19,
+            1200
+          ],
+          [
+            37604812.73,
+            1500
+          ],
+          [
+            48121104.32,
+            1900
+          ],
+          [
+            58637395.91,
+            2300
+          ],
+          [
+            74411833.3,
+            2700
+          ],
+          [
+            98073489.39,
+            3100
+          ],
+          [
+            null,
+            3500
+          ]
+        ],
+        "label": "Ganancias 2026, art. 94 annual scale (5% to 35%), after the ganancia no imponible (ARS 6,019,671.36) and the special deduction for the self-employed (ARS 21,068,849.78)"
+      }
+    ],
+    "notes": [
+      "Ganancias uses ARCA's annual 2026 tables (art. 94 scale and art. 30 deductions, updated with the January to June inflation). Family deductions and the higher special deduction for new professionals are not included.",
+      "Autónomos contributions are a fixed monthly amount by category, updated monthly; the estimate counts category I. If you pay a higher category, enter the difference as a fixed contribution: it is deducted before Ganancias too."
+    ]
+  },
   "notes": [
-    "No reserve estimate: Ganancias brackets are updated twice a year for inflation. The monotributo is a fixed monthly fee by category; enter it as a fixed contribution in the reserve check.",
+    "Reserve estimates: Ganancias for responsables inscriptos from ARCA's annual 2026 scale; the monotributo from the fee of the category that matches annual revenue. Both are indexed to inflation twice a year, so the pack is reviewed every February and August.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -133,6 +268,38 @@
     {
       "title": "Calcular Sueldo: ARCA publishes the 2026 Ganancias scales",
       "url": "https://calcularsueldo.com.ar/ganancias/13161/arca-oficializo-las-escalas-y-deducciones-de-ganancias-en-2026.html"
+    },
+    {
+      "title": "ARCA: escala del artículo 94, liquidación anual y final 2026 (official)",
+      "url": "https://www.afip.gob.ar/gananciasYBienes/ganancias/personas-humanas-sucesiones-indivisas/declaracion-jurada/documentos/Tabla-Art-94-LIG-liquidacion-anual-y-final-2026.pdf",
+      "official": true,
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "ARCA: deducciones del artículo 30, período anual 2026 (official)",
+      "url": "https://www.afip.gob.ar/gananciasYBienes/ganancias/personas-humanas-sucesiones-indivisas/deducciones/documentos/Deducciones-personales-art-30-liq-anual-2026.pdf",
+      "official": true,
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "Calcular Sueldo: ARCA confirmó los valores del monotributo desde agosto 2026 (services and goods fees)",
+      "url": "https://calcularsueldo.com.ar/?p=15434",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "La Nación: nuevos topes del monotributo en agosto 2026 (+16.8%)",
+      "url": "https://www.lanacion.com.ar/economia/nuevos-topes-cuanto-se-paga-de-monotributo-en-agosto-2026-nid04082026/",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "CPCECABA: Autónomos, ARCA actualizó los aportes para octubre 2026 (category I ARS 78,271.56, V ARS 344,390.34)",
+      "url": "https://web.cpcecba.org.ar/autonomos-arca-actualizo-los-aportes-que-rigen-para-el-periodo-octubre-2026/",
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "Calcular Sueldo: valores de autónomos desde octubre 2026, categories I to V",
+      "url": "https://calcularsueldo.com.ar/?p=16243",
+      "checked": "2026-10-21"
     }
   ]
 }

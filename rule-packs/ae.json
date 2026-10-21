@@ -3,8 +3,8 @@
   "id": "ae",
   "country": "AE",
   "name": "United Arab Emirates: freelancers and small companies",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-10-21",
   "currency": "AED",
   "vatName": "VAT",
   "vatRates": [
@@ -108,13 +108,14 @@
             900
           ]
         ],
-        "label": "Corporate tax 9% on taxable profit above AED 375,000 (natural persons with business turnover above AED 1 million)",
-        "minRevenue": 1000000
+        "label": "Corporate tax 9% on taxable profit above AED 375,000, only above AED 3 million of revenue: at or below it the business can elect Small Business Relief (no taxable income) for tax periods ending by 31 December 2029",
+        "minRevenue": 3000000.01
       }
     ]
   },
   "notes": [
     "There is no personal income tax. Corporate tax is 0% on taxable income up to AED 375,000 and 9% above.",
+    "Small Business Relief: a resident business (including a freelancer with a licence) whose revenue is AED 3 million or less in the period and every earlier period can elect to be treated as having no taxable income, for tax periods ending on or before 31 December 2029 (Ministerial Decision No. 131 of 2026, extending the original end of 2026). It must be elected in each corporate tax return; qualifying free zone persons and members of large multinational groups cannot use it. The estimate assumes the election.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
@@ -122,6 +123,17 @@
       "title": "Federal Tax Authority",
       "url": "https://tax.gov.ae",
       "official": true
+    },
+    {
+      "title": "UAE Ministry of Finance: Ministerial Decision No. 131 of 2026 amending Decision No. 73 of 2023 on Small Business Relief (official, Arabic)",
+      "url": "https://mof.gov.ae/wp-content/uploads/2026/08/Ministerial-Decision-No.-131-of-2026-Amending-Certain-Provisions-of-Ministerial-Decision-No.-73-of-2023-on-Small-Business-Relief-for-the-Purposes-of-Federal-Decree-Law-No.-47-of-2022-AR.pdf",
+      "official": true,
+      "checked": "2026-10-21"
+    },
+    {
+      "title": "Entrepreneur Middle East: UAE extends Small Business Tax Relief through 2029 (AED 3 million unchanged)",
+      "url": "https://mena.entrepreneur.com/business-news/uae-extends-small-business-tax-relief-through-2029",
+      "checked": "2026-10-21"
     }
   ]
 }

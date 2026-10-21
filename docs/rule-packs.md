@@ -45,7 +45,7 @@ const rule = customRule(es, { vatRate: 'standard', reserves: [{ name: 'irpf', bp
 - **short**: the reserve is below the estimated tax; the app suggests the required percentage.
 - **ok**: the reserve covers the estimate with less than 10 points to spare.
 - **generous**: more than 10 points above; the surplus goes back to the user after the release date anyway.
-- **unknown**: no estimate for that jurisdiction yet (Liechtenstein and Argentina, where income tax depends on the commune or on twice-yearly indexation); the user compares with their adviser's figure.
+- **unknown**: no estimate for that case (a US person in the Cayman Islands, who owes US tax on worldwide income); the user compares with their adviser's figure.
 
 ### Regions with their own income tax
 
@@ -59,7 +59,7 @@ const rule = customRule(es, { vatRate: 'standard', reserves: [{ name: 'irpf', bp
 
 | Switzerland | 26 cantons (their capitals) | Federal, cantonal and communal income tax from the Federal Tax Administration's own calculator, regenerated every January and July by [a workflow](../.github/workflows/swiss-scales.yml) |
 
-Liechtenstein (communal multipliers), Italy's regional and municipal surcharges (a default 2.5% is used) and local business taxes (French CFE, Colombian ICA, Brazilian ISS, Puerto Rico's municipal licence) are not modelled per region yet.
+Liechtenstein's communal multipliers (the highest, 180%, is used), Italy's regional and municipal surcharges (a default 2.5% is used) and local business taxes (French CFE, Colombian ICA, Brazilian ISS, Puerto Rico's municipal licence) are not modelled per region yet.
 
 ## Set up from the activity
 
@@ -108,7 +108,7 @@ How much margin a reserve needs depends on how exact the figure is and how hard 
 | `presumptive` | Progressive rates on a profit the law presumes from revenue; only personal allowances and other income change it | Portugal's simplified regime, India's section 44ADA |
 | `exact-on-profit` | One rate on profit: exact once expenses are known | Estonia, Hong Kong, Puerto Rico Act 60, UAE corporate tax, Vietnamese companies |
 | `estimate` | Progressive income tax with deductions and personal circumstances | Spain, Germany, the Netherlands, Ireland, the UK, the US, Canada, Australia, Japan, Korea and others |
-| `none` | The tax depends on things the pack cannot know | Liechtenstein, Argentina |
+| `none` | The tax depends on things the pack cannot know | Cayman Islands, US persons |
 
 ### Objective targets from last year's tax
 
@@ -187,7 +187,13 @@ A change is reviewed by a person before it reaches the registry; nothing changes
 - **Compliance dates added:** UK Making Tax Digital for Income Tax (£50,000 from April 2026, £30,000 from April 2027, £20,000 from April 2028); France e-invoicing (receive from 1 September 2026, SMEs and micro-entrepreneurs issue from 1 September 2027); Germany e-invoicing (issue from 2027 above EUR 800,000 turnover, from 2028 for all; Kleinunternehmer exempt).
 - **Confirmed unchanged:** EU VAT rates (TEDB), France micro BNC 25.6%, Thailand 7% to 30 September 2027, Vietnam 8% to the end of 2026, South Africa 15%, Panama 7%, Bahrain 10%.
 - **Sources:** IRS Publication 505 now links the 2026 edition; holiday calendars regenerated (Spain, India and Pakistan changed).
-- **Still without an estimate:** Liechtenstein and Argentina keep the suggested reserve and say so.
+- **Liechtenstein.** First reserve estimate: Art. 19 SteG tariff (version of 1 July 2026) with the highest communal surcharge (180%), and 12.285% AHV/IV/FAK for the self-employed in 2026.
+- **Argentina.** First reserve estimates: Ganancias with ARCA's annual 2026 art. 94 scale, the ganancia no imponible and the special deduction for the self-employed, plus autónomos at category I (October 2026); the monotributo as the fee of the category for the annual revenue (services, August 2026 to January 2027). Both are indexed twice a year, so the pack is due for review every February and August.
+- **United Arab Emirates.** Small Business Relief extended to tax periods ending by 31 December 2029 (Ministerial Decision No. 131 of 2026): no corporate tax up to AED 3 million of revenue when elected.
+- **South Africa.** The compulsory VAT registration threshold of R2.3 million (voluntary R120,000) is in force since 1 April 2026; the note said it was still pending.
+- **Bahrain.** A draft 10% corporate income tax on local businesses is noted; not law.
+- **Pages the law watch flagged as changed** (the UAE, Irish, Panamanian and South African tax authorities' home pages and Bahrain's VAT portal page): checked by hand. The changed figures were news items (a customs seizure, revenue statistics, other notices), not rates; following them up found the UAE, South Africa and Bahrain updates above.
+- **Fixed contributions** the user enters are now deducted before income tax where the pack's own contributions are.
 
 ## Moving to another country
 
@@ -203,10 +209,10 @@ Each tax can be paid from the vault to the tax-payment destination at any time. 
 | Pack | Jurisdiction | Currency | Consumption tax in force | Calendar | Presets (precision of the reserve check) | Sources |
 | --- | --- | --- | --- | --- | --- | --- |
 | [AD](../rule-packs/ad.json) | Andorra | EUR | IGI 4.5% / 1% | Months6; VAT: day 20 of month +0; income: 09-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (estimate), `not-igi-registered` (estimate) | 1 official, 0 checked 2026-10-17 |
-| [AE](../rule-packs/ae.json) | United Arab Emirates | AED | VAT 5% | Quarter; VAT: 28 days after the period; income: 09-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `vat-only` (exact), `vat-and-corporate-tax` (exact on profit) | 1 official, 0 checked 2026-10-17 |
-| [AR](../rule-packs/ar.json) | Argentina | ARS | IVA 27% / 21% / 10.5% | Month; VAT: day 25 of month +0; income: 06-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `responsable-inscripto` (none), `exportacion-servicios` (none), `monotributo` (none) | 1 official, 0 checked 2026-10-17 |
+| [AE](../rule-packs/ae.json) | United Arab Emirates | AED | VAT 5% | Quarter; VAT: 28 days after the period; income: 09-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `vat-only` (exact), `vat-and-corporate-tax` (exact on profit) | 2 official, 2 checked 2026-10-21 |
+| [AR](../rule-packs/ar.json) | Argentina | ARS | IVA 27% / 21% / 10.5% | Month; VAT: day 25 of month +0; income: 06-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `responsable-inscripto` (estimate), `exportacion-servicios` (estimate), `monotributo` (exact) | 3 official, 6 checked 2026-10-21 |
 | [AU](../rule-packs/au.json) | Australia | AUD | GST 10% | Quarter; VAT: day 28 of month +0; 28 of +1 for periods ending in month 12; income: 10-31 of FY+1 (FY from 07-01); weekend/holiday: next working day | `gst` (estimate), `not-gst-registered` (estimate) | 2 official, 2 checked 2026-10-17 |
-| [BH](../rule-packs/bh.json) | Bahrain | BHD | VAT 10% | Quarter; VAT: day 31 of month +0; income: day 31 of month +0; weekend/holiday: no move (shown: working day before) (not verified) | `vat-only` (exact), `not-vat-registered` (exact) | 1 official, 1 checked 2026-10-17 |
+| [BH](../rule-packs/bh.json) | Bahrain | BHD | VAT 10% | Quarter; VAT: day 31 of month +0; income: day 31 of month +0; weekend/holiday: no move (shown: working day before) (not verified) | `vat-only` (exact), `not-vat-registered` (exact) | 1 official, 2 checked 2026-10-21 |
 | [BR](../rule-packs/br.json) | Brazil | BRL | ISS / CBS / IBS: see notes | Month; income: 05-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `simples-anexo-iii` (exact), `simples-anexo-v` (exact), `pessoa-fisica` (estimate) | 1 official, 1 checked 2026-10-17 |
 | [BS](../rule-packs/bs.json) | The Bahamas | BSD | VAT 10% | Quarter; VAT: 21 days after the period; income: 21 days after the period; weekend/holiday: no move (shown: working day before) (not verified) | `vat-only` (exact) | 0 official, 0 checked 2026-10-17 |
 | [CA](../rule-packs/ca.json) | Canada | CAD | GST/HST 15% / 14.98% / 14% / 13% / 5% | Year; VAT: 04-30 of FY+1; income: 04-30 of FY+1; weekend/holiday: next working day | `gst` (estimate), `hst-13` (estimate), `hst-14` (estimate), `hst-15` (estimate), `gst-qst` (estimate), `small-supplier` (estimate) | 3 official, 3 checked 2026-10-17 |
@@ -228,7 +234,7 @@ Each tax can be paid from the vault to the tax-payment destination at any time. 
 | [KE](../rule-packs/ke.json) | Kenya | KES | VAT 16% | Month; VAT: day 20 of month +0; income: 06-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `turnover-tax` (exact), `vat` (estimate), `no-vat` (estimate) | 1 official, 0 checked 2026-10-17 |
 | [KR](../rule-packs/kr.json) | South Korea | KRW | VAT 10% | Months6; VAT: day 25 of month +0; income: 05-31 of FY+1; weekend/holiday: next working day | `general` (estimate), `vat-exempt-freelancer` (estimate) | 1 official, 0 checked 2026-10-17 |
 | [KY](../rule-packs/ky.json) | Cayman Islands | KYD | VAT: see notes | Quarter; income: 06-15 of FY+1; weekend/holiday: next working day | `no-tax` (exact), `us-person` (none) | 1 official, 1 checked 2026-10-17 |
-| [LI](../rule-packs/li.json) | Liechtenstein | CHF | MWST 8.1% / 3.8% / 2.6%; changes 2028-01-01 (proposed) | Quarter; VAT: 60 days after the period; income: 12-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (none), `reduced-vat` (none), `accommodation-vat` (none), `not-vat-registered` (none) | 1 official, 1 checked 2026-10-17 |
+| [LI](../rule-packs/li.json) | Liechtenstein | CHF | MWST 8.1% / 3.8% / 2.6%; changes 2028-01-01 (proposed) | Quarter; VAT: 60 days after the period; income: 12-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (estimate), `reduced-vat` (estimate), `accommodation-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 5 checked 2026-10-21 |
 | [LU](../rule-packs/lu.json) | Luxembourg | EUR | TVA 17% / 14% / 8% / 3% | Year; VAT: day 31 of month +1; income: 12-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (estimate), `intermediate-vat` (estimate), `reduced-vat` (estimate), `franchise` (estimate) | 1 official, 3 checked 2026-10-21 |
 | [MC](../rule-packs/mc.json) | Monaco | EUR | TVA 20% / 10% / 5.5% / 2.1% | Quarter; VAT: day 24 of month +0; income: 03-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (exact), `reduced-vat` (exact), `isb` (exact on profit) | 1 official, 1 checked 2026-10-17 |
 | [MT](../rule-packs/mt.json) | Malta | EUR | VAT 18% / 7% / 5% | Quarter; VAT: day 15 of month +1; income: 06-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (estimate), `reduced-vat` (estimate), `article-11` (estimate) | 2 official, 1 checked 2026-10-17 |
@@ -247,7 +253,7 @@ Each tax can be paid from the vault to the tax-payment destination at any time. 
 | [UA](../rule-packs/ua.json) | Ukraine | UAH | VAT (ПДВ) 20% / 14% / 7% | Quarter; VAT: day 30 of month +0; income: 50 days after the period; weekend/holiday: no move (shown: working day before) (not verified) | `fop-group-3` (exact), `fop-group-3-vat` (exact) | 1 official, 0 checked 2026-10-17 |
 | [US](../rule-packs/us.json) | United States | USD | none | Quarter; VAT: day 20 of month +0; income: 04-15 of FY+1; weekend/holiday: next working day | `self-employed` (estimate), `with-sales-tax-example` (estimate) | 5 official, 1 checked 2026-10-21 |
 | [VN](../rule-packs/vn.json) | Vietnam | VND | VAT (GTGT) 10% / 8% / 5%; changes 2027-01-01 | Quarter; VAT: day 31 of month +0; income: day 31 of month +0; weekend/holiday: no move (shown: working day before) (not verified) | `household-services` (exact), `company-vat` (exact on profit), `company-vat-8` (exact on profit) | 1 official, 1 checked 2026-10-17 |
-| [ZA](../rule-packs/za.json) | South Africa | ZAR | VAT 15% | Months2; VAT: day 31 of month +0; income: 01-31 of FY+2 (FY from 03-01); weekend/holiday: working day before | `vat` (estimate), `not-vat-registered` (estimate) | 3 official, 2 checked 2026-10-17 |
+| [ZA](../rule-packs/za.json) | South Africa | ZAR | VAT 15% | Months2; VAT: day 31 of month +0; income: 01-31 of FY+2 (FY from 03-01); weekend/holiday: working day before | `vat` (estimate), `not-vat-registered` (estimate) | 4 official, 4 checked 2026-10-21 |
 <!-- packs:end -->
 
 ## Coverage
