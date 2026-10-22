@@ -3,7 +3,7 @@
  * every screen with sample data and no network, for looking at the design.
  * Not part of the production build.
  */
-import { periodOf, upcomingDeadlines, type HolidayData, type PeriodKind, type RulePack } from 'kyros-sdk';
+import { calendarOf, duesOfCalendar, periodOf, upcomingDeadlines, type HolidayData, type PeriodKind, type RulePack } from 'kyros-sdk';
 import type { Snapshot, VaultInfo } from '../kyros';
 import type { Wallet } from '../wallet/types';
 
@@ -62,6 +62,8 @@ export function fixtureSnapshot(pack: RulePack, holidays?: HolidayData): Snapsho
     conversion: null,
     pendingConversionAt: null,
     feed: { registry: 'CREG', country: 'ES', rate: 'standard', maxBps: 3000 },
+    rule: { vatBps: 2100, buckets: [{ name: 'irpf', bps: 2000 }] },
+    dues: duesOfCalendar(calendarOf(pack, 'general'), { registry: 'CREG', country: 'ES' }),
     corrections: [{ id: 1, period: q, token: usd, bucket: 'vat', amount: 105n * U, readyAt: now + 5n * 86_400n }],
     // The guardian: a new tax destination nobody proposed from this device, waiting out the notice.
     guard: [{ kind: 'destination', tx: 'b'.repeat(64), at: day('2026-10-21T22:10:00Z'), readyAt: now + 20n * 3_600n, detail: 'GATTACKERFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', severity: 'critical', mine: false }],

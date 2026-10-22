@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chain } from './chain';
 import { loadConfig, type AppConfig } from './config';
-import { applyReadyCorrections, learnAbroadPayers, runDueScheduled, savedVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
+import { applyReadyCorrections, finishMove, learnAbroadPayers, runDueScheduled, savedVault, saveVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
+import { countryName } from './packs';
 import { AppCtx, type Ctx, type Screen } from './ui';
 import { friendlyError } from './errors';
 import { lazy, Suspense } from 'react';
@@ -14,6 +15,8 @@ const Home = lazy(() => Main().then((m) => ({ default: m.Home })));
 const Pay = lazy(() => Main().then((m) => ({ default: m.Pay })));
 const Request = lazy(() => Main().then((m) => ({ default: m.Request })));
 const Settings = lazy(() => Main().then((m) => ({ default: m.Settings })));
+const Expenses = lazy(() => import('./screens/Expenses').then((m) => ({ default: m.Expenses })));
+const Move = lazy(() => import('./screens/Move').then((m) => ({ default: m.Move })));
 const Assistant = lazy(() => import('./screens/Assistant').then((m) => ({ default: m.Assistant })));
 const Onboarding = lazy(() => import('./screens/Start').then((m) => ({ default: m.Onboarding })));
 const Welcome = lazy(() => import('./screens/Start').then((m) => ({ default: m.Welcome })));
@@ -95,6 +98,23 @@ export default function App() {
     if (!chain || !vault || (import.meta.env.DEV && location.hash.startsWith('#fixture'))) return;
     const s = await snapshot(chain, vault);
     setSnap(s);
+    // A signed change of country that has taken effect: the app switches to it.
+    if (vault.move?.signedAt && !vault.archivedOf) {
+      const done = await finishMove(chain, vault, s).catch(() => null);
+      if (done) {
+        setVault(done);
+        setToast({ msg: t('moveDone', { country: countryName(done.answers.packId.toUpperCase()) }) });
+        return;
+      }
+    }
+    // The rule the vault applies now (a proposal took effect, or the law's registry changed the VAT).
+    const key = (r: VaultInfo['rule']) => `${r.vatBps}|${r.buckets.map((b) => `${b.name}:${b.bps}`).join(',')}`;
+    if (s.rule && key(s.rule) !== key(vault.rule)) {
+      const next = { ...vault, rule: s.rule };
+      saveVault(next);
+      setVault(next);
+      return;
+    }
     // Wallets that paid the address for clients abroad are remembered in this browser.
     if (learnAbroadPayers(vault, s)) setVault({ ...vault });
     // Payments sent straight to the payment address are split here, by this browser's fee payer,
@@ -179,6 +199,8 @@ export default function App() {
   else if (screen === 'activity') page = <Activity />;
   else if (screen === 'alerts') page = <Alerts />;
   else if (screen === 'assistant') page = <Assistant />;
+  else if (screen === 'expenses') page = <Expenses />;
+  else if (screen === 'move') page = <Move />;
   else page = <Home />;
 
   return (

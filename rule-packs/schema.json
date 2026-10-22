@@ -494,6 +494,16 @@
         "profitReliefMax": {
           "type": "number",
           "minimum": 0
+        },
+        "justifiedExpenses": {
+          "type": "object",
+          "description": "Presumptive regimes that still ask for justified expenses (Portugal): this share of revenue must be justified; the shortfall is added to the taxable profit",
+          "required": ["bps"],
+          "properties": {
+            "bps": { "$ref": "#/$defs/bps" },
+            "automatic": { "type": "number", "minimum": 0, "description": "Amount that counts as justified with no receipts" },
+            "socialCounts": { "type": "boolean", "description": "Social contributions count instead of `automatic` when higher" }
+          }
         }
       }
     },

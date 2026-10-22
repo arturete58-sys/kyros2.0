@@ -3,8 +3,8 @@
   "id": "pt",
   "country": "PT",
   "name": "Portugal: self-employed (trabalhadores independentes)",
-  "version": "2026.3",
-  "reviewed": "2026-10-21",
+  "version": "2026.4",
+  "reviewed": "2026-10-22",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -183,6 +183,11 @@
   "estimate": {
     "year": 2026,
     "taxableShareBps": 7500,
+    "justifiedExpenses": {
+      "bps": 1500,
+      "automatic": 4104,
+      "socialCounts": true
+    },
     "items": [
       {
         "name": "irs",
@@ -242,7 +247,8 @@
       }
     ],
     "notes": [
-      "Bracket limits are rounded; the specific deduction and IRS Jovem are not applied."
+      "Bracket limits are rounded; the specific deduction and IRS Jovem are not applied.",
+      "Coefficient 0.75 (CIRS art. 31): 15% of revenue must be justified with expenses; 4,104 EUR (or the social security paid, if higher) counts with no receipts, and what is still missing is added to the taxable profit."
     ]
   },
   "notes": [
@@ -251,6 +257,11 @@
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
   "sources": [
+    {
+      "title": "CIRS art. 31: regime simplificado (coefficients and the 15% of justified expenses)",
+      "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx",
+      "official": true
+    },
     {
       "title": "European Commission: VAT rates in EU member states",
       "url": "https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-rates_en",

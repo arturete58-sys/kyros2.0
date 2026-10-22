@@ -20,7 +20,10 @@ export interface Ctx {
   setLang(l: Lang): void;
 }
 
-export type Screen = 'home' | 'request' | 'pay' | 'settings' | 'activity' | 'alerts' | 'assistant';
+export type Screen = 'home' | 'request' | 'pay' | 'settings' | 'activity' | 'alerts' | 'assistant' | 'expenses' | 'move';
+
+/** What a screen opens with when another one sends the user there (the assistant's move button). */
+export const prefill: { move?: { country: string; date: string } } = {};
 
 export const AppCtx = createContext<Ctx>(null as unknown as Ctx);
 export const useApp = () => useContext(AppCtx);

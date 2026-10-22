@@ -15,9 +15,11 @@
  * Whether an expense is deductible depends on the activity and the law; the
  * agent proposes, the user decides. Everything stays on the device.
  */
-import { checkReserve } from '../estimate.js';
-import type { RulePack } from '../rulepacks.js';
+import { checkReserve, estimateFor, estimateTaxes } from '../estimate.js';
+import { calendarOf, presetVatBps, type RulePack } from '../rulepacks.js';
 import type { Rule } from '../split.js';
+import { taxYearStart } from '../installments.js';
+import { dayString } from '../workdays.js';
 import { readInvoice, type InvoiceReading } from './invoice.js';
 
 export type ExpenseCategory = 'software' | 'equipment' | 'office' | 'travel' | 'professional' | 'telecom' | 'training' | 'marketing' | 'other';
@@ -81,15 +83,17 @@ export function expenseImpact(
   pack: RulePack,
   presetId: string,
   rule: Rule,
-  input: { revenue: number; expenses: Expense[]; activity?: string; incomeYtd?: number; withheldYtd?: number; paidYtd?: number },
+  input: { revenue: number; expenses: Expense[]; activity?: string; region?: string; incomeYtd?: number; withheldYtd?: number; paidYtd?: number },
 ): ExpenseImpact {
   const deductible = input.expenses.filter((e) => e.deductible);
-  const expenses = deductible.reduce((a, e) => a + e.base, 0);
-  const inputVat = deductible.reduce((a, e) => a + e.inputVat, 0);
+  // VAT the user cannot recover (not registered, or a sales tax) is part of what the expense cost.
+  const recoverable = vatRecovery(pack, presetId).recoverable;
+  const expenses = deductible.reduce((a, e) => a + e.base + (recoverable ? 0 : e.inputVat), 0);
+  const inputVat = recoverable ? deductible.reduce((a, e) => a + e.inputVat, 0) : 0;
   const currentBps = rule.buckets.reduce((a, b) => a + b.bps, 0);
-  const before = checkReserve(pack, presetId, { revenue: input.revenue, activity: input.activity, reserveBps: currentBps });
+  const before = checkReserve(pack, presetId, { revenue: input.revenue, activity: input.activity, region: input.region, reserveBps: currentBps });
   // The estimate's own expense ratio stands for "no expenses recorded": count the larger of the two.
-  const after = checkReserve(pack, presetId, { revenue: input.revenue, activity: input.activity, expenses: Math.max(expenses, before.expenses ?? 0), reserveBps: currentBps });
+  const after = checkReserve(pack, presetId, { revenue: input.revenue, activity: input.activity, region: input.region, expenses: Math.max(expenses, before.expenses ?? 0), reserveBps: currentBps });
   const out: ExpenseImpact = { expenses, inputVat, currentBps, recommendedBefore: before.recommendedBps, recommendedAfter: after.recommendedBps };
   // Only a cut the expenses themselves justify: lower than without them, and lower than the vault's.
   if (after.recommendedBps !== undefined && before.recommendedBps !== undefined && after.recommendedBps < before.recommendedBps && after.recommendedBps < currentBps && rule.buckets.length) {
@@ -103,4 +107,194 @@ export function expenseImpact(
     out.es130 = { before: inst(0), after: inst(expenses) };
   }
   return out;
+}
+
+// ---- Deductions, country by country ----
+
+/**
+ * How expenses change the income tax in a preset's regime, read from its estimate:
+ * - `profit`: tax and contributions on profit (revenue minus expenses): every expense lowers them;
+ * - `partial`: part of what is owed is on revenue (a turnover or municipal tax), part on profit;
+ * - `presumptive`: the law presumes the profit as a share of revenue: real expenses change nothing;
+ * - `justify`: presumed profit, but a share of revenue must be justified with expenses (Portugal);
+ * - `turnover`: a tax on revenue only;
+ * - `no-income-tax`: nothing on income to lower;
+ * - `unknown`: the pack has no estimate.
+ */
+export type IncomeDeduction = 'profit' | 'partial' | 'presumptive' | 'justify' | 'turnover' | 'no-income-tax' | 'unknown';
+
+/**
+ * What expenses do to the prepayments along the year:
+ * - `es130`: computed on profit to date (Spain's modelo 130): expenses lower the next one;
+ * - `fixed`: set from last year's tax or the tax office's notice: this year's expenses lower the final payment
+ *   (in some countries the user can ask to lower them, `reduction`);
+ * - `follows-reserve`: computed from what the vault reserves: a lower reserve lowers them;
+ * - `none`: no prepayments, the tax is paid with the annual return.
+ */
+export type PrepaymentEffect = 'es130' | 'fixed' | 'follows-reserve' | 'none';
+
+/** Where a lower prepayment can be asked for when this year's profit is lower (the procedure's own name). */
+export const PREPAYMENT_REDUCTION: Record<string, string> = {
+  DE: 'Antrag auf Herabsetzung der Vorauszahlungen (§ 37 Abs. 3 EStG)',
+  GB: 'SA303 (reduce payments on account)',
+  IE: 'preliminary tax: 90% of this year’s tax',
+  CA: 'current-year option (instalments)',
+  AU: 'PAYG instalment variation',
+  IT: 'metodo previsionale (acconti)',
+  JP: '予定納税額の減額申請',
+  KR: '중간예납 추계액 신고 (first half below 30% of last year)',
+};
+
+/** Consumption taxes with no general credit for what the seller pays on its purchases. */
+const SALES_TAX = new Set(['US', 'PR']);
+/** Export presets whose input tax is not refunded as a rule (Pakistan's provincial sales tax on services). */
+const EXPORT_NO_REFUND = new Set(['PK']);
+
+export interface VatRecovery {
+  recoverable: boolean;
+  /** `registered`: charges VAT and deducts input VAT; `zero-rated`: exports, input VAT refunded; `not-registered`: VAT on purchases is a cost; `sales-tax`: no input credit; `no-vat`: the country has no consumption tax. */
+  reason: 'registered' | 'zero-rated' | 'not-registered' | 'sales-tax' | 'no-vat';
+}
+
+/** Whether the VAT on the user's purchases comes back (deducted in the VAT return) in this preset. */
+export function vatRecovery(pack: RulePack, presetId: string, date: Date | string = new Date()): VatRecovery {
+  if (SALES_TAX.has(pack.country)) return { recoverable: false, reason: 'sales-tax' };
+  if (!pack.calendar.vat && !(pack.vatRates ?? []).length && pack.presets.every((p) => p.vatBps === 0)) return { recoverable: false, reason: 'no-vat' };
+  let vat = 0;
+  try {
+    vat = presetVatBps(pack, presetId, date);
+  } catch {
+    vat = pack.presets.find((p) => p.id === presetId)?.vatBps ?? 0;
+  }
+  if (vat > 0) return { recoverable: true, reason: 'registered' };
+  if (/export/i.test(presetId) && !EXPORT_NO_REFUND.has(pack.country)) return { recoverable: true, reason: 'zero-rated' };
+  return { recoverable: false, reason: 'not-registered' };
+}
+
+/** How expenses work for income tax in the preset (see `IncomeDeduction`). */
+export function incomeDeduction(pack: RulePack, presetId: string, region?: string): IncomeDeduction {
+  const p = pack.presets.find((x) => x.id === presetId);
+  let est;
+  try {
+    est = estimateFor(pack, presetId, region);
+  } catch {
+    est = p?.estimate ?? pack.estimate;
+  }
+  if (!est) return p && p.buckets.length === 0 ? 'no-income-tax' : 'unknown';
+  // Contributions are counted in the saving; the treatment is the income tax's.
+  const tax = est.items.filter((i) => i.kind === 'incomeTax');
+  // A single fee in place of income tax (Argentina's monotributo), set by revenue band.
+  if (!tax.length) return (p?.covers ?? []).includes('incomeTax') && est.items.some((i) => i.basis === 'revenue') ? 'turnover' : 'no-income-tax';
+  if (est.taxableShareBps !== undefined) return est.justifiedExpenses ? 'justify' : 'presumptive';
+  const onRevenue = tax.filter((i) => i.basis === 'revenue').length;
+  if (onRevenue === tax.length) return 'turnover';
+  return onRevenue > 0 ? 'partial' : 'profit';
+}
+
+/** What the prepayments of the preset's calendar do with expenses (see `PrepaymentEffect`). */
+export function prepaymentEffect(pack: RulePack, presetId: string): PrepaymentEffect {
+  let dates;
+  try {
+    dates = calendarOf(pack, presetId).prepayments ?? [];
+  } catch {
+    dates = pack.calendar.prepayments ?? [];
+  }
+  if (!dates.length) return 'none';
+  const kinds = dates.map((d) => d.amount?.kind ?? 'reservedSoFar');
+  if (kinds.includes('es130')) return 'es130';
+  if (kinds.some((k) => k === 'annualized' || k === 'reservedSoFar')) return 'follows-reserve';
+  return 'fixed';
+}
+
+/** The expenses dated in the tax year that contains `at` (the pack's fiscal year). */
+export function expensesInTaxYear(pack: RulePack, list: Expense[], at: Date = new Date()): { from: string; to: string; expenses: Expense[] } {
+  const now = BigInt(Math.floor(at.getTime() / 1000));
+  const start = taxYearStart(pack.calendar.fiscalYearStart, now);
+  const end = taxYearStart(pack.calendar.fiscalYearStart, start + 86_400n, 1);
+  const from = dayString(start + 86_400n);
+  const to = dayString(end);
+  return { from, to, expenses: list.filter((e) => e.date >= from && e.date <= to) };
+}
+
+export interface DeductionSummary {
+  currency: string;
+  /** Deductible expenses counted (what they cost for income tax: the base, plus VAT that does not come back). */
+  expenses: number;
+  count: number;
+  byCategory: Partial<Record<ExpenseCategory, number>>;
+  income: {
+    treatment: IncomeDeduction;
+    /** Estimated tax and contributions for the year without and with these expenses. */
+    incomeTax?: { without: number; with: number };
+    social?: { without: number; with: number };
+    /** What the expenses save in the year (income tax plus contributions), by the pack's estimate. */
+    saving?: number;
+    /** Presumptive regimes: the share of revenue taxed whatever the expenses. */
+    taxableShareBps?: number;
+    /** Portugal: what the law asks to justify, what counts with no receipts, and what is still missing. */
+    justify?: { required: number; automatic: number; missing: number };
+  };
+  vat: VatRecovery & { amount: number };
+  prepayment: { effect: PrepaymentEffect; es130?: { before: number; after: number }; reduction?: string };
+  /** The reserve the vault should keep with these expenses, and the rule to propose when it can be lower. */
+  reserve: Pick<ExpenseImpact, 'recommendedBefore' | 'recommendedAfter' | 'currentBps' | 'proposal'>;
+}
+
+/**
+ * The deductions of the user's expenses under their country's rules: what
+ * they save in income tax and contributions (by the pack's estimate), the
+ * input VAT that comes back (or why it does not), what they do to the
+ * prepayments, and the reserve the vault should keep.
+ */
+export function deductionSummary(
+  pack: RulePack,
+  presetId: string,
+  rule: Rule,
+  input: { revenue: number; expenses: Expense[]; activity?: string; region?: string; incomeYtd?: number; withheldYtd?: number; paidYtd?: number; date?: Date },
+): DeductionSummary {
+  const vat = vatRecovery(pack, presetId, input.date);
+  const deductible = input.expenses.filter((e) => e.deductible);
+  const cost = (e: Expense) => e.base + (vat.recoverable ? 0 : e.inputVat);
+  const expenses = deductible.reduce((a, e) => a + cost(e), 0);
+  const byCategory: DeductionSummary['byCategory'] = {};
+  for (const e of deductible) byCategory[e.category] = (byCategory[e.category] ?? 0) + cost(e);
+  const treatment = incomeDeduction(pack, presetId, input.region);
+  const income: DeductionSummary['income'] = { treatment };
+  let est;
+  try {
+    est = estimateFor(pack, presetId, input.region);
+  } catch {
+    est = undefined;
+  }
+  const round = (x: number) => Math.round(x * 100) / 100;
+  if (est && est.items.length && input.revenue > 0) {
+    const r0 = estimateTaxes(est, { revenue: input.revenue, expenses: 0, activity: input.activity });
+    const r1 = estimateTaxes(est, { revenue: input.revenue, expenses, activity: input.activity });
+    income.incomeTax = { without: round(r0.incomeTax), with: round(r1.incomeTax) };
+    if (r0.social > 0) income.social = { without: round(r0.social), with: round(r1.social) };
+    income.saving = round(r0.incomeTax + r0.social - r1.incomeTax - r1.social);
+    if (est.taxableShareBps !== undefined) income.taxableShareBps = est.taxableShareBps;
+    const j = est.justifiedExpenses;
+    if (j) {
+      const required = (input.revenue * j.bps) / 10_000;
+      const automatic = Math.max(j.automatic ?? 0, j.socialCounts ? r1.social : 0);
+      income.justify = { required: round(required), automatic: round(automatic), missing: round(Math.max(0, required - automatic - expenses)) };
+    }
+  }
+  const effect = prepaymentEffect(pack, presetId);
+  const impact = expenseImpact(pack, presetId, rule, { revenue: input.revenue, expenses: input.expenses, activity: input.activity, region: input.region, incomeYtd: input.incomeYtd, withheldYtd: input.withheldYtd, paidYtd: input.paidYtd });
+  return {
+    currency: pack.currency,
+    expenses: round(expenses),
+    count: deductible.length,
+    byCategory,
+    income,
+    vat: { ...vat, amount: vat.recoverable ? round(deductible.reduce((a, e) => a + e.inputVat, 0)) : 0 },
+    prepayment: {
+      effect,
+      ...(effect === 'es130' && impact.es130 ? { es130: impact.es130 } : {}),
+      ...(effect === 'fixed' && PREPAYMENT_REDUCTION[pack.country] ? { reduction: PREPAYMENT_REDUCTION[pack.country] } : {}),
+    },
+    reserve: { recommendedBefore: impact.recommendedBefore, recommendedAfter: impact.recommendedAfter, currentBps: impact.currentBps, proposal: rule.buckets.length ? impact.proposal : undefined },
+  };
 }

@@ -4,8 +4,8 @@
  * on each prepayment, the tax office's letter, and scheduled payments.
  */
 import { useState } from 'react';
-import { daysFromCivil, dayString, drawFrom, incomeTaxBuckets, readNotice, suggestPrepayment, taxYearStart, type Deadline, type PeriodKind, type ScheduledItem } from 'kyros-sdk';
-import { applyNotice, cancelScheduled, loadInputs, money, noticeText, runDueScheduled, saveInputs, schedulePayment, taxYearPeriods, type Held, type Snapshot, type VaultInfo } from '../kyros';
+import { daysFromCivil, dayString, drawFrom, incomeTaxBuckets, readNotice, suggestPrepayment, taxYearStart, vatRecovery, type Deadline, type PeriodKind, type ScheduledItem } from 'kyros-sdk';
+import { applyNotice, cancelScheduled, loadExpenses, loadInputs, money, noticeText, runDueScheduled, saveInputs, schedulePayment, taxYearPeriods, type Held, type Snapshot, type VaultInfo } from '../kyros';
 import { fmtDate as fmtDay, fmtNumber, locale, t } from '../i18n';
 import { Button, TxLink, useApp } from '../ui';
 
@@ -177,8 +177,17 @@ function Instalment({ d }: { d: Deadline }) {
   const rule = d.amount ?? { kind: 'reservedSoFar' as const };
   const yearKey = dayString(taxYearStart(pack.calendar.fiscalYearStart, legal, 'taxYear' in rule ? (rule.taxYear ?? 0) : 0) + DAY);
   const prevKey = dayString(taxYearStart(pack.calendar.fiscalYearStart, legal, -1) + DAY);
+  // The expenses recorded on this device for that tax year (Expenses and deductions), unless the user typed a figure.
+  const offset = 'taxYear' in rule ? (rule.taxYear ?? 0) : 0;
+  const nextKey = dayString(taxYearStart(pack.calendar.fiscalYearStart, legal, offset + 1) + DAY);
+  const recoverable = vatRecovery(pack, vault.presetId).recoverable;
+  const recorded = loadExpenses(vault.vault)
+    .filter((e) => e.deductible && e.date >= yearKey && e.date < nextKey)
+    .reduce((a, e) => a + e.base + (recoverable ? 0 : e.inputVat), 0);
+  const typed = inputs.expenses[yearKey];
+  const expensesUnits = typed ? toUnits(typed) : recorded > 0 ? BigInt(Math.round(recorded * 100)) * 100_000n : undefined;
   const s = suggestPrepayment(rule, pack, kind, legal, snap.figures, {
-    expenses: toUnits(inputs.expenses[yearKey] ?? ''),
+    expenses: expensesUnits,
     previousYearTax: toUnits(inputs.previousYearTax[prevKey] ?? ''),
     notice: toUnits(inputs.notice[d.legal] ?? ''),
   });
@@ -193,7 +202,7 @@ function Instalment({ d }: { d: Deadline }) {
   const share = 'share' in rule ? Math.round(rule.share * 100) : 0;
   const basis =
     s.rule === 'es130'
-      ? t('inst_es130', { income: money(s.income ?? 0n), expenses: money(toUnits(inputs.expenses[yearKey] ?? '') ?? 0n), withheld: money(s.withheld ?? 0n), paid: money(s.paid ?? 0n) })
+      ? t('inst_es130', { income: money(s.income ?? 0n), expenses: money(expensesUnits ?? 0n), withheld: money(s.withheld ?? 0n), paid: money(s.paid ?? 0n) })
       : s.rule === 'annualized'
         ? t('inst_annualized', { share, estimate: money(s.estimate ?? 0n), paid: money(s.paid ?? 0n) })
         : s.rule === 'previousYear'
@@ -220,7 +229,7 @@ function Instalment({ d }: { d: Deadline }) {
       {s.needs === 'expenses' || s.rule === 'es130' ? (
         <label className="tiny">
           {t('needExpenses')}
-          <input className="input" inputMode="decimal" value={inputs.expenses[yearKey] ?? ''} onChange={(e) => save('expenses', yearKey, e.target.value)} />
+          <input className="input" inputMode="decimal" placeholder={recorded > 0 ? money(expensesUnits ?? 0n) : undefined} value={inputs.expenses[yearKey] ?? ''} onChange={(e) => save('expenses', yearKey, e.target.value)} />
         </label>
       ) : null}
       {s.rule === 'previousYear' && (

@@ -27,7 +27,7 @@ import {
 import { convertNow, loadExpenses, noticeText, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
 import { countryName, loadPack } from '../packs';
 import { getLang, t } from '../i18n';
-import { Tabs, TxLink, useApp } from '../ui';
+import { prefill, Tabs, TxLink, useApp } from '../ui';
 import { applyNoticeAndSchedule } from './Taxes';
 
 interface Message {
@@ -65,13 +65,15 @@ function context(snap: Snapshot | null, vault: VaultInfo, chain: ReturnType<type
     withheldYtd: thisYear.reduce((a, f) => a + u(f.withheld), 0),
     paidYtd: thisYear.reduce((a, f) => a + u(f.incomePaid), 0),
     guard: snap?.guard,
-    calendar: cal ? { period: cal.period, dues: duesOfCalendar(cal), noticeSecs: BigInt(chain.cfg.noticeSecs) } : undefined,
+    // The vault's own due rules (with its holidays), so the assistant's plan matches what the Move screen signs.
+    calendar: cal ? { period: cal.period, dues: snap?.dues ?? duesOfCalendar(cal), noticeSecs: BigInt(chain.cfg.noticeSecs) } : undefined,
     loadPacks: (cs) => Promise.all(cs.map((c) => loadPack(c.toLowerCase()))),
     pack,
     presetId: vault.presetId,
     rule: vault.rule,
     revenue: vault.answers.revenue,
     activity: vault.answers.activity,
+    region: vault.answers.region,
     spendable: snap?.spendable,
     reserved: snap?.reserved,
     buckets: snap?.buckets,
@@ -188,6 +190,10 @@ export function Assistant() {
   const act = (a: AssistantAction) => {
     if (a.kind === 'ask') return void ask(a.text);
     if (a.kind === 'go') return go(a.screen);
+    if (a.kind === 'move') {
+      prefill.move = { country: a.country, date: a.date };
+      return go('move');
+    }
     if (a.kind === 'attach') {
       setAccept(a.accept === 'csv' ? '.csv,text/csv' : 'application/pdf,.pdf,.txt,.eml,text/plain,.csv,text/csv');
       // Let the accept attribute update before the picker opens.
@@ -246,7 +252,7 @@ export function Assistant() {
                   {m.actions.map((a, i) => (
                     <button
                       key={i}
-                      className={`chip${a.kind === 'ask' ? '' : a.kind === 'go' || a.kind === 'attach' || a.kind === 'add-expense' ? ' go' : a.kind === 'stop-change' ? ' danger' : ' sign'}`}
+                      className={`chip${a.kind === 'ask' ? '' : a.kind === 'go' || a.kind === 'attach' || a.kind === 'add-expense' || a.kind === 'move' ? ' go' : a.kind === 'stop-change' ? ' danger' : ' sign'}`}
                       onClick={() => act(a)}
                       disabled={thinking || ((a.kind === 'apply-notice' || a.kind === 'register-invoice' || a.kind === 'pay-many' || a.kind === 'convert' || a.kind === 'propose-rule' || a.kind === 'stop-change') && !wallet)}
                       data-testid={`act-${a.kind}`}

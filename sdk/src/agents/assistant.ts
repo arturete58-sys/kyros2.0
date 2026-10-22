@@ -25,7 +25,7 @@ import { readNotice } from '../notice.js';
 import { checkPayouts, parsePayouts, PAYOUTS_PER_RUN, type PayoutCheck } from './payouts.js';
 import { answerReserveQuestion, buildLedger, checkTaxExport, parseReserveQuestion } from './reconcile.js';
 import type { TreasuryReading } from './treasury.js';
-import { expenseFromDocument, expenseImpact, type Expense } from './expenses.js';
+import { deductionSummary, expenseFromDocument, expensesInTaxYear, type DeductionSummary, type Expense } from './expenses.js';
 import type { GuardAlert } from './watchdog.js';
 import { checkIban } from './settlement.js';
 import type { AgentId } from './catalog.js';
@@ -81,6 +81,8 @@ export interface AssistantContext {
   /** Revenue the user gave at sign-up (VAT excluded, a year). */
   revenue?: number;
   activity?: string;
+  /** The pack region the user chose (a US state, a Spanish community...). */
+  region?: string;
   spendable?: Pair;
   reserved?: Pair;
   /** Totals per bucket over the open periods. */
@@ -113,7 +115,8 @@ export interface AssistantContext {
 }
 
 export type AssistantAction =
-  | { kind: 'go'; screen: 'pay' | 'request' | 'settings' | 'activity' | 'home'; label: string }
+  | { kind: 'go'; screen: 'pay' | 'request' | 'settings' | 'activity' | 'home' | 'expenses'; label: string }
+  | { kind: 'move'; label: string; country: string; date: string }
   | { kind: 'attach'; accept: 'document' | 'csv'; label: string }
   | { kind: 'ask'; text: string }
   | { kind: 'apply-notice'; label: string; date: string; amount?: number; taxYearStart: bigint }
@@ -521,37 +524,84 @@ async function move(q: string, ctx: AssistantContext): Promise<AssistantReply> {
   const plan = scheduleMove(ctx.calendar, { pack, presetId: preset.id }, date);
   const head = say(L, 'moveHead', { country: countryLabel(L, target.country), date: fmtDate(L, date) });
   const body = plan.plan.sameVault ? say(L, 'moveSame') : say(L, 'moveNew', { country: countryLabel(L, target.country), by: fmtDate(L, plan.proposeBy!), current: ctx.countryName });
-  return { intent: 'move', text: [head, body, say(L, 'moveNotInApp')].join('\n\n'), actions: [] };
+  return {
+    intent: 'move',
+    text: [head, body, say(L, 'moveSign')].join('\n\n'),
+    actions: [{ kind: 'move', label: say(L, 'a_move', { country: countryLabel(L, target.country) }), country: target.country, date }],
+  };
 }
 
 function expenses(ctx: AssistantContext): AssistantReply {
   const L = ctx.lang;
-  const list = ctx.expenses ?? [];
-  if (!list.length || !ctx.pack || !ctx.presetId || !ctx.rule) return { intent: 'expense', text: say(L, 'expenseIntro'), actions: [{ kind: 'attach', accept: 'document', label: say(L, 'a_attach') }] };
+  const list = ctx.pack ? expensesInTaxYear(ctx.pack, ctx.expenses ?? [], ctx.now).expenses : [];
+  const open: AssistantAction = { kind: 'go', screen: 'expenses', label: say(L, 'd_title') };
+  if (!list.length || !ctx.pack || !ctx.presetId || !ctx.rule) return { intent: 'expense', text: say(L, 'expenseIntro'), actions: [{ kind: 'attach', accept: 'document', label: say(L, 'a_attach') }, open] };
   return expenseReply(ctx, list);
+}
+
+/** What a deduction summary says, in `lang`: the regime, input VAT, prepayments (one sentence each). */
+export function deductionTexts(
+  lang: AssistantLang,
+  s: DeductionSummary,
+  o: { countryName: string; vatName?: string; revenue?: number },
+): { treatment: string; justify?: string; vat?: string; prepayment: string[]; note?: string } {
+  const m = (x: number) => `${fmtNum(lang, x)} ${s.currency}`;
+  const vat = o.vatName ?? 'VAT';
+  const share = s.income.taxableShareBps !== undefined ? pct(lang, s.income.taxableShareBps) : '';
+  let treatment: string;
+  let justify: string | undefined;
+  if (s.income.treatment === 'justify' && s.income.justify) {
+    const j = s.income.justify;
+    treatment = say(lang, 'dt_justify', { country: o.countryName, share, required: pct(lang, Math.round((j.required / Math.max(1, o.revenue ?? j.required)) * 10_000)), amount: m(j.required), automatic: m(j.automatic) });
+    justify = j.missing > 0 ? say(lang, 'dj_missing', { missing: m(j.missing) }) : say(lang, 'dj_ok');
+  } else if ((s.income.treatment === 'profit' || s.income.treatment === 'partial') && s.income.incomeTax && s.income.incomeTax.without === 0)
+    treatment = say(lang, 'dt_zero', { country: o.countryName });
+  else treatment = say(lang, `dt_${s.income.treatment === 'justify' ? 'presumptive' : s.income.treatment}` as TextKey, { country: o.countryName, share });
+  const vatText =
+    s.vat.reason === 'no-vat'
+      ? undefined
+      : s.vat.reason === 'registered' || s.vat.reason === 'zero-rated'
+      ? s.vat.amount > 0
+        ? say(lang, `dv_${s.vat.reason}` as TextKey, { vat, amount: m(s.vat.amount) })
+        : undefined
+      : say(lang, `dv_${s.vat.reason}` as TextKey, { vat });
+  const prepayment: string[] = [];
+  const p = s.prepayment;
+  if (p.effect === 'es130') prepayment.push(p.es130 ? say(lang, 'dp_es130', { before: m(p.es130.before), after: m(p.es130.after) }) : say(lang, 'dp_es130Wait'));
+  else if (p.effect === 'fixed') {
+    prepayment.push(say(lang, 'dp_fixed'));
+    if (p.reduction) prepayment.push(say(lang, 'dp_fixedReduce', { procedure: p.reduction }));
+  } else if (p.effect === 'follows-reserve') prepayment.push(say(lang, 'dp_follows-reserve'));
+  else prepayment.push(say(lang, 'dp_none', { country: o.countryName }));
+  const note = o.revenue ? say(lang, 'd_estimateNote', { country: o.countryName, revenue: m(o.revenue) }) : undefined;
+  return { treatment, justify, vat: vatText, prepayment, note };
 }
 
 function expenseReply(ctx: AssistantContext, list: Expense[], lead?: string): AssistantReply {
   const L = ctx.lang;
   const cur = ctx.pack!.currency;
   const m = (x: number) => `${fmtNum(L, x)} ${cur}`;
-  const im = expenseImpact(ctx.pack!, ctx.presetId!, ctx.rule!, { revenue: ctx.revenue ?? 0, expenses: list, activity: ctx.activity, incomeYtd: ctx.incomeYtd, withheldYtd: ctx.withheldYtd, paidYtd: ctx.paidYtd });
+  const s = deductionSummary(ctx.pack!, ctx.presetId!, ctx.rule!, { revenue: ctx.revenue ?? 0, expenses: list, activity: ctx.activity, region: ctx.region, incomeYtd: ctx.incomeYtd, withheldYtd: ctx.withheldYtd, paidYtd: ctx.paidYtd, date: ctx.now });
+  const tx = deductionTexts(L, s, { countryName: ctx.countryName, vatName: ctx.pack!.vatName, revenue: ctx.revenue });
   const items: string[] = [];
-  if (im.recommendedBefore !== undefined && im.recommendedAfter !== undefined)
+  if (s.income.saving !== undefined && s.income.saving > 0) items.push(`- ${say(L, 'd_saving')}: ${m(s.income.saving)}`);
+  if (tx.vat) items.push(`- ${tx.vat}`);
+  for (const p of tx.prepayment) items.push(`- ${p}`);
+  const r = s.reserve;
+  if (r.recommendedBefore !== undefined && r.recommendedAfter !== undefined && ctx.rule!.buckets.length)
     items.push(
-      im.recommendedAfter < im.recommendedBefore
-        ? `- ${say(L, 'expenseReserve', { before: pct(L, im.recommendedBefore), after: pct(L, im.recommendedAfter), current: pct(L, im.currentBps) })}`
-        : `- ${say(L, 'expenseReserveSame', { pct: pct(L, im.recommendedAfter), current: pct(L, im.currentBps) })}`,
+      r.recommendedAfter < r.recommendedBefore
+        ? `- ${say(L, 'expenseReserve', { before: pct(L, r.recommendedBefore), after: pct(L, r.recommendedAfter), current: pct(L, r.currentBps) })}`
+        : `- ${say(L, 'expenseReserveSame', { pct: pct(L, r.recommendedAfter), current: pct(L, r.currentBps) })}`,
     );
-  if (im.es130) items.push(`- ${say(L, 'expense130', { before: m(im.es130.before), after: m(im.es130.after) })}`);
-  if (im.inputVat > 0) items.push(`- ${say(L, 'expenseVat')}`);
-  const parts = [...(lead ? [lead] : []), `${say(L, 'expenseImpact', { expenses: m(im.expenses), vat: m(im.inputVat) })}\n${items.join('\n')}`];
+  const parts = [...(lead ? [lead] : []), [tx.treatment, tx.justify].filter(Boolean).join(' '), `${say(L, 'expenseImpact', { expenses: m(s.expenses), vat: m(s.vat.amount) })}\n${items.join('\n')}`];
   const actions: AssistantAction[] = [];
-  if (im.proposal) {
-    const nb = im.proposal.buckets.reduce((a, b) => a + b.bps, 0);
+  if (r.proposal) {
+    const nb = r.proposal.buckets.reduce((a, b) => a + b.bps, 0);
     parts.push(say(L, 'expenseLower', { new: pct(L, nb) }));
-    actions.push({ kind: 'propose-rule', label: say(L, 'a_proposeRule', { new: pct(L, nb) }), rule: im.proposal });
-  } else parts.push(say(L, 'expenseNoChange'));
+    actions.push({ kind: 'propose-rule', label: say(L, 'a_proposeRule', { new: pct(L, nb) }), rule: r.proposal });
+  } else if (ctx.rule!.buckets.length) parts.push(say(L, 'expenseNoChange'));
+  actions.push({ kind: 'go', screen: 'expenses', label: say(L, 'd_title') });
   return { intent: 'expense', text: parts.join('\n\n'), actions };
 }
 
@@ -559,9 +609,10 @@ function expenseReply(ctx: AssistantContext, list: Expense[], lead?: string): As
 export function assistantExpenseAdded(ctx: AssistantContext, added: Expense): AssistantReply {
   const L = ctx.lang;
   const cur = ctx.pack?.currency ?? '';
-  const lead = say(L, 'expenseAdded', { base: `${fmtNum(L, added.base)} ${cur}`, vat: `${fmtNum(L, added.inputVat)} ${cur}`, category: added.category });
+  const lead = say(L, 'expenseAdded', { base: `${fmtNum(L, added.base)} ${cur}`, vat: `${fmtNum(L, added.inputVat)} ${cur}`, category: say(L, `c_${added.category}` as TextKey) });
   if (!ctx.pack || !ctx.presetId || !ctx.rule) return { intent: 'expense', text: lead, actions: [] };
-  return expenseReply(ctx, [...(ctx.expenses ?? []), added], lead);
+  const year = expensesInTaxYear(ctx.pack, [...(ctx.expenses ?? []), added], ctx.now).expenses;
+  return expenseReply(ctx, year, lead);
 }
 
 function guard(ctx: AssistantContext): AssistantReply {

@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import { Address, Keypair, MuxedAccount, Account, StrKey } from '@stellar/stellar-sdk';
 import { daysByCountry, residenceWatch, residenceWindow, scheduleMove, type DayLog } from '../agents/residence.js';
 import { x402Vat, x402Gross, x402Price, x402Requirement, x402RatesNeeded, EU_STANDARD_VAT } from '../agents/x402.js';
-import { expenseFromDocument, expenseImpact } from '../agents/expenses.js';
+import { deductionSummary, expenseFromDocument, expenseImpact, expensesInTaxYear, incomeDeduction, prepaymentEffect, vatRecovery } from '../agents/expenses.js';
 import { guardAlerts, guardStopOp, guardMessage } from '../agents/watchdog.js';
 import { checkIban, checkSettlement, settlementOps, workingDaysBefore } from '../agents/settlement.js';
 import { blendRates, lendingAdvice } from '../agents/blend.js';
 import { AGENTS, isActive } from '../agents/catalog.js';
 import { assistantReply, assistantDocument, assistantExpenseAdded, countriesIn, detectIntent, type AssistantContext } from '../agents/assistant.js';
-import { loadRulePack, calendarOf, duesOfCalendar, upcomingDeadlines } from '../rulepacks.js';
+import { listRulePacks, loadRulePack, calendarOf, duesOfCalendar, upcomingDeadlines } from '../rulepacks.js';
+import { deductionTexts } from '../agents/assistant.js';
 import { KyrosClient } from '../client.js';
 import type { VaultEventRow, InboxMove } from '../events.js';
 
@@ -216,10 +217,14 @@ test('assistant: residence, moves, expenses, the guardian, x402 and paying throu
 
   const mv = await assistantReply('Me mudo a Portugal el 1 de enero de 2027', ctx());
   assert.match(mv.text, /Mudanza a Portugal el 1 de enero de 2027/);
+  assert.deepEqual(mv.actions.map((a) => a.kind === 'move' && [a.country, a.date]), [['PT', '2027-01-01']]);
 
   const ex = await assistantReply('¿Qué gastos puedo deducir?', ctx({ expenses: [{ date: '2026-09-01', base: 15_000, inputVat: 3_150, category: 'software', deductible: true }] }));
+  assert.match(ex.text, /pagas sobre el beneficio/);
   assert.match(ex.text, /modelo 130/);
+  assert.match(ex.text, /Ahorro estimado en el año/);
   assert.equal(ex.actions[0]?.kind, 'propose-rule');
+  assert.ok(ex.actions.some((a) => a.kind === 'go' && a.screen === 'expenses'));
 
   const added = assistantExpenseAdded(ctx(), { date: '2026-10-01', base: 1000, inputVat: 210, category: 'software', deductible: true });
   assert.match(added.text, /Gasto apuntado/);
@@ -238,4 +243,63 @@ test('assistant: residence, moves, expenses, the guardian, x402 and paying throu
   // An invoice: mine (register the payment) or a supplier's (an expense).
   const inv = await assistantDocument('Acme Hosting S.L. FACTURA Nº H-1 Base imponible 100,00 € IVA 21% 21,00 € Total 121,00 €', 'f.pdf', ctx());
   assert.deepEqual(inv.actions.map((a) => a.kind), ['register-invoice', 'add-expense']);
+});
+
+test('expense agent: deductions under each country’s rules', () => {
+  const ex = [{ date: '2026-03-01', base: 3000, inputVat: 600, category: 'software' as const, deductible: true }];
+  const rule = (id: string, preset: string) => {
+    const p = loadRulePack(id).presets.find((x) => x.id === preset)!;
+    return { vatBps: p.vatBps, buckets: p.buckets.map((b) => ({ name: b.name, bps: b.bps })) };
+  };
+  const sum = (id: string, preset: string, revenue = 40_000) => deductionSummary(loadRulePack(id), preset, rule(id, preset), { revenue, expenses: ex, activity: 'software', date: new Date('2026-10-22') });
+
+  // Spain: on profit, input VAT back, the modelo 130 to date.
+  const es = deductionSummary(loadRulePack('es'), 'general', rule('es', 'general'), { revenue: 40_000, expenses: ex, incomeYtd: 30_000, withheldYtd: 0, paidYtd: 0, date: new Date('2026-10-22') });
+  assert.equal(es.income.treatment, 'profit');
+  assert.ok(es.income.saving! > 0 && es.income.incomeTax!.with < es.income.incomeTax!.without);
+  assert.deepEqual([es.vat.reason, es.vat.amount], ['registered', 600]);
+  assert.deepEqual(es.prepayment, { effect: 'es130', es130: { before: 6000, after: 5400 } });
+
+  // Not registered for VAT: the VAT paid is part of the cost (Germany's Kleinunternehmer), and prepayments can be lowered on request.
+  const de = sum('de', 'small-business');
+  assert.deepEqual([de.vat.reason, de.vat.amount, de.expenses], ['not-registered', 0, 3600]);
+  assert.equal(de.prepayment.effect, 'fixed');
+  assert.match(de.prepayment.reduction!, /§ 37 Abs. 3 EStG/);
+  assert.ok(sum('de', 'standard').income.saving! < de.income.saving!);
+
+  // Presumptive and turnover regimes: real expenses do not change the income tax.
+  assert.deepEqual([sum('fr', 'micro-bnc').income.treatment, sum('fr', 'micro-bnc').income.saving], ['presumptive', 0]);
+  assert.equal(sum('ar', 'monotributo').income.treatment, 'turnover');
+  assert.equal(sum('ph', 'eight-percent').income.treatment, 'turnover');
+  assert.equal(incomeDeduction(loadRulePack('jp'), 'taxable'), 'profit');
+
+  // Portugal (coefficient 0.75): 15% of revenue must be justified; contributions count first.
+  const pt = sum('pt', 'standard', 60_000);
+  assert.equal(pt.income.treatment, 'justify');
+  assert.equal(pt.income.justify!.required, 9000);
+  const ptNone = deductionSummary(loadRulePack('pt'), 'standard', rule('pt', 'standard'), { revenue: 60_000, expenses: [], date: new Date('2026-10-22') });
+  assert.ok(ptNone.income.justify!.missing > pt.income.justify!.missing);
+
+  // Sales tax: no credit; no consumption tax at all: nothing to say about VAT.
+  assert.deepEqual([vatRecovery(loadRulePack('us'), 'self-employed').reason, sum('us', 'self-employed').expenses], ['sales-tax', 3600]);
+  assert.equal(vatRecovery(loadRulePack('hk'), 'profits-tax').reason, 'no-vat');
+  assert.equal(vatRecovery(loadRulePack('mx'), 'resico-exportacion').reason, 'zero-rated');
+  assert.equal(vatRecovery(loadRulePack('pk'), 'it-export').reason, 'not-registered');
+  assert.equal(prepaymentEffect(loadRulePack('us'), 'self-employed'), 'follows-reserve');
+
+  // Every preset of every pack has a summary, and a sentence for it in every language.
+  for (const id of listRulePacks()) {
+    const pack = loadRulePack(id);
+    for (const p of pack.presets) {
+      const s = sum(id, p.id);
+      for (const lang of ['es', 'en', 'pt', 'fr', 'de', 'it'] as const) {
+        const tx = deductionTexts(lang, s, { countryName: pack.name, vatName: pack.vatName, revenue: 40_000 });
+        assert.ok(tx.treatment && !/\{|undefined/.test([tx.treatment, tx.vat ?? '', ...tx.prepayment].join(' ')), `${id}/${p.id}/${lang}`);
+      }
+    }
+  }
+
+  // Only the expenses of the current tax year count (Australia's year starts on 1 July).
+  const au = expensesInTaxYear(loadRulePack('au'), [{ ...ex[0], date: '2026-06-30' }, { ...ex[0], date: '2026-07-01' }], new Date('2026-10-22'));
+  assert.deepEqual([au.from, au.to, au.expenses.map((e) => e.date)], ['2026-07-01', '2027-06-30', ['2026-07-01']]);
 });

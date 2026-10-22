@@ -105,6 +105,33 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await page.getByTestId('act-register-invoice').last().click();
   await settle(page);
   await expect(page.getByTestId('msg-assistant').last()).toContainText('Hecho');
+
+  // Expenses and deductions: a supplier invoice typed by hand, and what it saves under Spain's rules.
+  await page.getByRole('button', { name: 'Inicio' }).click();
+  await page.getByTestId('expenses-card').click();
+  await page.getByTestId('expense-hand').click();
+  await page.getByTestId('expense-base').fill('1000');
+  await page.getByTestId('expense-vat').fill('210');
+  await page.getByTestId('expense-save').click();
+  await expect(page.getByTestId('ded-expenses')).toContainText('1000,00');
+  await expect(page.getByTestId('deductions')).toContainText('pagas sobre el beneficio');
+
+  // Moving to Portugal from today: a new vault with Portugal's rules, and the same payment address
+  // moves to it after the notice (the passkey signs). The Spanish vault stays, with its reserve.
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByTestId('change-country').click();
+  await page.getByTestId('move-country').selectOption('pt');
+  await expect(page.getByTestId('move-plan')).toContainText('Lo que vas a firmar');
+  await page.getByTestId('move-sign').click();
+  await settle(page);
+  await expect(page.getByTestId('move-card')).toContainText('firmado');
+  await expect(page.locator('header.greet')).toContainText('Portugal', { timeout: 300_000 });
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await expect(page.getByTestId('previous-vaults')).toContainText('España');
+  await page.getByTestId('previous-vaults').getByRole('button', { name: 'Abrir' }).click();
+  await expect(page.getByTestId('archived-banner')).toBeVisible();
+  await page.getByRole('button', { name: 'Volver a la actual' }).click();
+  await expect(page.locator('header.greet')).toContainText('Portugal');
 });
 
 test('the user picks the language and it is remembered', async ({ page }) => {

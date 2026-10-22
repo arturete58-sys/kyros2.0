@@ -24,6 +24,10 @@ import {
   vaultEvents,
   inboxMoves,
   guardAlerts,
+  calendarOf,
+  scheduleMove,
+  type CalendarPeriod,
+  type MoveSchedule,
   type Expense,
   type GuardAlert,
   type Correction,
@@ -88,6 +92,37 @@ export interface VaultInfo {
   mine?: string[];
   /** Payments the user already settled (VAT taken back, or kept): their event ids. */
   settled?: string[];
+  /** A change of country the owner planned or signed, until it takes effect. */
+  move?: PendingMove;
+  /** Vaults of earlier countries: they keep their reserves and pay those taxes on their dates. */
+  previous?: VaultInfo[];
+  /** Set while the app shows an earlier vault: the current one's address. */
+  archivedOf?: string;
+}
+
+/**
+ * A change of tax residence. Same calendar: the vault takes the new rule on the
+ * day (`propose_rule_at`, signed ahead). Another calendar: a new vault, and the
+ * same payment address moves to it after the notice (`propose_vault`), signed
+ * from `signFrom` so the move lands on the day.
+ */
+export interface PendingMove {
+  packId: string;
+  region?: string;
+  presetId: string;
+  rule: Rule;
+  /** The day the new residence starts, YYYY-MM-DD. */
+  date: string;
+  kind: 'rule' | 'vault';
+  /** Unix seconds (as a string) from which the move can be signed (another calendar). */
+  signFrom?: string;
+  /** Unix seconds (as a string) when it takes effect, once signed. */
+  readyAt?: string;
+  newVault?: string;
+  /** The vault followed the law's registry before (the move stops it). */
+  wasFollowing?: boolean;
+  hashes?: string[];
+  signedAt?: string;
 }
 
 export interface TaxNotice {
@@ -106,7 +141,24 @@ export interface TaxNotice {
 const key = (owner: string) => `kyros.vault.${owner}`;
 
 export function saveVault(v: VaultInfo): void {
+  if (v.archivedOf) {
+    // An earlier vault is kept inside the current one's record.
+    const raw = store.get(key(v.owner));
+    if (!raw) return;
+    const cur = JSON.parse(raw) as VaultInfo;
+    const { archivedOf: _, ...prev } = v;
+    cur.previous = (cur.previous ?? []).map((p) => (p.vault === v.vault ? prev : p));
+    store.set(key(v.owner), JSON.stringify(cur));
+    return;
+  }
   store.set(key(v.owner), JSON.stringify(v));
+}
+
+/** The current vault's record (when the app shows an earlier one). */
+export function currentVault(v: VaultInfo): VaultInfo | null {
+  if (!v.archivedOf) return v;
+  const raw = store.get(key(v.owner));
+  return raw ? (JSON.parse(raw) as VaultInfo) : null;
 }
 
 /** What the user typed for instalments: expenses so far, last year's tax, notified amounts (per tax year or deadline). */
@@ -256,6 +308,10 @@ export interface Snapshot {
   transfers: { general: Transfer[]; abroad: Transfer[] };
   /** Pending changes the guardian flags (a new destination, rule, adapter, correction, inbox move). */
   guard: GuardAlert[];
+  /** The rule the vault applies now (read from the chain). */
+  rule: Rule | null;
+  /** When each tax of a period falls due, as the vault has it. */
+  dues: Dues | null;
 }
 
 const configs = new Map<string, { period: PeriodKind; dues: Dues }>();
@@ -274,10 +330,9 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const dollars = chain.dollarTokens;
   const none = { held: 0n, liquid: 0n, invested: 0n, surplus: 0n };
   const sum = (xs: bigint[]) => xs.reduce((a, b) => a + b, 0n);
-  if (!configs.has(v.vault)) {
-    const cfg = await safe(() => c.config(v.vault), null);
-    if (cfg) configs.set(v.vault, { period: cfg.period, dues: cfg.dues });
-  }
+  // Read every time: the rule changes when a proposal takes effect.
+  const live = await safe(() => c.config(v.vault), null);
+  if (live) configs.set(v.vault, { period: live.period, dues: live.dues });
   const conf = configs.get(v.vault) ?? null;
   const [sUsds, sEur, pUsds, pEur, period] = await Promise.all([
     Promise.all(dollars.map((d) => safe(() => c.balance(d, v.owner), 0n))),
@@ -385,6 +440,8 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     corrections,
     transfers: { general, abroad },
     guard,
+    rule: live?.rule ?? null,
+    dues: conf?.dues ?? null,
   };
 }
 
@@ -713,4 +770,155 @@ export async function applyReadyCorrections(chain: Chain, s: Snapshot, v: VaultI
 
 export function cancelCorrection(chain: Chain, wallet: Wallet, v: VaultInfo, id: number): Promise<string> {
   return wallet.signAndSend(chain.client.cancelCorrectionOp(v.vault, id));
+}
+
+// ---- Changing country ----
+
+const sameRule = (a: Rule, b: Rule) => a.vatBps === b.vatBps && JSON.stringify(a.buckets.map((x) => [x.name, x.bps])) === JSON.stringify(b.buckets.map((x) => [x.name, x.bps]));
+const nowSecs = () => BigInt(Math.floor(Date.now() / 1000));
+const dayStart = (d: string) => BigInt(Math.floor(Date.parse(`${d}T00:00:00Z`) / 1000));
+
+/** The vault's calendar as `scheduleMove` takes it. */
+function calendarPeriod(k: PeriodKind): CalendarPeriod | 'Seconds' {
+  return k.kind === 'Months' ? (`Months${k.months}` as CalendarPeriod) : k.kind;
+}
+
+/** What a move to `pack` on `date` means for this vault: the new rule and preset, and how it is done. */
+export async function planMove(chain: Chain, v: VaultInfo, s: Snapshot, pack: RulePack, region: string | undefined, date: string): Promise<{ move: PendingMove; schedule: MoveSchedule; plan: Plan }> {
+  const answers = { ...v.answers, packId: pack.id, region };
+  const plan = makePlan(pack, answers);
+  const conf = s.periodKind && s.dues ? { period: s.periodKind, dues: s.dues } : await chain.client.config(v.vault);
+  const schedule = scheduleMove(
+    { period: calendarPeriod(conf.period), dues: conf.dues, following: !!s.feed, noticeSecs: BigInt(chain.cfg.noticeSecs) },
+    { pack, presetId: plan.setup.presetId, reserves: plan.rule.buckets },
+    date,
+  );
+  const rule = schedule.plan.rule;
+  const move: PendingMove = {
+    packId: pack.id,
+    region,
+    presetId: plan.setup.presetId,
+    rule,
+    date,
+    kind: schedule.plan.sameVault ? 'rule' : 'vault',
+    // Another calendar: the payment address moves a notice after it is signed, so it is signed a notice before the day.
+    ...(schedule.plan.sameVault ? {} : { signFrom: String(dayStart(date) - BigInt(chain.cfg.noticeSecs)) }),
+    wasFollowing: !!s.feed,
+  };
+  return { move, schedule, plan: { ...plan, rule } };
+}
+
+/** Whether the move can be signed now (another calendar: only from the notice before the day). */
+export function canSignMove(m: PendingMove): boolean {
+  return m.kind === 'rule' || BigInt(m.signFrom ?? '0') <= nowSecs();
+}
+
+/** Owner: signs the move. Same calendar: the rule for the day. Another calendar: a new vault and the payment address moving to it. */
+export async function signMove(chain: Chain, wallet: Wallet, v: VaultInfo, m: PendingMove, onStep: (s: string) => void): Promise<VaultInfo> {
+  const hashes: string[] = [];
+  const c = chain.client;
+  const next: VaultInfo = { ...v, move: { ...m } };
+  if (m.kind === 'rule') {
+    if (m.wasFollowing) {
+      onStep(t('moveStepUnfollow'));
+      hashes.push(await wallet.signAndSend(c.unfollowOp(v.vault)));
+    }
+    onStep(t('moveStepRule'));
+    hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeRuleAtOp(v.vault, m.rule, dayStart(m.date)))));
+    const at = dayStart(m.date);
+    const earliest = nowSecs() + BigInt(chain.cfg.noticeSecs);
+    next.move = { ...m, readyAt: String(at > earliest ? at : earliest), hashes, signedAt: new Date().toISOString() };
+  } else {
+    const pack = await loadPack(m.packId);
+    const cfg = chain.cfg;
+    const fp = chain.feePayer;
+    onStep(t('stepFeePayer'));
+    await chain.ensureAccount(fp.publicKey());
+    onStep(t('moveStepVault'));
+    const terms = termsFromPack(pack, m.presetId, new Date(`${m.date}T00:00:00Z`), { holidayRegistry: cfg.registry || undefined });
+    const nv = await c.deployVault(fp, Buffer.from(cfg.wasm.vault, 'hex'), {
+      owner: wallet.address,
+      rule: m.rule,
+      taxDestination: cfg.taxAccount,
+      noticeSecs: BigInt(cfg.noticeSecs),
+      period: terms.period,
+      dues: terms.dues,
+      tokens: [...chain.dollarTokens, cfg.tokens.eur.contract],
+    });
+    if (v.abroadInbox) {
+      // The address for clients abroad keeps booking without VAT in the new vault.
+      onStep(t('abroadSigning'));
+      hashes.push(await wallet.signAndSend(c.expectPayerOp(nv.contractId, v.abroadInbox, abroadTerms(m.rule))));
+    }
+    onStep(t('moveStepInbox'));
+    hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(v.inbox, nv.contractId))));
+    if (v.abroadInbox) hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(v.abroadInbox, nv.contractId))));
+    next.move = { ...m, newVault: nv.contractId, readyAt: String(nowSecs() + BigInt(cfg.noticeSecs)), hashes, signedAt: new Date().toISOString() };
+  }
+  saveVault(next);
+  return next;
+}
+
+/** Saves a move that cannot be signed yet (another calendar, before the notice). */
+export function keepMove(v: VaultInfo, m: PendingMove): VaultInfo {
+  const next = { ...v, move: m };
+  saveVault(next);
+  return next;
+}
+
+/** Owner: withdraws a move before it takes effect (or forgets one not signed yet). */
+export async function cancelMove(chain: Chain, wallet: Wallet, v: VaultInfo): Promise<VaultInfo> {
+  const m = v.move;
+  if (m?.signedAt) {
+    if (m.kind === 'rule') await wallet.signAndSend(chain.client.cancelChangeOp(v.vault));
+    else {
+      await wallet.signAndSend(chain.client.cancelMoveOp(v.inbox));
+      if (v.abroadInbox) await wallet.signAndSend(chain.client.cancelMoveOp(v.abroadInbox));
+    }
+  }
+  const next = { ...v };
+  delete next.move;
+  saveVault(next);
+  return next;
+}
+
+/**
+ * Once a signed move has taken effect on chain, the app switches to it:
+ * the new rule and country, or the new vault (the earlier one is kept, with
+ * its reserves, under `previous`). Returns null while it has not.
+ */
+export async function finishMove(chain: Chain, v: VaultInfo, s: Snapshot): Promise<VaultInfo | null> {
+  const m = v.move;
+  if (!m?.signedAt || v.archivedOf || BigInt(m.readyAt ?? '0') > nowSecs()) return null;
+  const answers = { ...v.answers, packId: m.packId, region: m.region };
+  if (m.kind === 'rule') {
+    if (!s.rule || !sameRule(s.rule, m.rule)) return null;
+    const next: VaultInfo = { ...v, answers, presetId: m.presetId, rule: m.rule };
+    delete next.move;
+    saveVault(next);
+    return next;
+  }
+  if (!m.newVault || (await chain.client.inboxVault(v.inbox)) !== m.newVault) return null;
+  const { previous = [], move: _m, ...old } = v;
+  const next: VaultInfo = {
+    vault: m.newVault,
+    inbox: v.inbox,
+    abroadInbox: v.abroadInbox,
+    abroadPayers: v.abroadPayers,
+    owner: v.owner,
+    answers,
+    rule: m.rule,
+    presetId: m.presetId,
+    createdAt: new Date().toISOString(),
+    deployedAt: v.deployedAt,
+    mine: v.mine,
+    previous: [{ ...old }, ...previous],
+  };
+  saveVault(next);
+  return next;
+}
+
+/** The app shows an earlier vault (to pay its taxes and release what is left). */
+export function viewPrevious(current: VaultInfo, prev: VaultInfo): VaultInfo {
+  return { ...prev, archivedOf: current.vault };
 }

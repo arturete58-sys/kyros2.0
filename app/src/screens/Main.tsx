@@ -5,6 +5,8 @@ import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
 import { Button, LangPicker, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
 import { activityText, clientText } from './Start';
+import { ExpensesCard } from './Expenses';
+import { ArchivedBanner, MoveCard, PreviousVaults } from './Move';
 import { fmtDate as fmtDay, fmtDateTime, fmtTime, getLang, locale, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
@@ -215,7 +217,9 @@ export function Home() {
             {initials(wallet.label)}
           </span>
         </header>
+        <ArchivedBanner />
         <GuardCards />
+        <MoveCard />
         <AbroadFixes />
         {empty && (
           <section className="card start" data-testid="start-here">
@@ -304,7 +308,8 @@ export function Home() {
           </div>
         </section>
         )}
-        <PayAddress />
+        {!vault.archivedOf && <PayAddress />}
+        <ExpensesCard />
         {received.length > 0 && (
           <div className="list">
             <h2>{t('lastPayments')}</h2>
@@ -621,7 +626,7 @@ export function Pay() {
 }
 
 export function Settings() {
-  const { vault, snap, chain, wallet, run, refresh, setWallet, setVault } = useApp();
+  const { vault, snap, chain, wallet, run, refresh, setWallet, setVault, go } = useApp();
   if (!vault || !wallet) return null;
   const now = BigInt(Math.floor(Date.now() / 1000));
   const euroActive = !!snap?.conversion;
@@ -652,7 +657,14 @@ export function Settings() {
               {t('splitValue', { vat: pct(vault.rule.vatBps), res: pct(reserveBps) })}
             </span>
           </div>
+          {!vault.archivedOf && !vault.move && (
+            <Button small kind="secondary" testid="change-country" onClick={() => go('move')}>
+              {t('changeCountry')}
+            </Button>
+          )}
         </div>
+        <MoveCard />
+        <PreviousVaults />
         <h2>{t('eurosAndLaw')}</h2>
         <div className="card">
           <div className="row">

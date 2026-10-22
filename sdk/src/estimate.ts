@@ -60,6 +60,12 @@ export interface Estimate {
   profitReliefBps?: number;
   /** Cap on that deduction, in the pack's currency (Spain: EUR 2,000). */
   profitReliefMax?: number;
+  /**
+   * A presumptive regime that still asks for justified expenses (Portugal, coefficient 0.75):
+   * `bps` of revenue must be justified; `automatic` counts with no receipts (or the social
+   * contributions, when `socialCounts` and they are higher); the shortfall is added to the profit.
+   */
+  justifiedExpenses?: { bps: number; automatic?: number; socialCounts?: boolean };
   items: EstimateItem[];
   notes?: string[];
 }
@@ -246,8 +252,11 @@ export function estimateTaxes(est: Estimate, input: ReserveInput): EstimateResul
     lines.push({ name: it.name, label: it.label, kind: it.kind, amount });
   }
   const deductibleShare = est.socialDeductibleBps !== undefined ? est.socialDeductibleBps / 10_000 : est.socialDeductible ? 1 : 0;
+  // Portugal: what is missing from the share of revenue that must be justified is added to the profit.
+  const j = est.justifiedExpenses;
+  const unjustified = j ? Math.max(0, (revenue * j.bps) / 10_000 - Math.max(j.automatic ?? 0, j.socialCounts ? socialTotal + (input.fixedSocial ?? 0) : 0) - expenses) : 0;
   // Fixed contributions the user entered (e.g. Argentina's autónomos) are deductible like the pack's own.
-  const incomeBasis = Math.max(0, taxable - (socialTotal + (input.fixedSocial ?? 0)) * deductibleShare);
+  const incomeBasis = Math.max(0, taxable + unjustified - (socialTotal + (input.fixedSocial ?? 0)) * deductibleShare);
   for (const it of est.items) {
     if (it.kind !== 'incomeTax' || !applies(it)) continue;
     lines.push({ name: it.name, label: it.label, kind: it.kind, amount: amountOf(it, incomeBasis) });
@@ -255,7 +264,7 @@ export function estimateTaxes(est: Estimate, input: ReserveInput): EstimateResul
   if (input.extraIncomeTaxBps) lines.push({ name: 'extra_income_tax', label: 'Regional, state or other income tax (entered by the user)', kind: 'incomeTax', amount: (taxable * input.extraIncomeTaxBps) / 10_000 });
   if (input.fixedSocial) lines.push({ name: 'fixed_social', label: 'Fixed contributions (entered by the user)', kind: 'social', amount: input.fixedSocial });
   const sum = (k: Coverage) => lines.filter((l) => l.kind === k).reduce((a, l) => a + l.amount, 0);
-  return { revenue, expenses, taxable, lines, incomeTax: sum('incomeTax'), social: sum('social') };
+  return { revenue, expenses, taxable: taxable + unjustified, lines, incomeTax: sum('incomeTax'), social: sum('social') };
 }
 
 /**
