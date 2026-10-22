@@ -352,6 +352,11 @@ export class KyrosClient {
     return new Contract(vault).call('propose_destination', addr(destination));
   }
 
+  /** Owner: cancel the pending rule and destination changes still inside their notice. */
+  cancelChangeOp(vault: string): xdr.Operation {
+    return new Contract(vault).call('cancel');
+  }
+
   applyPendingOp(vault: string): xdr.Operation {
     return new Contract(vault).call('apply_pending');
   }

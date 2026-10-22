@@ -22,7 +22,12 @@ export interface VaultEventRow {
     | 'converted'
     | 'invested'
     | 'harvested'
-    | 'correction_applied';
+    | 'correction_applied'
+    | 'strategy_proposed'
+    | 'conversion_proposed'
+    | 'correction_proposed'
+    | 'strategy_stopped'
+    | 'conversion_stopped';
   token?: string;
   period?: number;
   gross?: bigint;
@@ -39,6 +44,16 @@ export interface VaultEventRow {
   /** A conversion: what went in (`amount`, in `token`) and what came out (`amountOut`, in `toToken`). */
   amountOut?: bigint;
   toToken?: string;
+  /** A proposed change: when it applies (UNIX seconds). */
+  readyAt?: bigint;
+  /** A proposed tax destination. */
+  destination?: string;
+  /** A proposed rule: its VAT and its reserve (sum of the buckets), bps. */
+  rule?: { vatBps: number; reserveBps: number };
+  /** A proposed yield adapter or swapper. */
+  adapter?: string;
+  /** A proposed correction's id. */
+  id?: number;
 }
 
 const KINDS = new Set([
@@ -54,6 +69,11 @@ const KINDS = new Set([
   'invested',
   'harvested',
   'correction_applied',
+  'strategy_proposed',
+  'conversion_proposed',
+  'correction_proposed',
+  'strategy_stopped',
+  'conversion_stopped',
 ]);
 
 /** Every Kyros event of `vault` from `startLedger` on (RPC keeps a limited window of history). */
@@ -73,6 +93,27 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
       const kind = topics[1] as VaultEventRow['kind'];
       if (kind === 'correction_applied') {
         rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, amount: big(v.amount) });
+        continue;
+      }
+      if (kind === 'rule_proposed' || kind === 'destination_proposed' || kind === 'strategy_proposed' || kind === 'conversion_proposed' || kind === 'correction_proposed') {
+        const rule = v.rule as { vat_bps: number; buckets: { bps: number }[] } | undefined;
+        const c = v.correction as { period: number; token: string; bucket: string; amount: bigint; ready_at: bigint } | undefined;
+        const st = (v.strategy ?? v.conversion) as { adapter?: string; swapper?: string } | undefined;
+        rows.push({
+          ledger: ev.ledger,
+          closedAt: ev.ledgerClosedAt,
+          txHash: ev.txHash,
+          kind,
+          readyAt: big(v.ready_at ?? c?.ready_at),
+          destination: v.destination !== undefined ? String(v.destination) : undefined,
+          rule: rule ? { vatBps: Number(rule.vat_bps), reserveBps: rule.buckets.reduce((a, b) => a + Number(b.bps), 0) } : undefined,
+          adapter: st ? String(st.adapter ?? st.swapper) : undefined,
+          id: kind === 'correction_proposed' ? Number(topics[2]) : undefined,
+          period: c ? Number(c.period) : undefined,
+          token: c ? String(c.token) : undefined,
+          bucket: c ? String(c.bucket) : undefined,
+          amount: c ? BigInt(c.amount) : undefined,
+        });
         continue;
       }
       if (kind === 'converted') {
@@ -112,6 +153,29 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
     cursor = res.cursor;
   }
   return rows;
+}
+
+/** An inbox's proposal to pay into another vault, and whether it was cancelled. */
+export interface InboxMove {
+  ledger: number;
+  closedAt: string;
+  txHash: string;
+  kind: 'move_proposed' | 'move_cancelled';
+  vault?: string;
+  readyAt?: bigint;
+}
+
+/** The inbox's move proposals and cancellations from `startLedger` on. */
+export async function inboxMoves(server: rpc.Server, inbox: string, startLedger: number): Promise<InboxMove[]> {
+  const res = await server.getEvents({ filters: [{ type: 'contract' as const, contractIds: [inbox] }], startLedger, limit: 200 } as rpc.Server.GetEventsRequest);
+  const out: InboxMove[] = [];
+  for (const ev of res.events) {
+    const t = ev.topic.map((x: xdr.ScVal) => scValToNative(x));
+    if (t[0] !== 'kyros_inbox' || (t[1] !== 'move_proposed' && t[1] !== 'move_cancelled')) continue;
+    const v = (scValToNative(ev.value) ?? {}) as { vault?: string; ready_at?: bigint };
+    out.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind: t[1], vault: v.vault ? String(v.vault) : undefined, readyAt: v.ready_at !== undefined ? BigInt(v.ready_at) : undefined });
+  }
+  return out;
 }
 
 /** A token transfer into an address (who paid an inbox, and how much). */

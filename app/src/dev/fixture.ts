@@ -63,6 +63,8 @@ export function fixtureSnapshot(pack: RulePack, holidays?: HolidayData): Snapsho
     pendingConversionAt: null,
     feed: { registry: 'CREG', country: 'ES', rate: 'standard', maxBps: 3000 },
     corrections: [{ id: 1, period: q, token: usd, bucket: 'vat', amount: 105n * U, readyAt: now + 5n * 86_400n }],
+    // The guardian: a new tax destination nobody proposed from this device, waiting out the notice.
+    guard: [{ kind: 'destination', tx: 'b'.repeat(64), at: day('2026-10-21T22:10:00Z'), readyAt: now + 20n * 3_600n, detail: 'GATTACKERFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', severity: 'critical', mine: false }],
     transfers: {
       // A client in Germany paid the address for clients abroad, then the usual one.
       abroad: [{ id: 't1', ledger: 5, closedAt: day('2026-09-21T10:00:00Z'), txHash: 'a1', token: usd, from: 'GCLIENTDEFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB', amount: 1_500n * U }],
@@ -79,5 +81,5 @@ export function fixtureSnapshot(pack: RulePack, holidays?: HolidayData): Snapsho
 
 /** A vault just created: no payments yet. */
 export function emptySnapshot(s: Snapshot): Snapshot {
-  return { ...s, spendable: { usd: 0n, eur: 0n }, reserved: { usd: 0n, eur: 0n }, buckets: {}, held: [], figures: [], scheduled: [], events: [], feed: null, corrections: [], transfers: { general: [], abroad: [] } };
+  return { ...s, spendable: { usd: 0n, eur: 0n }, reserved: { usd: 0n, eur: 0n }, buckets: {}, held: [], figures: [], scheduled: [], events: [], feed: null, corrections: [], transfers: { general: [], abroad: [] }, guard: [] };
 }

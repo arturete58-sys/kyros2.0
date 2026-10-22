@@ -14,6 +14,7 @@
 import { scValToNative } from '@stellar/stellar-sdk';
 import type { KyrosClient, Position, Strategy } from '../client.js';
 import { oracleAssetToScVal, u32, type Conversion } from '../scval.js';
+import { lendingAdvice, readBlendRates, type BlendRates, type LendingAdvice } from './blend.js';
 
 export type TreasuryDecision = 'convert-now' | 'wait' | 'set-up-conversion' | 'nothing-to-convert' | 'cannot-quote';
 
@@ -91,7 +92,7 @@ export function treasuryAdvice(i: TreasuryInput): TreasuryAdvice {
 export interface YieldProjection {
   /** Annual yield in basis points: observed from the vault's own position, or the one given. */
   apyBps: number;
-  source: 'observed' | 'given';
+  source: 'observed' | 'given' | 'pool';
   /** What `amount` earns from now to the due date at that yield (7 decimals). */
   untilDue: bigint;
   days: number;
@@ -150,6 +151,8 @@ export interface TreasuryReading {
   advice: TreasuryAdvice;
   yield?: YieldProjection;
   strategy: Strategy | null;
+  /** The Blend pool behind the strategy (or the one asked about): its rates and whether to lend or bring the reserve back. */
+  lending?: { pool: string; asset: string; rates: BlendRates; advice: LendingAdvice };
 }
 
 /**
@@ -160,7 +163,7 @@ export interface TreasuryReading {
  */
 export async function readTreasury(
   client: KyrosClient,
-  v: { vault: string; period: number; fromToken: string; held: bigint; dueAt: bigint; noticeSecs: bigint; investedSince?: bigint; apyBps?: number },
+  v: { vault: string; period: number; fromToken: string; held: bigint; dueAt: bigint; noticeSecs: bigint; investedSince?: bigint; apyBps?: number; blendPool?: string; blendAsset?: string; blendAmount?: bigint },
   now = BigInt(Math.floor(Date.now() / 1000)),
 ): Promise<TreasuryReading> {
   const [conversion, strategy] = await Promise.all([client.conversion(v.vault).catch(() => null), client.strategy(v.vault).catch(() => null)]);
@@ -179,5 +182,20 @@ export async function readTreasury(
     if (apy !== undefined && pos) y = projectYield((pos.held * BigInt(strategy.maxBps)) / 10_000n, apy, now, v.dueAt, 'observed');
   }
   if (!y && v.apyBps !== undefined) y = projectYield(v.held, v.apyBps, now, v.dueAt, 'given');
-  return { advice, yield: y, strategy };
+  // The pool's own rates: from the strategy's adapter, or a pool the caller names.
+  let lending: TreasuryReading['lending'];
+  try {
+    const pool = strategy ? String(scValToNative(await client.read(strategy.adapter, 'pool'))) : v.blendPool;
+    const asset = strategy?.token ?? v.blendAsset;
+    if (pool && asset) {
+      const rates = await readBlendRates(client, pool, asset);
+      const pos = strategy ? await client.position(v.vault, strategy.token).catch(() => null) : null;
+      const amount = pos ? (pos.held * BigInt(strategy!.maxBps)) / 10_000n : (v.blendAmount ?? v.held);
+      lending = { pool, asset, rates, advice: lendingAdvice({ amount, dueAt: v.dueAt, now, rates, invested: pos?.invested }) };
+      if (!y) y = projectYield(amount, rates.supplyAprBps, now, v.dueAt, 'pool');
+    }
+  } catch {
+    /* no pool reading: the rest of the advice stands */
+  }
+  return { advice, yield: y, strategy, lending };
 }

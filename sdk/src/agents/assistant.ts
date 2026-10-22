@@ -25,6 +25,13 @@ import { readNotice } from '../notice.js';
 import { checkPayouts, parsePayouts, PAYOUTS_PER_RUN, type PayoutCheck } from './payouts.js';
 import { answerReserveQuestion, buildLedger, checkTaxExport, parseReserveQuestion } from './reconcile.js';
 import type { TreasuryReading } from './treasury.js';
+import { expenseFromDocument, expenseImpact, type Expense } from './expenses.js';
+import type { GuardAlert } from './watchdog.js';
+import { checkIban } from './settlement.js';
+import type { AgentId } from './catalog.js';
+import { scheduleMove } from './residence.js';
+import type { Dues } from '../periods.js';
+import type { CalendarPeriod } from '../rulepacks.js';
 
 export type { AssistantLang } from './assistant-text.js';
 
@@ -49,6 +56,11 @@ export type Intent =
   | 'custody'
   | 'late'
   | 'payTax'
+  | 'residence'
+  | 'expense'
+  | 'guard'
+  | 'x402'
+  | 'settlement'
   | 'unknown';
 
 /** Two amounts kept apart: what is in dollars (USDC) and in euros (EURC), 7 decimals. */
@@ -84,6 +96,18 @@ export interface AssistantContext {
   euroTokens?: string[];
   /** Reads the treasury (conversion, oracle, yield) on demand. */
   loadTreasury?: (apyBps?: number) => Promise<TreasuryReading | undefined>;
+  /** Expenses the user recorded on this device (expense agent). */
+  expenses?: Expense[];
+  /** Income, withholding and income tax paid so far this year, in the pack's currency (from the vault's periods). */
+  incomeYtd?: number;
+  withheldYtd?: number;
+  paidYtd?: number;
+  /** Pending changes the guardian found. */
+  guard?: GuardAlert[];
+  /** The vault's period kind and dues, and its notice, for planning a move. */
+  calendar?: { period: CalendarPeriod | 'Seconds'; dues: Dues; following?: boolean; noticeSecs: bigint };
+  /** Loads other countries' rule packs (residence and moves). */
+  loadPacks?: (countries: string[]) => Promise<RulePack[]>;
   /** Asks the network which payout vaults accept the token (optional). */
   verifyPayouts?: (c: PayoutCheck) => Promise<PayoutCheck['problems']>;
 }
@@ -95,7 +119,10 @@ export type AssistantAction =
   | { kind: 'apply-notice'; label: string; date: string; amount?: number; taxYearStart: bigint }
   | { kind: 'register-invoice'; label: string; number: string; terms: { vatBps: number; withholdingBps: number; buckets: { name: string; bps: number }[] } }
   | { kind: 'pay-many'; label: string; check: PayoutCheck }
-  | { kind: 'convert'; label: string; period: number };
+  | { kind: 'convert'; label: string; period: number }
+  | { kind: 'add-expense'; label: string; expense: Expense }
+  | { kind: 'propose-rule'; label: string; rule: Rule }
+  | { kind: 'stop-change'; label: string; alert: GuardAlert };
 
 export interface AssistantReply {
   intent: Intent;
@@ -129,7 +156,12 @@ const WORDS: [Intent, RegExp, number][] = [
   ['payouts', /(pagar a varios|pagos masivos|varias personas|n[óo]mina|payroll|bulk|batch|many people|several people|sammelzahlung|mehrere personen|paiements group[ée]s|plusieurs personnes|pagamenti multipli|pi[ùu] persone|pagamentos em massa|v[áa]rias pessoas|pay_many|becas|grants|bounties|dao)/i, 3],
   ['law', /(novedad|qu[ée] ha cambiado|cambios? (en|de) la ley|ley|law|legal|rules changed|what changed|gesetz|[äa]nderung|neuerung|loi|nouveaut|legge|novit[àa]|lei|novidade|verifactu|factura electr[óo]nica|e-?invoic|e-?rechnung|making tax digital|\bmtd\b|2027|reforma|reform)/i, 2],
   ['move', /(me mudo|mudarme|mudanza|me voy a vivir|cambio de pa[íi]s|moving|move to|relocat|umzieh|umzug|d[ée]m[ée]nag|trasferi|mi trasferisco|mudar(-me)? para|mudan[çc]a)/i, 4],
-  ['custody', /(seguro|segura|custodi|puede kyros|tocar mi dinero|mis claves|clave privada|private key|safe|secure|custody|can kyros|sicher|verwahr|s[ûu]r|s[ée]curit|sicuro|sicurezza|seguran[çc]a|chave privada|robar|steal|hack)/i, 3],
+  ['custody', /(seguro|segura|custodi|puede kyros|tocar mi dinero|mis claves|clave privada|private key|safe|secure|custody|can kyros|sicher|verwahr|s[ûu]r|s[ée]curit|sicuro|sicurezza|seguran[çc]a|chave privada)/i, 3],
+  ['guard', /(sospechos|raro|extra[ñn]o|hacke|robad|robar|stolen|steal|suspicious|unusual|verd[äa]chtig|gestohlen|suspect|vol[ée]|sospett|rubat|suspeit|roubad|alguien (ha )?cambi|someone (has )?changed|no he sido yo|wasn.t me|cambios? pendientes?|pending changes?)/i, 5],
+  ['residence', /(d[íi]as en|days in|tage in|jours (en|au|aux)|giorni in|dias em|residen|ans[äa]ssig|d[óo]nde tributo|where do i pay tax|wo zahle ich|o[uù] (dois-je|je) pa|dove pago|onde pago|183|convenio|tratado|treaty|doble imposici|double tax|doppelbesteuer|double imposition|doppia imposizion|dupla tributa|n[óo]mada|nomad)/i, 3],
+  ['expense', /(gastos?\b|deducible|deducir|desgrav|ticket|recibo|receipt|expense|deductible|ausgabe|betriebsausgabe|absetz|d[ée]penses?|d[ée]ductible|spes[ae]|deducibil|despesas?|dedut[íi]vel|iva soportado|input vat|vorsteuer|tva d[ée]ductible|proveedor|supplier)/i, 3],
+  ['x402', /(x402|http 402|402 payment|agentes? de ia que pag|ai agents? pay|micropag|micropayment|vender (una )?api|sell (an )?api)/i, 6],
+  ['settlement', /(\biban\b|anchor|transferencia a hacienda|domiciliaci|sep-?24|liquidar (el )?impuesto|bank transfer|[üu]berweisung|virement|bonifico|transfer[êe]ncia banc|pagar por banco|cuenta bancaria|bank account)/i, 4],
   ['late', /(tarde|retraso|atraso|recargo|multa|sanci[óo]n|late|penalt|fine|interest on late|s[äa]umnis|versp[äa]t|zu sp[äa]t|zuschlag|retard|p[ée]nalit|ritardo|sanzion|mora|atrasad)/i, 3],
   ['payTax', /(c[óo]mo pago|pagar (el|los|mis) impuesto|pay (my )?tax|how do i pay|steuer(n)? zahlen|wie zahle|payer (mes|les) imp[ôo]ts|comment payer|pagare le tasse|come pago|pagar (os )?impostos|como pago)/i, 4],
 ];
@@ -196,6 +228,58 @@ export function numberIn(q: string): number | undefined {
 function percentIn(q: string): number | undefined {
   const m = /(\d{1,2}(?:[.,]\d{1,2})?)\s*%/.exec(q);
   return m ? Math.round(Number(m[1].replace(',', '.')) * 100) : undefined;
+}
+
+
+// ---- countries named in a question ----
+
+/** The countries Kyros has rule packs for. */
+export const PACK_COUNTRIES = ['AD', 'AE', 'AR', 'AU', 'BH', 'BR', 'BS', 'CA', 'CH', 'CO', 'CY', 'DE', 'EE', 'ES', 'FR', 'GB', 'GE', 'HK', 'ID', 'IE', 'IN', 'IT', 'JP', 'KE', 'KR', 'KY', 'LI', 'LU', 'MC', 'MT', 'MX', 'NG', 'NL', 'PA', 'PH', 'PK', 'PR', 'PT', 'SG', 'SV', 'TH', 'TR', 'UA', 'US', 'VN', 'ZA'];
+
+const fold = (x: string) => x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+let countryNames: [string, string][] | undefined;
+function names(): [string, string][] {
+  if (countryNames) return countryNames;
+  const out = new Map<string, string>();
+  for (const lang of Object.keys(LOCALE) as AssistantLang[]) {
+    let dn: Intl.DisplayNames | undefined;
+    try {
+      dn = new Intl.DisplayNames([LOCALE[lang]], { type: 'region' });
+    } catch {
+      dn = undefined;
+    }
+    for (const c of PACK_COUNTRIES) {
+      const n = dn?.of(c);
+      if (n) out.set(fold(n), c);
+    }
+  }
+  for (const [n, c] of [['usa', 'US'], ['eeuu', 'US'], ['estados unidos', 'US'], ['uk', 'GB'], ['reino unido', 'GB'], ['emiratos', 'AE'], ['dubai', 'AE'], ['inglaterra', 'GB'], ['england', 'GB'], ['suiza', 'CH'], ['holanda', 'NL']] as [string, string][]) out.set(n, c);
+  countryNames = [...out.entries()].sort((a, b) => b[0].length - a[0].length);
+  return countryNames;
+}
+
+/** Countries named in a text, in order of appearance, with the number of days written before each, if any. */
+export function countriesIn(q: string): { country: string; days?: number; index: number }[] {
+  const t = fold(q);
+  const found: { country: string; days?: number; index: number }[] = [];
+  const taken: [number, number][] = [];
+  for (const [name, code] of names()) {
+    let from = 0;
+    for (;;) {
+      const i = t.indexOf(name, from);
+      if (i < 0) break;
+      from = i + name.length;
+      const before = t[i - 1];
+      const after = t[i + name.length];
+      if ((before && /[a-z]/.test(before)) || (after && /[a-z]/.test(after))) continue;
+      if (taken.some(([a, b]) => i < b && i + name.length > a)) continue;
+      taken.push([i, i + name.length]);
+      const m = /(\d{1,3})\s*(?:dias?|days?|tage[n]?|jours?|giorni|d)\b[^\d]{0,12}$/.exec(t.slice(Math.max(0, i - 40), i)) ?? /(\d{1,3})\s*$/.exec(t.slice(Math.max(0, i - 12), i).replace(/\s+(y|and|und|et|e|en|in|em|au|a)\s+$/, ' '));
+      found.push({ country: code, days: m ? Number(m[1]) : undefined, index: i });
+    }
+  }
+  // "150 días en Portugal y 40 en España": a number with no unit before the second country counts as days too.
+  return found.sort((a, b) => a.index - b.index);
 }
 
 const sumPair = (xs: Pair[]): Pair => xs.reduce((a, b) => ({ usd: a.usd + b.usd, eur: a.eur + b.eur }), { usd: 0n, eur: 0n });
@@ -374,6 +458,12 @@ async function yieldAnswer(q: string, ctx: AssistantContext): Promise<AssistantR
   const L = ctx.lang;
   const given = percentIn(q);
   const t = await ctx.loadTreasury?.(given).catch(() => undefined);
+  if (t?.lending && given === undefined) {
+    const { rates, advice, asset } = t.lending;
+    const sym = isEuro(asset, ctx) ? 'EURC' : 'USDC';
+    const text = say(L, 'yieldPool', { apr: pct(L, rates.supplyAprBps), util: pct(L, rates.utilizationBps), amount: `${fmtNum(L, units(advice.amount))} ${sym}`, days: Math.max(0, advice.days), earn: `${fmtNum(L, units(advice.untilDue))} ${sym}` });
+    return { intent: 'yield', text: `${text}\n\n${say(L, `lend_${advice.decision}` as TextKey)}\n\n${say(L, 'yieldRisk')}`, actions: [] };
+  }
   const y = t?.yield;
   if (!y) return { intent: 'yield', text: `${say(L, 'yieldAsk')}\n\n${say(L, 'yieldRisk')}`, actions: [] };
   const amount = `${fmtNum(L, units(y.untilDue))} USDC`;
@@ -382,6 +472,124 @@ async function yieldAnswer(q: string, ctx: AssistantContext): Promise<AssistantR
       ? say(L, 'yieldObserved', { apy: pct(L, y.apyBps), days: y.days, amount })
       : say(L, 'yieldGiven', { apy: pct(L, y.apyBps), held: `${fmtNum(L, units(ctx.dollarReserve?.amount ?? 0n))} USDC`, days: y.days, amount });
   return { intent: 'yield', text: `${text}\n\n${say(L, 'yieldRisk')}`, actions: [] };
+}
+
+
+async function residence(q: string, ctx: AssistantContext): Promise<AssistantReply> {
+  const L = ctx.lang;
+  const counted = countriesIn(q).filter((c) => c.days !== undefined);
+  if (!counted.length || !ctx.loadPacks) return { intent: 'residence', text: say(L, 'residenceAsk'), actions: [] };
+  const packs = await ctx.loadPacks(counted.map((c) => c.country)).catch(() => [] as RulePack[]);
+  const lines: string[] = [];
+  const name = (c: string) => countryLabel(L, c);
+  let claimed = 0;
+  for (const c of counted) {
+    const p = packs.find((x) => x.country === c.country);
+    const r = p?.residence;
+    if (!r?.days) {
+      lines.push(`- ${say(L, 'residenceNoTest', { country: name(c.country), days: c.days! })}`);
+      continue;
+    }
+    const need = r.inclusive ? r.days : r.days + 1;
+    if (c.days! >= need) {
+      claimed++;
+      lines.push(`- ${say(L, 'residenceMet', { country: name(c.country), days: c.days!, threshold: r.days })}`);
+    } else lines.push(`- ${say(L, 'residenceLeft', { country: name(c.country), days: c.days!, threshold: r.days, left: need - c.days! })}`);
+  }
+  const parts = [`${say(L, 'residenceHead')}\n${lines.join('\n')}`];
+  if (claimed >= 2 || counted.length >= 2) parts.push(say(L, 'residenceTwo'));
+  parts.push(say(L, 'residenceSwitch', { current: ctx.countryName }));
+  return { intent: 'residence', text: parts.join('\n\n'), actions: [] };
+}
+
+function countryLabel(lang: AssistantLang, code: string): string {
+  try {
+    return new Intl.DisplayNames([LOCALE[lang]], { type: 'region' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+async function move(q: string, ctx: AssistantContext): Promise<AssistantReply> {
+  const L = ctx.lang;
+  const target = countriesIn(q).find((c) => c.country !== ctx.pack?.country);
+  const date = readNotice(q, (ctx.now ?? new Date()).toISOString().slice(0, 10)).dates[0]?.value;
+  if (!target || !date || !ctx.loadPacks || !ctx.calendar) return { intent: 'move', text: `${say(L, 'move')}\n\n${say(L, 'moveAsk')}`, actions: [] };
+  const [pack] = await ctx.loadPacks([target.country]).catch(() => [] as RulePack[]);
+  const preset = pack?.presets.find((p) => p.buckets.length > 0) ?? pack?.presets[0];
+  if (!pack || !preset) return { intent: 'move', text: say(L, 'moveAsk'), actions: [] };
+  const plan = scheduleMove(ctx.calendar, { pack, presetId: preset.id }, date);
+  const head = say(L, 'moveHead', { country: countryLabel(L, target.country), date: fmtDate(L, date) });
+  const body = plan.plan.sameVault ? say(L, 'moveSame') : say(L, 'moveNew', { country: countryLabel(L, target.country), by: fmtDate(L, plan.proposeBy!), current: ctx.countryName });
+  return { intent: 'move', text: [head, body, say(L, 'moveNotInApp')].join('\n\n'), actions: [] };
+}
+
+function expenses(ctx: AssistantContext): AssistantReply {
+  const L = ctx.lang;
+  const list = ctx.expenses ?? [];
+  if (!list.length || !ctx.pack || !ctx.presetId || !ctx.rule) return { intent: 'expense', text: say(L, 'expenseIntro'), actions: [{ kind: 'attach', accept: 'document', label: say(L, 'a_attach') }] };
+  return expenseReply(ctx, list);
+}
+
+function expenseReply(ctx: AssistantContext, list: Expense[], lead?: string): AssistantReply {
+  const L = ctx.lang;
+  const cur = ctx.pack!.currency;
+  const m = (x: number) => `${fmtNum(L, x)} ${cur}`;
+  const im = expenseImpact(ctx.pack!, ctx.presetId!, ctx.rule!, { revenue: ctx.revenue ?? 0, expenses: list, activity: ctx.activity, incomeYtd: ctx.incomeYtd, withheldYtd: ctx.withheldYtd, paidYtd: ctx.paidYtd });
+  const items: string[] = [];
+  if (im.recommendedBefore !== undefined && im.recommendedAfter !== undefined)
+    items.push(
+      im.recommendedAfter < im.recommendedBefore
+        ? `- ${say(L, 'expenseReserve', { before: pct(L, im.recommendedBefore), after: pct(L, im.recommendedAfter), current: pct(L, im.currentBps) })}`
+        : `- ${say(L, 'expenseReserveSame', { pct: pct(L, im.recommendedAfter), current: pct(L, im.currentBps) })}`,
+    );
+  if (im.es130) items.push(`- ${say(L, 'expense130', { before: m(im.es130.before), after: m(im.es130.after) })}`);
+  if (im.inputVat > 0) items.push(`- ${say(L, 'expenseVat')}`);
+  const parts = [...(lead ? [lead] : []), `${say(L, 'expenseImpact', { expenses: m(im.expenses), vat: m(im.inputVat) })}\n${items.join('\n')}`];
+  const actions: AssistantAction[] = [];
+  if (im.proposal) {
+    const nb = im.proposal.buckets.reduce((a, b) => a + b.bps, 0);
+    parts.push(say(L, 'expenseLower', { new: pct(L, nb) }));
+    actions.push({ kind: 'propose-rule', label: say(L, 'a_proposeRule', { new: pct(L, nb) }), rule: im.proposal });
+  } else parts.push(say(L, 'expenseNoChange'));
+  return { intent: 'expense', text: parts.join('\n\n'), actions };
+}
+
+/** After the user adds an expense: what it changes. */
+export function assistantExpenseAdded(ctx: AssistantContext, added: Expense): AssistantReply {
+  const L = ctx.lang;
+  const cur = ctx.pack?.currency ?? '';
+  const lead = say(L, 'expenseAdded', { base: `${fmtNum(L, added.base)} ${cur}`, vat: `${fmtNum(L, added.inputVat)} ${cur}`, category: added.category });
+  if (!ctx.pack || !ctx.presetId || !ctx.rule) return { intent: 'expense', text: lead, actions: [] };
+  return expenseReply(ctx, [...(ctx.expenses ?? []), added], lead);
+}
+
+function guard(ctx: AssistantContext): AssistantReply {
+  const L = ctx.lang;
+  const alerts = ctx.guard ?? [];
+  if (!alerts.length) return { intent: 'guard', text: say(L, 'guardNone'), actions: [] };
+  const lines = alerts.map((a) => `- ${say(L, 'guardLine', { what: say(L, `g_${a.kind}` as TextKey), date: a.readyAt ? fmtDate(L, new Date(Number(a.readyAt) * 1000).toISOString()) : '—', mine: a.mine ? say(L, 'guardMine') : '' })}`);
+  return {
+    intent: 'guard',
+    text: `${say(L, 'guardHead', { n: alerts.length })}\n${lines.join('\n')}\n\n${say(L, 'guardAdvice')}`,
+    actions: alerts.filter((a) => !a.mine).map((a) => ({ kind: 'stop-change' as const, label: `${say(L, 'a_stop')}: ${say(L, `g_${a.kind}` as TextKey).toLowerCase()}`, alert: a })),
+  };
+}
+
+/** An agent that is built but not switched on in the app yet: what it does and what turns it on (in its intro). */
+function ready(L: AssistantLang, id: Extract<AgentId, 'x402' | 'settlement'>, intro: TextKey): AssistantReply {
+  return { intent: id, text: say(L, intro), actions: [] };
+}
+
+function settlement(q: string, ctx: AssistantContext): AssistantReply {
+  const L = ctx.lang;
+  const m = /\b([A-Z]{2}\d{2}(?:[ -]?[A-Z0-9]{4}){2,7}(?:[ -]?[A-Z0-9]{1,4})?)\b/i.exec(q);
+  if (m) {
+    const r = checkIban(m[1]);
+    const text = r.ok ? say(L, 'ibanOk', { iban: r.iban.replace(/(.{4})/g, '$1 ').trim(), country: r.country }) : say(L, 'ibanBad', { why: say(L, `iban_${r.reason}` as TextKey) });
+    return { intent: 'settlement', text: `${text}\n\n${say(L, 'settlementIntro')}`, actions: [] };
+  }
+  return ready(L, 'settlement', 'settlementIntro');
 }
 
 /** Answers a question typed in the chat. */
@@ -422,7 +630,17 @@ export async function assistantReply(question: string, ctx: AssistantContext): P
     case 'law':
       return law(ctx);
     case 'move':
-      return { intent, text: say(L, 'move'), actions: [{ kind: 'go', screen: 'settings', label: say(L, 'a_settings') }] };
+      return move(question, ctx);
+    case 'residence':
+      return residence(question, ctx);
+    case 'expense':
+      return expenses(ctx);
+    case 'guard':
+      return guard(ctx);
+    case 'x402':
+      return ready(L, 'x402', 'x402Intro');
+    case 'settlement':
+      return settlement(question, ctx);
     case 'custody':
       return { intent, text: say(L, 'custody'), actions: [] };
     case 'late':
@@ -477,7 +695,13 @@ export async function assistantDocument(text: string, fileName: string, ctx: Ass
     parts.push(say(L, 'invoicePlan', { vat: pct(L, plan.terms.vatBps), wh: pct(L, plan.terms.withholdingBps), res: pct(L, plan.terms.buckets.reduce((s, b) => s + b.bps, 0)) }));
     if (r.warnings.includes('totals-do-not-add-up')) parts.push(say(L, 'warn_totals'));
     if (!r.number) parts.push(say(L, 'warn_number'));
-    const actions: AssistantAction[] = r.number ? [{ kind: 'register-invoice', label: say(L, 'a_registerInvoice'), number: r.number, terms: plan.terms }] : [{ kind: 'go', screen: 'request', label: say(L, 'a_request') }];
+    // Mine (a payment to come) or a supplier's (an expense): the user says which.
+    const { expense } = expenseFromDocument(text, now.toISOString().slice(0, 10));
+    parts.push(say(L, 'invoiceWhich'));
+    const actions: AssistantAction[] = [
+      r.number ? { kind: 'register-invoice', label: say(L, 'a_registerIncome'), number: r.number, terms: plan.terms } : { kind: 'go', screen: 'request', label: say(L, 'a_request') },
+      { kind: 'add-expense', label: say(L, 'a_addExpense'), expense },
+    ];
     return { intent: 'invoice', text: parts.join('\n\n'), actions };
   }
   if (kind === 'payouts-csv') {

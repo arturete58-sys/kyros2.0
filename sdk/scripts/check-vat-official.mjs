@@ -41,7 +41,8 @@ const envelope = (codes) => `<?xml version="1.0" encoding="UTF-8"?>
 const res = await fetch(ENDPOINT, {
   method: 'POST',
   headers: { 'content-type': 'text/xml; charset=utf-8', SOAPAction: 'urn:ec.europa.eu:taxud:tedb:services:v1:VatRetrievalService/RetrieveVatRates' },
-  body: envelope(packs.map((p) => p.country)),
+  // Every member state: the packs, and the standard-rate table the x402 billing agent uses.
+  body: envelope([...EU]),
 });
 const xml = await res.text();
 if (debug) console.error(xml.slice(0, 6000));
@@ -88,6 +89,20 @@ for (const p of packs.sort((a, b) => a.id.localeCompare(b.id))) {
   for (const i of issues) problems.push(`\`${p.id}\`: ${i}`);
 }
 
+// The x402 billing agent's table of standard rates (all 27 states), when the SDK is built.
+const sdk = await import('../dist/index.js').catch(() => null);
+const tableLines = [];
+if (sdk?.EU_STANDARD_VAT) {
+  for (const [c, bps] of Object.entries(sdk.EU_STANDARD_VAT).sort()) {
+    const o = official[c];
+    if (!o || !o.standard.size) continue;
+    if (!o.standard.has(bps)) {
+      tableLines.push(`- ${c}: table ${bps / 100}%, TEDB ${[...o.standard].map((x) => x / 100 + '%').join('/')}`);
+      problems.push(`\`EU_STANDARD_VAT\` (sdk/src/agents/x402.ts) ${c}: ${bps / 100}%, TEDB ${[...o.standard].map((x) => x / 100 + '%').join('/')}`);
+    }
+  }
+}
+
 const report = [
   `# EU VAT rates against the official TEDB, ${today}`,
   '',
@@ -96,6 +111,8 @@ const report = [
   '| Country | Rule pack | TEDB rates | Result |',
   '| --- | --- | --- | --- |',
   ...lines,
+  '',
+  sdk?.EU_STANDARD_VAT ? (tableLines.length ? '' : 'The x402 agent\'s table of the 27 standard rates matches TEDB.') : '',
   '',
   problems.length ? '## To review\n\n' + problems.map((x) => `- ${x}`).join('\n') : 'Every EU pack matches the official rates.',
   '',

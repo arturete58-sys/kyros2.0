@@ -156,7 +156,7 @@ sequenceDiagram
 
 ## Agents off-chain
 
-Five agents in the SDK read, check and prepare without holding funds or keys: the law agent (pull requests and registry transactions from the weekly law watch), the document agent (notices and invoices into `set_due` and `expect_invoice`), the treasury agent (when to `convert`, and the yield until the due date), the payout agent (`pay_many` from a CSV) and the reconciliation agent (every figure tied to its transaction, exports checked against the chain). The app's Assistant tab answers questions with them on the user's device. See [agents.md](agents.md).
+Ten agents in the SDK read, check and prepare without holding funds or keys: law, documents, treasury (euros and Blend yield), payouts, reconciliation, residence and moves, x402 billing, expenses, the guardian (pending changes and how to stop them) and settlement through an anchor. The app's Assistant tab answers questions with them on the user's device. See [agents.md](agents.md).
 
 ## Storage
 

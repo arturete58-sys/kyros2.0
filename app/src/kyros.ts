@@ -22,6 +22,10 @@ import {
   transfersInto,
   upcomingDeadlines,
   vaultEvents,
+  inboxMoves,
+  guardAlerts,
+  type Expense,
+  type GuardAlert,
   type Correction,
   type ActivityId,
   type ClientKind,
@@ -80,6 +84,8 @@ export interface VaultInfo {
   abroadInbox?: string;
   /** Wallets known to pay from abroad (seen paying the address for clients abroad, or confirmed by the user). */
   abroadPayers?: string[];
+  /** Changes the owner proposed from this device (transaction hashes): the guardian does not flag them. */
+  mine?: string[];
   /** Payments the user already settled (VAT taken back, or kept): their event ids. */
   settled?: string[];
 }
@@ -119,6 +125,26 @@ export function loadInputs(vault: string): InstalmentInputsStore {
 }
 export function saveInputs(vault: string, i: InstalmentInputsStore): void {
   store.set(inputsKey(vault), JSON.stringify(i));
+}
+
+/** Remembers a change the owner proposed from here, so the guardian knows it was theirs. */
+export function rememberMine(v: VaultInfo, hash: string): string {
+  v.mine = [...new Set([...(v.mine ?? []), hash])].slice(-50);
+  saveVault(v);
+  return hash;
+}
+
+const expensesKey = (vault: string) => `kyros.expenses.${vault}`;
+/** Expenses the user recorded (expense agent), kept in this browser only. */
+export function loadExpenses(vault: string): Expense[] {
+  try {
+    return JSON.parse(store.get(expensesKey(vault)) ?? '[]') as Expense[];
+  } catch {
+    return [];
+  }
+}
+export function saveExpenses(vault: string, xs: Expense[]): void {
+  store.set(expensesKey(vault), JSON.stringify(xs));
 }
 
 export function savedVault(owner: string, deployedAt: string): VaultInfo | null {
@@ -228,6 +254,8 @@ export interface Snapshot {
   corrections: Correction[];
   /** Who paid each payment address lately (the address for clients abroad, if any). */
   transfers: { general: Transfer[]; abroad: Transfer[] };
+  /** Pending changes the guardian flags (a new destination, rule, adapter, correction, inbox move). */
+  guard: GuardAlert[];
 }
 
 const configs = new Map<string, { period: PeriodKind; dues: Dues }>();
@@ -322,12 +350,22 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const latest = await safe(() => chain.server.getLatestLedger(), { sequence: 0 } as { sequence: number });
   const since = Math.max(latest.sequence - 17_000, 1);
   const allTokens = [...dollars, eur.contract];
-  const [events, corrections, general, abroad] = await Promise.all([
+  const [events, corrections, general, abroad, moves] = await Promise.all([
     safe(() => vaultEvents(chain.server, v.vault, since), []),
     safe(() => c.corrections(v.vault), [] as Correction[]),
     safe(() => transfersInto(chain.server, allTokens, v.inbox, since), [] as Transfer[]),
     v.abroadInbox ? safe(() => transfersInto(chain.server, allTokens, v.abroadInbox!, since), [] as Transfer[]) : Promise.resolve([] as Transfer[]),
+    safe(() => inboxMoves(chain.server, v.inbox, since), []),
   ]);
+  // The guardian: anything pending that the owner did not propose from here, or that goes somewhere unknown.
+  const known = new Set([chain.cfg.taxAccount, ...(chain.cfg.conversion ? [chain.cfg.conversion.swapper] : [])]);
+  const guard = guardAlerts(events, moves, {
+    now: BigInt(Math.floor(Date.now() / 1000)),
+    mine: new Set(v.mine ?? []),
+    known,
+    currentReserveBps: v.rule.buckets.reduce((a, b) => a + b.bps, 0),
+    openCorrections: new Set(corrections.map((x) => x.id)),
+  });
   return {
     spendable: { usd: sum(sUsds), eur: sEur },
     reserved: { usd: sum(pUsds.map((p) => p.held)), eur: pEur.held },
@@ -346,6 +384,7 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     events: events.reverse(),
     corrections,
     transfers: { general, abroad },
+    guard,
   };
 }
 
@@ -428,7 +467,7 @@ export function releaseDue(chain: Chain, wallet: Wallet, v: VaultInfo, h: Pick<H
 export async function proposeEuroReserve(chain: Chain, wallet: Wallet, v: VaultInfo): Promise<string> {
   const conv = chain.cfg.conversion;
   if (!conv) throw new Error(t('errNoConversion'));
-  return wallet.signAndSend(
+  const hash = await wallet.signAndSend(
     chain.client.proposeConversionOp(v.vault, {
       fromToken: chain.cfg.tokens.usd.contract,
       toToken: chain.cfg.tokens.eur.contract,
@@ -441,6 +480,7 @@ export async function proposeEuroReserve(chain: Chain, wallet: Wallet, v: VaultI
       maxAgeSecs: 86_400n,
     }),
   );
+  return rememberMine(v, hash);
 }
 
 /** Anyone (here, the fee payer): swap the period's dollar reserve into euros. */
@@ -638,7 +678,7 @@ function settle(v: VaultInfo, id: string): void {
 /** Owner: takes a suspect's VAT back (after the notice) and books that wallet's next payments without VAT. */
 export async function reclaimAbroadVat(chain: Chain, wallet: Wallet, v: VaultInfo, x: AbroadSuspect, onStep: (s: string) => void): Promise<void> {
   onStep(t('reclaiming'));
-  await wallet.signAndSend(chain.client.proposeCorrectionOp(v.vault, { period: x.period, token: x.token, bucket: 'vat', amount: x.vat }));
+  rememberMine(v, await wallet.signAndSend(chain.client.proposeCorrectionOp(v.vault, { period: x.period, token: x.token, bucket: 'vat', amount: x.vat })));
   settle(v, x.id);
   let known = null;
   try {

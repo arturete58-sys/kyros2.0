@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool } from 'kyros-sdk';
+import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, type AssistantTextKey } from 'kyros-sdk';
 import { abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
 import { Button, LangPicker, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
 import { activityText, clientText } from './Start';
-import { fmtDate as fmtDay, fmtDateTime, fmtTime, locale, t, type Key } from '../i18n';
+import { fmtDate as fmtDay, fmtDateTime, fmtTime, getLang, locale, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
 const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : 'bucketIncome');
@@ -215,6 +215,7 @@ export function Home() {
             {initials(wallet.label)}
           </span>
         </header>
+        <GuardCards />
         <AbroadFixes />
         {empty && (
           <section className="card start" data-testid="start-here">
@@ -808,6 +809,42 @@ export function Activity() {
   );
 }
 
+/** The guardian: pending changes nobody proposed from this device, each with the operation that stops it. */
+function GuardCards() {
+  const { snap, vault, chain, wallet, run, refresh } = useApp();
+  const lang = getLang();
+  const alerts = (snap?.guard ?? []).filter((a) => !a.mine);
+  if (!vault || !alerts.length) return null;
+  return (
+    <>
+      {alerts.map((a) => (
+        <div key={a.tx} className={`card ${a.severity === 'critical' ? 'danger' : 'warn'}`} data-testid="guard-alert">
+          <p className="tiny" style={{ fontWeight: 700 }}>
+            {assistantText(lang, `g_${a.kind}` as AssistantTextKey)}
+            {a.readyAt ? ` · ${fmtDateTime(new Date(Number(a.readyAt) * 1000))}` : ''}
+          </p>
+          <p className="small">{assistantText(lang, 'guardAdvice')}</p>
+          {a.detail && <p className="tiny muted mono">{a.detail}</p>}
+          <Button
+            small
+            testid="guard-stop"
+            disabled={!wallet}
+            onClick={() =>
+              wallet &&
+              run(assistantText(lang, 'a_stop'), async () => {
+                await wallet.signAndSend(guardStopOp(chain.client, a, vault.vault, vault.inbox));
+                await refresh();
+              })
+            }
+          >
+            {assistantText(lang, 'a_stop')}
+          </Button>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function Alerts() {
   const { snap, vault } = useApp();
   const now = BigInt(Math.floor(Date.now() / 1000));
@@ -828,8 +865,9 @@ export function Alerts() {
       <div className="content">
         <h1>{t('alerts')}</h1>
         {!snap && <Skeleton rows={2} />}
+        <GuardCards />
         <AbroadFixes pending />
-        {snap && items.length === 0 && !abroadSuspects(vault!, snap).length && !snap.corrections.length && <p className="muted">{t('nothingPending')}</p>}
+        {snap && items.length === 0 && !abroadSuspects(vault!, snap).length && !snap.corrections.length && !snap.guard.some((g) => !g.mine) && <p className="muted">{t('nothingPending')}</p>}
         {items.map((i) => (
           <div key={i.title + i.body} className={`card ${i.tone}`}>
             <p className="tiny" style={{ fontWeight: 700 }}>

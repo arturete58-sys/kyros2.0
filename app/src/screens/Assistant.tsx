@@ -7,8 +7,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   assistantDocument,
+  assistantExpenseAdded,
   assistantIntro,
   assistantReply,
+  calendarOf,
+  duesOfCalendar,
+  guardStopOp,
+  periodStart,
   incomeTaxBuckets,
   invoiceReference,
   payoutsOf,
@@ -19,8 +24,8 @@ import {
   type AssistantReply,
   type PeriodKind,
 } from 'kyros-sdk';
-import { convertNow, noticeText, type Snapshot, type VaultInfo } from '../kyros';
-import { countryName } from '../packs';
+import { convertNow, loadExpenses, noticeText, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
+import { countryName, loadPack } from '../packs';
 import { getLang, t } from '../i18n';
 import { Tabs, TxLink, useApp } from '../ui';
 import { applyNoticeAndSchedule } from './Taxes';
@@ -46,9 +51,22 @@ function context(snap: Snapshot | null, vault: VaultInfo, chain: ReturnType<type
   const first = usd[0];
   const dollarReserve = first ? { period: first.period, amount: usd.filter((h) => h.period === first.period).reduce((a, h) => a + h.amount, 0n), dueAt: first.payBy } : undefined;
   const investedSince = snap?.events.filter((e) => e.kind === 'invested').map((e) => BigInt(Math.floor(new Date(e.closedAt).getTime() / 1000))).sort((a, b) => (a < b ? -1 : 1))[0];
+  // This year's income, withholding and income tax paid, from the vault's periods (dollars and euros together, as the app shows them).
+  const kind = (snap?.periodKind as PeriodKind | null) ?? null;
+  const year = new Date().getUTCFullYear();
+  const thisYear = kind ? (snap?.figures ?? []).filter((f) => new Date(Number(periodStart(kind, f.id)) * 1000).getUTCFullYear() === year) : [];
+  const u = (x: bigint) => Number(x) / 1e7;
+  const cal = pack ? calendarOf(pack, vault.presetId) : null;
   return {
     lang,
     countryName: countryName(pack?.country ?? vault.answers.packId.toUpperCase()),
+    expenses: loadExpenses(vault.vault),
+    incomeYtd: thisYear.length ? thisYear.reduce((a, f) => a + u(f.income), 0) : undefined,
+    withheldYtd: thisYear.reduce((a, f) => a + u(f.withheld), 0),
+    paidYtd: thisYear.reduce((a, f) => a + u(f.incomePaid), 0),
+    guard: snap?.guard,
+    calendar: cal ? { period: cal.period, dues: duesOfCalendar(cal), noticeSecs: BigInt(chain.cfg.noticeSecs) } : undefined,
+    loadPacks: (cs) => Promise.all(cs.map((c) => loadPack(c.toLowerCase()))),
     pack,
     presetId: vault.presetId,
     rule: vault.rule,
@@ -175,6 +193,11 @@ export function Assistant() {
       // Let the accept attribute update before the picker opens.
       return void setTimeout(() => fileRef.current?.click(), 0);
     }
+    if (a.kind === 'add-expense') {
+      const before = context(snap, vault, chain);
+      saveExpenses(vault.vault, [...loadExpenses(vault.vault), a.expense]);
+      return answer(assistantExpenseAdded(before, a.expense));
+    }
     if (!wallet) return;
     if (a.kind === 'apply-notice') {
       if (!snap?.pack || !snap.periodKind) return;
@@ -197,6 +220,10 @@ export function Assistant() {
       });
     } else if (a.kind === 'convert') {
       void run(a.label, async () => done([await convertNow(chain, vault, a.period)]));
+    } else if (a.kind === 'propose-rule') {
+      void run(a.label, async () => done([rememberMine(vault, await wallet.signAndSend(chain.client.proposeRuleOp(vault.vault, a.rule)))]));
+    } else if (a.kind === 'stop-change') {
+      void run(a.label, async () => done([await wallet.signAndSend(guardStopOp(chain.client, a.alert, vault.vault, vault.inbox))]));
     }
   };
 
@@ -219,9 +246,9 @@ export function Assistant() {
                   {m.actions.map((a, i) => (
                     <button
                       key={i}
-                      className={`chip${a.kind === 'ask' ? '' : a.kind === 'go' || a.kind === 'attach' ? ' go' : ' sign'}`}
+                      className={`chip${a.kind === 'ask' ? '' : a.kind === 'go' || a.kind === 'attach' || a.kind === 'add-expense' ? ' go' : a.kind === 'stop-change' ? ' danger' : ' sign'}`}
                       onClick={() => act(a)}
-                      disabled={thinking || ((a.kind === 'apply-notice' || a.kind === 'register-invoice' || a.kind === 'pay-many' || a.kind === 'convert') && !wallet)}
+                      disabled={thinking || ((a.kind === 'apply-notice' || a.kind === 'register-invoice' || a.kind === 'pay-many' || a.kind === 'convert' || a.kind === 'propose-rule' || a.kind === 'stop-change') && !wallet)}
                       data-testid={`act-${a.kind}`}
                     >
                       {a.kind === 'ask' ? a.text : a.label}
