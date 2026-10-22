@@ -89,6 +89,22 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await page.getByTestId('make-abroad').click();
   await settle(page);
   await expect(page.getByTestId('pay-address').getByTestId('address')).toHaveText(/^C[A-Z0-9]{7}…/);
+
+  // The assistant answers from the vault, reads an invoice on the device, and the passkey signs its terms.
+  await page.getByRole('button', { name: 'Asistente' }).click();
+  await expect(page.getByTestId('msg-assistant').first()).toContainText('asistente de Kyros');
+  await page.getByTestId('assistant-input').fill('¿Cuándo es mi próximo plazo?');
+  await page.getByTestId('assistant-send').click();
+  await expect(page.getByTestId('msg-assistant').last()).toContainText('Tus próximos plazos');
+  await page.getByTestId('assistant-file').setInputFiles({
+    name: 'factura.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from(`FACTURA Nº E2E-${Date.now()} Base imponible 100,00 € IVA 21% 21,00 € Retención IRPF 15% -15,00 € Total a pagar 106,00 €`),
+  });
+  await expect(page.getByTestId('msg-assistant').last()).toContainText('retención del cliente 15');
+  await page.getByTestId('act-register-invoice').last().click();
+  await settle(page);
+  await expect(page.getByTestId('msg-assistant').last()).toContainText('Hecho');
 });
 
 test('the user picks the language and it is remembered', async ({ page }) => {

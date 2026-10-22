@@ -9,9 +9,12 @@ name: Law watch
 #     real browser, or from the Internet Archive;
 #  5. the public holidays behind the deadlines, against the newest release of the
 #     `holidays` package (a new or moved holiday changes rule-packs/holidays).
-# Anything that needs a look opens (or updates) one issue. A maintainer reviews,
-# updates the pack, and syncs the on-chain rate registry from it; vaults that
-# follow the registry then change on the legal date with no action from users.
+# Anything that needs a look opens (or updates) one issue. Where the fix is
+# unambiguous (an official standard VAT rate that differs, new holiday data),
+# the law agent (sdk/scripts/law-agent.mjs) prepares it as a pull request; a
+# maintainer reviews and merges it, then signs the registry transactions the
+# agent prepares, so vaults that follow the registry change on the legal date
+# with no action from users. Nothing is merged or signed automatically.
 on:
   schedule:
     - cron: '17 5 * * 1'
@@ -23,6 +26,7 @@ on:
 permissions:
   contents: write
   issues: write
+  pull-requests: write
 
 concurrency:
   group: law-watch
@@ -37,10 +41,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Build the SDK (for the law agent)
+        run: cd sdk && npm ci && npm run build
       - name: EU rates against the official TEDB
         id: tedb
         continue-on-error: true
-        run: node sdk/scripts/check-vat-official.mjs --out tedb.md
+        run: node sdk/scripts/check-vat-official.mjs --out tedb.md --json tedb.json
       - name: EU and UK rates against an independent dataset
         id: dataset
         continue-on-error: true
@@ -82,6 +88,43 @@ jobs:
             git commit -m 'Law watch: official snapshots'
             git pull --rebase origin main && git push
           fi
+      - name: 'Law agent: changes for review'
+        id: agent
+        if: steps.tedb.outcome == 'failure' || steps.holidays.outcome == 'failure'
+        run: |
+          node sdk/scripts/law-agent.mjs --findings tedb.json --apply --out agent.md
+          if [ "${{ steps.holidays.outcome }}" = failure ]; then python rule-packs/holidays/generate.py; fi
+          if [ -n "$(git status --porcelain -- rule-packs ':!rule-packs/watch')" ]; then
+            branch="law-agent/$(date -u +%F)"
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git switch -c "$branch"
+            git add -- rule-packs ':!rule-packs/watch'
+            git commit -m 'Law agent: rule packs from the law watch'
+            git push -f origin "$branch"
+            echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          fi
+      - name: 'Law agent: open the pull request'
+        if: steps.agent.outputs.branch != ''
+        uses: actions/github-script@v7
+        env:
+          BRANCH: ${{ steps.agent.outputs.branch }}
+        with:
+          script: |
+            const fs = require('fs');
+            const head = process.env.BRANCH;
+            const body = fs.readFileSync('agent.md', 'utf8');
+            let link;
+            try {
+              const { data: open } = await github.rest.pulls.list({ ...context.repo, state: 'open', head: `${context.repo.owner}:${head}` });
+              const pr = open[0] ?? (await github.rest.pulls.create({ ...context.repo, head, base: 'main', title: `Law agent: rule packs to review (${head.slice(10)})`, body })).data;
+              link = pr.html_url;
+            } catch (e) {
+              // Repositories that do not let Actions open pull requests: the branch is there to compare.
+              link = `https://github.com/${context.repo.owner}/${context.repo.repo}/compare/main...${head}`;
+              core.warning(`pull request not opened (${e.message}); compare: ${link}`);
+            }
+            fs.appendFileSync('report.md', `\n## Law agent\n\nChanges prepared for review: ${link}\n`);
       - name: Open or update an issue
         if: steps.tedb.outcome == 'failure' || steps.dataset.outcome == 'failure' || steps.oecd.outcome == 'failure' || steps.pages.outcome == 'failure' || steps.holidays.outcome == 'failure'
         uses: actions/github-script@v7

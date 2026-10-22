@@ -20,7 +20,7 @@ export interface Ctx {
   setLang(l: Lang): void;
 }
 
-export type Screen = 'home' | 'request' | 'pay' | 'settings' | 'activity' | 'alerts';
+export type Screen = 'home' | 'request' | 'pay' | 'settings' | 'activity' | 'alerts' | 'assistant';
 
 export const AppCtx = createContext<Ctx>(null as unknown as Ctx);
 export const useApp = () => useContext(AppCtx);
@@ -88,6 +88,12 @@ export function Top(p: { onBack?: () => void; step?: number; of?: number }) {
 const icons: Record<string, ReactNode> = {
   home: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z" />,
   list: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />,
+  chat: (
+    <>
+      <path d="M20.5 11.5a8 8 0 0 1-11.7 7.1L4 20l1.4-4.6A8 8 0 1 1 20.5 11.5Z" />
+      <path d="M8.5 10.5h7M8.5 13.5h4.5" />
+    </>
+  ),
   bell: (
     <>
       <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z" />
@@ -107,6 +113,7 @@ export function Tabs(p: { current: Screen }) {
   const tabs: [Screen, string, string][] = [
     ['home', t('tabHome'), 'home'],
     ['activity', t('movements'), 'list'],
+    ['assistant', t('assistantTab'), 'chat'],
     ['alerts', t('alerts'), 'bell'],
     ['settings', t('settings'), 'gear'],
   ];

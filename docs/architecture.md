@@ -154,6 +154,10 @@ sequenceDiagram
 
 `propose_vault(new_vault)` on the inbox needs the vault owner's signature, and the new vault must belong to the same owner. The move takes effect after the current vault's notice, and `cancel_move` withdraws it until then. The payment address stays the same. The old vault keeps its reserves, pays the old country's taxes from them and releases the rest on its own due dates. No locked money moves between vaults.
 
+## Agents off-chain
+
+Five agents in the SDK read, check and prepare without holding funds or keys: the law agent (pull requests and registry transactions from the weekly law watch), the document agent (notices and invoices into `set_due` and `expect_invoice`), the treasury agent (when to `convert`, and the yield until the due date), the payout agent (`pay_many` from a CSV) and the reconciliation agent (every figure tied to its transaction, exports checked against the chain). The app's Assistant tab answers questions with them on the user's device. See [agents.md](agents.md).
+
 ## Storage
 
 - Instance: config (owner, rule, tax destination, notice, period kind, due rules per bucket, accepted tokens) and pending changes. Extended on every write.

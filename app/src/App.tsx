@@ -14,6 +14,7 @@ const Home = lazy(() => Main().then((m) => ({ default: m.Home })));
 const Pay = lazy(() => Main().then((m) => ({ default: m.Pay })));
 const Request = lazy(() => Main().then((m) => ({ default: m.Request })));
 const Settings = lazy(() => Main().then((m) => ({ default: m.Settings })));
+const Assistant = lazy(() => import('./screens/Assistant').then((m) => ({ default: m.Assistant })));
 const Onboarding = lazy(() => import('./screens/Start').then((m) => ({ default: m.Onboarding })));
 const Welcome = lazy(() => import('./screens/Start').then((m) => ({ default: m.Welcome })));
 const PayLink = lazy(() => import('./screens/PayLink').then((m) => ({ default: m.PayLink })));
@@ -177,6 +178,7 @@ export default function App() {
   else if (screen === 'settings') page = <Settings />;
   else if (screen === 'activity') page = <Activity />;
   else if (screen === 'alerts') page = <Alerts />;
+  else if (screen === 'assistant') page = <Assistant />;
   else page = <Home />;
 
   return (

@@ -32,6 +32,33 @@ export function scheduleAt(payBy: bigint): bigint {
   return at > now + 60n ? at : now + 60n;
 }
 
+/**
+ * Applies a tax office notice to the vault (the income-tax due date for its
+ * tax year) and, when it states an amount, schedules that payment from the
+ * income-tax reserve shortly before the date. Used by the notice reader and
+ * the assistant.
+ */
+export async function applyNoticeAndSchedule(
+  chain: Parameters<typeof applyNotice>[0],
+  wallet: Parameters<typeof applyNotice>[1],
+  vault: VaultInfo,
+  snap: Snapshot,
+  kind: PeriodKind,
+  pack: NonNullable<Snapshot['pack']>,
+  n: { date: string; amount?: bigint; taxYearStart: bigint },
+  step: (s: string) => void,
+): Promise<string[]> {
+  const hs = await applyNotice(chain, wallet, vault, kind, pack, n, step);
+  if (n.amount && n.amount > 0n) {
+    // The payment goes out by itself shortly before the notice's date.
+    const { from, to } = taxYearPeriods(kind, pack, n.taxYearStart);
+    const rows = incomeRows(snap, vault).filter((h) => h.period >= from && h.period <= to);
+    const { items } = drawFrom(rows, n.amount);
+    if (items.length) hs.push(await schedulePayment(chain, wallet, vault, scheduleAt(endOfDay(n.date)), items));
+  }
+  return hs;
+}
+
 /** Income-tax reserve rows of the vault (what instalments are paid from). */
 function incomeRows(s: Snapshot, v: VaultInfo): Held[] {
   const names = s.pack ? incomeTaxBuckets(s.pack, v.presetId) : [];
@@ -320,15 +347,7 @@ export function NoticeReader() {
                   disabled={!/^\d{4}-\d{2}-\d{2}$/.test(date)}
                   onClick={() =>
                     run(t('noticeApply'), async (step) => {
-                      const hs = await applyNotice(chain, wallet, vault, kind, pack, { date, amount: toUnits(amount), taxYearStart: BigInt(year) }, step);
-                      const due = toUnits(amount);
-                      if (due && due > 0n) {
-                        // The payment goes out by itself shortly before the notice's date.
-                        const { from, to } = taxYearPeriods(kind, pack, BigInt(year));
-                        const rows = incomeRows(snap, vault).filter((h) => h.period >= from && h.period <= to);
-                        const { items } = drawFrom(rows, due);
-                        if (items.length) hs.push(await schedulePayment(chain, wallet, vault, scheduleAt(endOfDay(date)), items));
-                      }
+                      const hs = await applyNoticeAndSchedule(chain, wallet, vault, snap, kind, pack, { date, amount: toUnits(amount), taxYearStart: BigInt(year) }, step);
                       setHashes(hs);
                       setDone(t('noticeApplied'));
                       await refresh();

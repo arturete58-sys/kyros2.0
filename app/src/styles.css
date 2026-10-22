@@ -262,3 +262,38 @@ h1.display { font-size: 34px; line-height: 1.06; letter-spacing: -0.035em; font-
 .greet h1 { font-size: 26px; }
 .avatar { flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--action-soft); color: var(--action); font-weight: 600; font-size: 16px; display: flex; align-items: center; justify-content: center; letter-spacing: 0.02em; }
 .content { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 35%, transparent) transparent; }
+
+/* Assistant: a chat answered on the device. Bubbles keep the app's one action colour for the user's side. */
+.chat { gap: 12px; }
+.chat-head { display: flex; flex-direction: column; gap: 4px; }
+.chat-log { display: flex; flex-direction: column; gap: 10px; }
+.bubble { max-width: 90%; padding: 12px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 6px; animation: bubble-in 0.2s var(--ease); overflow-wrap: anywhere; }
+.bubble.assistant { align-self: flex-start; background: var(--surface); border-bottom-left-radius: 6px; }
+.bubble.user { align-self: flex-end; background: var(--action); color: var(--on-action); border-bottom-right-radius: 6px; }
+.bubble ul { margin: 2px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.bubble .chat-block { display: flex; flex-direction: column; gap: 2px; }
+.bubble .chat-block + .chat-block { margin-top: 6px; }
+.bubble a { align-self: flex-start; }
+.chat-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { border: 0; border-radius: 999px; padding: 8px 13px; font-size: 13.5px; font-weight: 550; line-height: 1.25; text-align: left; cursor: pointer; background: var(--action-soft); color: var(--action); transition: background-color 0.15s, transform 0.12s var(--ease); min-height: 40px; }
+.chip.go { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.chip.sign { background: var(--action); color: var(--on-action); }
+.chip:active:not(:disabled) { transform: scale(0.97); }
+.chip:disabled { opacity: 0.45; cursor: default; }
+.typing { flex-direction: row; gap: 5px; padding: 15px 16px; }
+.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); animation: blink 1.2s infinite ease-in-out; }
+.typing span:nth-child(2) { animation-delay: 0.15s; }
+.typing span:nth-child(3) { animation-delay: 0.3s; }
+.dock { position: sticky; bottom: 0; z-index: var(--z-tabs); }
+.dock .tabs { position: static; background: var(--surface); }
+.composer { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface); box-shadow: 0 -1px 0 var(--line); }
+.chat-end { scroll-margin-bottom: 150px; height: 1px; }
+.composer .input { border-radius: 999px; padding: 11px 16px; }
+.icon-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--action-soft); color: var(--action); cursor: pointer; transition: opacity 0.15s, transform 0.12s var(--ease); }
+.icon-btn svg { width: 21px; height: 21px; }
+.icon-btn.send { background: var(--action); color: var(--on-action); }
+.icon-btn:disabled { opacity: 0.4; cursor: default; }
+.icon-btn:active:not(:disabled) { transform: scale(0.95); }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bubble, .typing span { animation: none; } }

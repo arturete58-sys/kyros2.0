@@ -2,7 +2,9 @@
 // VAT rates (TEDB, "Taxes in Europe Database"), through its public VAT Retrieval
 // web service. Prints a Markdown report; exits with 1 when a rate differs.
 //
-//   node scripts/check-vat-official.mjs [--out report.md] [--debug]
+//   node scripts/check-vat-official.mjs [--out report.md] [--json findings.json] [--debug]
+//
+// `--json` writes the differences as findings for the law agent (law-agent.mjs).
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +16,8 @@ const packDir = join(here, '..', '..', 'rule-packs');
 const args = process.argv.slice(2);
 const out = args.includes('--out') ? args[args.indexOf('--out') + 1] : undefined;
 const debug = args.includes('--debug');
+const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : undefined;
+const findings = [];
 const today = new Date().toISOString().slice(0, 10);
 
 const packs = readdirSync(packDir)
@@ -70,8 +74,16 @@ for (const p of packs.sort((a, b) => a.id.localeCompare(b.id))) {
     continue;
   }
   const issues = [];
-  if (o.standard.size && !o.standard.has(mine.standard)) issues.push(`standard ${mine.standard / 100}%, TEDB ${[...o.standard].map((x) => x / 100 + '%').join('/')}`);
-  for (const [k, v] of Object.entries(mine).filter(([k]) => !k.startsWith('regional_'))) if (v !== 0 && !o.all.has(v)) issues.push(`\`${k}\` ${v / 100}% is not a TEDB rate`);
+  if (o.standard.size && !o.standard.has(mine.standard)) {
+    issues.push(`standard ${mine.standard / 100}%, TEDB ${[...o.standard].map((x) => x / 100 + '%').join('/')}`);
+    findings.push({ pack: p.id, country: p.country, rate: 'standard', packBps: mine.standard, officialBps: [...o.standard], source: 'European Commission TEDB' });
+  }
+  for (const [k, v] of Object.entries(mine).filter(([k]) => !k.startsWith('regional_') && k !== 'standard')) {
+    if (v !== 0 && !o.all.has(v)) {
+      issues.push(`\`${k}\` ${v / 100}% is not a TEDB rate`);
+      findings.push({ pack: p.id, country: p.country, rate: k, packBps: v, officialBps: [...o.all], source: 'European Commission TEDB' });
+    }
+  }
   lines.push(`| ${p.country} | ${Object.entries(mine).map(([k, v]) => `${k} ${v / 100}%`).join(', ')} | ${[...o.all].sort((a, b) => b - a).map((x) => x / 100 + '%').join(', ')} | ${issues.length ? '⚠️ ' + issues.join('; ') : 'matches'} |`);
   for (const i of issues) problems.push(`\`${p.id}\`: ${i}`);
 }
@@ -90,4 +102,5 @@ const report = [
 ].join('\n');
 console.log(report);
 if (out) writeFileSync(out, report);
+if (jsonOut) writeFileSync(jsonOut, JSON.stringify(findings, null, 2) + '\n');
 if (problems.length) process.exitCode = 1;
