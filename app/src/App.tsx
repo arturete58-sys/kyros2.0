@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chain } from './chain';
 import { loadConfig, type AppConfig } from './config';
-import { applyReadyCorrections, finishMove, learnAbroadPayers, runDueScheduled, savedVault, saveVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
+import { applyReadyCorrections, finishMove, freshVault, learnAbroadPayers, runDueScheduled, savedVault, saveVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
 import { countryName } from './packs';
 import { AppCtx, type Ctx, type Screen } from './ui';
 import { friendlyError } from './errors';
@@ -98,9 +98,14 @@ export default function App() {
     if (!chain || !vault || (import.meta.env.DEV && location.hash.startsWith('#fixture'))) return;
     const s = await snapshot(chain, vault);
     setSnap(s);
-    // A signed change of country that has taken effect: the app switches to it.
-    if (vault.move?.signedAt && !vault.archivedOf) {
-      const done = await finishMove(chain, vault, s).catch(() => null);
+    // A signed change of country that has taken effect: the app switches to it. The stored record is
+    // read again: a refresh started before the move was signed must not write over it.
+    const latest = freshVault(vault);
+    if (latest.move?.signedAt && !latest.archivedOf) {
+      const done = await finishMove(chain, latest, s).catch((e: Error) => {
+        console.info('[move] check failed:', e.message);
+        return null;
+      });
       if (done) {
         setVault(done);
         setToast({ msg: t('moveDone', { country: countryName(done.answers.packId.toUpperCase()) }) });
@@ -110,13 +115,14 @@ export default function App() {
     // The rule the vault applies now (a proposal took effect, or the law's registry changed the VAT).
     const key = (r: VaultInfo['rule']) => `${r.vatBps}|${r.buckets.map((b) => `${b.name}:${b.bps}`).join(',')}`;
     if (s.rule && key(s.rule) !== key(vault.rule)) {
-      const next = { ...vault, rule: s.rule };
+      const next = { ...freshVault(vault), rule: s.rule };
       saveVault(next);
       setVault(next);
       return;
     }
     // Wallets that paid the address for clients abroad are remembered in this browser.
-    if (learnAbroadPayers(vault, s)) setVault({ ...vault });
+    const base = freshVault(vault);
+    if (learnAbroadPayers(base, s)) setVault({ ...base });
     // Payments sent straight to the payment address are split here, by this browser's fee payer,
     // and scheduled tax payments whose date has come are sent (anyone may run them).
     if (sweeping.current || location.hash === '#ui-test') return;

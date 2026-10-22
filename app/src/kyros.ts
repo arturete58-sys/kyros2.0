@@ -154,6 +154,15 @@ export function saveVault(v: VaultInfo): void {
   store.set(key(v.owner), JSON.stringify(v));
 }
 
+/** The latest stored record of this vault (other code may have saved it since `v` was read). */
+export function freshVault(v: VaultInfo): VaultInfo {
+  if (v.archivedOf) return v;
+  const raw = store.get(key(v.owner));
+  if (!raw) return v;
+  const s = JSON.parse(raw) as VaultInfo;
+  return s.vault === v.vault ? s : v;
+}
+
 /** The current vault's record (when the app shows an earlier one). */
 export function currentVault(v: VaultInfo): VaultInfo | null {
   if (!v.archivedOf) return v;
@@ -892,13 +901,20 @@ export async function finishMove(chain: Chain, v: VaultInfo, s: Snapshot): Promi
   if (!m?.signedAt || v.archivedOf || BigInt(m.readyAt ?? '0') > nowSecs()) return null;
   const answers = { ...v.answers, packId: m.packId, region: m.region };
   if (m.kind === 'rule') {
-    if (!s.rule || !sameRule(s.rule, m.rule)) return null;
+    if (!s.rule || !sameRule(s.rule, m.rule)) {
+      console.info('[move] the vault does not apply the new rule yet');
+      return null;
+    }
     const next: VaultInfo = { ...v, answers, presetId: m.presetId, rule: m.rule };
     delete next.move;
     saveVault(next);
     return next;
   }
-  if (!m.newVault || (await chain.client.inboxVault(v.inbox)) !== m.newVault) return null;
+  const now = m.newVault ? await chain.client.inboxVault(v.inbox) : '';
+  if (!m.newVault || now !== m.newVault) {
+    console.info('[move] the payment address still pays into', now, 'not yet', m.newVault);
+    return null;
+  }
   const { previous = [], move: _m, ...old } = v;
   const next: VaultInfo = {
     vault: m.newVault,

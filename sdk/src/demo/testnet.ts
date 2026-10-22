@@ -299,8 +299,14 @@ async function main(): Promise<void> {
     tx: abT2.hash,
     detail: suspect ? `payer ${suspect.from.slice(0, 8)}… seen paying both addresses` : 'not recognised',
   });
-  const abPid = Number((await vaultEvents(c.server, abVault.contractId, Math.max(latestAb - 200, 1))).filter((e) => e.kind === 'received').pop()?.period ?? (await c.currentPeriod(abVault.contractId)));
-  const abVat = (await c.period(abVault.contractId, abPid, token)).buckets.vat ?? 0n;
+  // The period that holds the VAT just reserved: this hour's, or the last one's if the hour turned since
+  // (read from the vault itself: the RPC's event index can lag a few seconds behind).
+  let abPid = await c.currentPeriod(abVault.contractId);
+  let abVat = (await c.period(abVault.contractId, abPid, token)).buckets.vat ?? 0n;
+  if (abVat === 0n) {
+    abPid -= 1;
+    abVat = (await c.period(abVault.contractId, abPid, token)).buckets.vat ?? 0n;
+  }
   const corr = await c.send(k.freelancer, c.proposeCorrectionOp(abVault.contractId, { period: abPid, token, bucket: 'vat', amount: abVat }));
   const corrEarly = await expectRefusal(() => c.send(k.keeper, c.applyCorrectionOp(abVault.contractId, 1)), 'NotYet');
   steps.push({ step: `The owner proposes taking that VAT back (${formatAmount(abVat)} KUSD); applying it before the 2-minute notice is refused`, ok: abVat === parseAmount('210'), tx: corr.hash, detail: `refused by the contract: ${corrEarly}` });

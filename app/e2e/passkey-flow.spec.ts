@@ -10,6 +10,7 @@ async function virtualFaceId(page: Page) {
 }
 
 const consoleErrors: string[] = [];
+const moveLog: string[] = [];
 
 async function settle(page: Page) {
   await expect(page.getByTestId('busy')).toHaveCount(0, { timeout: 300_000 });
@@ -22,6 +23,7 @@ const amountOf = async (page: Page, testid: string) => Number(((await page.getBy
 
 test('a freelancer signs up with a passkey, gets paid, registers an expected payment and pays the tax', async ({ page }) => {
   page.on('console', (m) => m.type() === 'error' && consoleErrors.push(m.text().slice(0, 1500)));
+  page.on('console', (m) => m.text().startsWith('[move]') && moveLog.push(m.text().slice(0, 300)));
   page.on('pageerror', (e) => consoleErrors.push(String(e.stack ?? e).slice(0, 1500)));
   await virtualFaceId(page);
   await page.goto('./');
@@ -125,7 +127,12 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await page.getByTestId('move-sign').click();
   await settle(page);
   await expect(page.getByTestId('move-card')).toContainText('firmado');
-  await expect(page.locator('header.greet')).toContainText('Portugal', { timeout: 300_000 });
+  try {
+    await expect(page.locator('header.greet')).toContainText('Portugal', { timeout: 300_000 });
+  } catch (e) {
+    const stored = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('kyros.vault.')).map((k) => JSON.stringify(JSON.parse(localStorage.getItem(k) ?? '{}').move ?? null)));
+    throw new Error(`${(e as Error).message.slice(0, 300)}\n[move log] ${moveLog.slice(-4).join(' | ')}\n[stored move] ${stored.join(' ')}\n${consoleErrors.slice(-3).join('\n')}`);
+  }
   await page.getByRole('button', { name: 'Ajustes' }).click();
   await expect(page.getByTestId('previous-vaults')).toContainText('España');
   await page.getByTestId('previous-vaults').getByRole('button', { name: 'Abrir' }).click();
