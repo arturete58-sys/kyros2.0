@@ -522,6 +522,12 @@ async function main(): Promise<void> {
   });
 
   // A platform's payout run: one signature pays two freelancers, each split by their own vault.
+  // The Spanish vault's rate changes at the legal date: keep the run (quote, simulate, submit) clear of it.
+  const toLaw = Number(lawDate) * 1000 - Date.now();
+  if (toLaw > -10_000 && toLaw < 45_000) {
+    log(`waiting ${Math.ceil((toLaw + 10_000) / 1000)} s so the payout run does not straddle the Spanish legal date`);
+    await sleep(toLaw + 10_000);
+  }
   const runQuotes = [await c.quote(vault.contractId, parseAmount('121')), await c.quote(thVault.contractId, parseAmount('110'))];
   const runHeld = [await c.balance(token, vault.contractId), await c.balance(token, thVault.contractId)];
   const run = await c.send(
