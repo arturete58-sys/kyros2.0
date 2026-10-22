@@ -52,6 +52,16 @@ export function deductionsOf(v: VaultInfo, pack: RulePack, list = loadExpenses(v
   return { summary, year };
 }
 
+/** The same, or nothing when the figures cannot be worked out (never breaks the screen). */
+function safeDeductions(...a: Parameters<typeof deductionsOf>): ReturnType<typeof deductionsOf> | null {
+  try {
+    return deductionsOf(...a);
+  } catch (e) {
+    console.error('deductions', e);
+    return null;
+  }
+}
+
 interface Draft {
   date: string;
   supplier: string;
@@ -72,7 +82,7 @@ export function Expenses() {
   const [hash, setHash] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
   const pack = snap?.pack ?? null;
-  const d = useMemo(() => (vault && pack ? deductionsOf(vault, pack, list, snap) : null), [vault, pack, list, snap]);
+  const d = useMemo(() => (vault && pack && pack.id === vault.answers.packId ? safeDeductions(vault, pack, list, snap) : null), [vault, pack, list, snap]);
   if (!vault || !wallet) return null;
   const lang = getLang();
   const country = countryName(pack?.country ?? vault.answers.packId.toUpperCase());
@@ -304,7 +314,7 @@ export function Expenses() {
 export function ExpensesCard() {
   const { vault, snap, go } = useApp();
   const pack = snap?.pack ?? null;
-  const d = useMemo(() => (vault && pack && !vault.archivedOf ? deductionsOf(vault, pack, undefined, snap) : null), [vault, pack, snap]);
+  const d = useMemo(() => (vault && pack && !vault.archivedOf && pack.id === vault.answers.packId ? safeDeductions(vault, pack, undefined, snap) : null), [vault, pack, snap]);
   if (!vault || !pack || !d) return null;
   const cur = pack.currency;
   const country = countryName(pack.country);

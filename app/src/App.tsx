@@ -94,9 +94,13 @@ export default function App() {
   }, [wallet]);
 
   const sweeping = useRef(false);
+  // The vault on screen: a snapshot read for another one (before a move or a switch) is dropped.
+  const shown = useRef<string | null>(null);
+  shown.current = vault?.vault ?? null;
   const refresh = useCallback(async () => {
     if (!chain || !vault || (import.meta.env.DEV && location.hash.startsWith('#fixture'))) return;
     const s = await snapshot(chain, vault);
+    if (shown.current !== vault.vault) return;
     setSnap(s);
     // A signed change of country that has taken effect: the app switches to it. The stored record is
     // read again: a refresh started before the move was signed must not write over it.
@@ -107,6 +111,7 @@ export default function App() {
         return null;
       });
       if (done) {
+        setSnap(null);
         setVault(done);
         setToast({ msg: t('moveDone', { country: countryName(done.answers.packId.toUpperCase()) }) });
         return;
@@ -166,6 +171,8 @@ export default function App() {
     setWallet,
     vault,
     setVault: (v) => {
+      // Another vault (a move, or an earlier country's): its figures are read afresh.
+      if (v?.vault !== vault?.vault) setSnap(null);
       setVault(v);
       setScreen('home');
     },
