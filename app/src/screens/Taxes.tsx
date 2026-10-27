@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { daysFromCivil, dayString, drawFrom, incomeTaxBuckets, readNotice, suggestPrepayment, taxYearStart, vatRecovery, type Deadline, type PeriodKind, type ScheduledItem } from 'kyros-sdk';
-import { applyNotice, cancelScheduled, loadExpenses, loadInputs, money, noticeText, runDueScheduled, saveInputs, schedulePayment, taxYearPeriods, type Held, type Snapshot, type VaultInfo } from '../kyros';
+import { applyNotice, cancelScheduled, figuresWithOutside, loadExpenses, loadInputs, money, noticeText, runDueScheduled, saveInputs, schedulePayment, taxYearPeriods, type Held, type Snapshot, type VaultInfo } from '../kyros';
 import { fmtDate as fmtDay, fmtNumber, locale, t } from '../i18n';
 import { Button, TxLink, useApp } from '../ui';
 
@@ -186,7 +186,7 @@ function Instalment({ d }: { d: Deadline }) {
     .reduce((a, e) => a + e.base + (recoverable ? 0 : e.inputVat), 0);
   const typed = inputs.expenses[yearKey];
   const expensesUnits = typed ? toUnits(typed) : recorded > 0 ? BigInt(Math.round(recorded * 100)) * 100_000n : undefined;
-  const s = suggestPrepayment(rule, pack, kind, legal, snap.figures, {
+  const s = suggestPrepayment(rule, pack, kind, legal, figuresWithOutside(snap, vault), {
     expenses: expensesUnits,
     previousYearTax: toUnits(inputs.previousYearTax[prevKey] ?? ''),
     notice: toUnits(inputs.notice[d.legal] ?? ''),

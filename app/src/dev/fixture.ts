@@ -31,6 +31,7 @@ export function fixtureVault(): VaultInfo {
     createdAt: '2026-07-02T09:00:00Z',
     deployedAt: 'fixture',
     abroadInbox: 'CBABROADFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    wallets: [{ address: 'GBEXCHANGEFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'Exchange' }],
   };
 }
 

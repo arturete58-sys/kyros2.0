@@ -18,7 +18,7 @@ import {
   periodStart,
   type RulePack,
 } from 'kyros-sdk';
-import { loadExpenses, noticeText, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
+import { figuresWithOutside, loadExpenses, noticeText, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
 import { countryName } from '../packs';
 import { fmtDate, fmtNumber, getLang, t } from '../i18n';
 import { Button, pct, Tabs, Top, TxLink, useApp } from '../ui';
@@ -37,7 +37,8 @@ export function deductionsOf(v: VaultInfo, pack: RulePack, list = loadExpenses(v
   const year = expensesInTaxYear(pack, list);
   // The year's income, withholding and income tax paid so far, from the vault (for Spain's modelo 130).
   const from = Date.parse(`${year.from}T00:00:00Z`) / 1000;
-  const figs = snap?.periodKind ? snap.figures : [];
+  // The vault's figures plus what the business's other wallets received.
+  const figs = snap?.periodKind ? figuresWithOutside(snap, v) : [];
   const u = (x: bigint) => Number(x) / 1e7;
   const inYear = figs.filter((f) => snap?.periodKind && Number(periodStart(snap.periodKind, f.id)) >= from);
   const summary = deductionSummary(pack, v.presetId, v.rule, {

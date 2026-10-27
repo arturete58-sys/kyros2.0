@@ -24,6 +24,11 @@ jobs:
       - name: Build the SDK
         working-directory: sdk
         run: npm ci && npm run build
+      - name: Business wallets read from Horizon on testnet
+        working-directory: sdk
+        env:
+          KYROS_LIVE_RESULTS: ${{ github.workspace }}/docs/testnet/latest.json
+        run: node --test dist/test/wallets.test.js
       - name: x402 plugin tests
         working-directory: plugins/x402
         run: npm ci && npm test

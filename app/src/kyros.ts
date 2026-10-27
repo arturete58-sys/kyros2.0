@@ -28,6 +28,12 @@ import {
   scheduleMove,
   shopInboxTermsOp,
   type ShopConfig,
+  outsideIncome,
+  pendingReserve,
+  walletPaymentsHorizon,
+  walletPaymentsRpc,
+  type PaidAsset,
+  type WalletPayment,
   type CalendarPeriod,
   type MoveSchedule,
   type Expense,
@@ -102,6 +108,13 @@ export interface VaultInfo {
   archivedOf?: string;
   /** Payment addresses for selling online (a shop or an x402 API): VAT bps → inbox. */
   shopInboxes?: Record<number, string>;
+  /** The business's other wallets: what they receive is income of the same business. */
+  wallets?: BusinessWallet[];
+}
+
+export interface BusinessWallet {
+  address: string;
+  label?: string;
 }
 
 /**
@@ -930,6 +943,7 @@ export async function finishMove(chain: Chain, v: VaultInfo, s: Snapshot): Promi
     abroadInbox: v.abroadInbox,
     abroadPayers: v.abroadPayers,
     shopInboxes: v.shopInboxes,
+    wallets: v.wallets,
     owner: v.owner,
     answers,
     rule: m.rule,
@@ -977,4 +991,133 @@ export function shopConfig(chain: Chain, v: VaultInfo): ShopConfig {
     inboxes: v.shopInboxes ?? {},
     vault: v.vault,
   };
+}
+
+// ---- The business's other wallets ----
+
+// Kept per owner, not per vault: tax is per person, and a change of country makes a new vault.
+const outsideKey = (owner: string) => `kyros.outside.${owner}`;
+interface OutsideStore {
+  payments: (Omit<WalletPayment, 'amount'> & { amount: string })[];
+  notIncome: string[];
+  readAt?: number;
+}
+function loadOutside(vault: string): OutsideStore {
+  try {
+    return { payments: [], notIncome: [], ...JSON.parse(store.get(outsideKey(vault)) ?? '{}') };
+  } catch {
+    return { payments: [], notIncome: [] };
+  }
+}
+const saveOutside = (vault: string, o: OutsideStore) => store.set(outsideKey(vault), JSON.stringify(o));
+
+export const horizonUrl = (chain: Chain) => (chain.cfg.network === 'testnet' ? 'https://horizon-testnet.stellar.org' : 'https://horizon.stellar.org');
+
+/** The stablecoins the business is paid in. */
+export function paidAssets(chain: Chain): PaidAsset[] {
+  const t = chain.cfg.tokens;
+  return [
+    { code: t.usd.code, issuer: t.usd.issuer, contract: t.usd.contract },
+    { code: t.eur.code, issuer: t.eur.issuer, contract: t.eur.contract },
+    ...(chain.cfg.cctp ? [{ code: chain.cfg.cctp.usdc.code, issuer: chain.cfg.cctp.usdc.issuer, contract: chain.cfg.cctp.usdc.contract }] : []),
+  ];
+}
+
+/** The business's own addresses: money between them, or from its Kyros vaults, is not income. */
+export function ownAddresses(v: VaultInfo): string[] {
+  const of = (x: VaultInfo): string[] => [x.owner, x.vault, x.inbox, ...(x.abroadInbox ? [x.abroadInbox] : []), ...Object.values(x.shopInboxes ?? {})];
+  return [...new Set([...of(v), ...(v.previous ?? []).flatMap(of), ...(v.wallets ?? []).map((w) => w.address)])];
+}
+
+/** The start of the tax year that contains now, as an ISO date. */
+export function taxYearFrom(pack: RulePack | null): string {
+  const start = taxYearStart(pack?.calendar.fiscalYearStart, BigInt(Math.floor(Date.now() / 1000)));
+  return new Date(Number(start) * 1000).toISOString();
+}
+
+/**
+ * Reads what the business's other wallets received this tax year (Horizon for
+ * accounts, the RPC's recent events for contract wallets) and keeps it on this
+ * device. At most every five minutes unless `force`.
+ */
+export async function refreshOutside(chain: Chain, v: VaultInfo, pack: RulePack | null, force = false): Promise<void> {
+  const wallets = v.wallets ?? [];
+  if (!wallets.length) return;
+  const o = loadOutside(v.owner);
+  if (!force && o.readAt && Date.now() - o.readAt < 5 * 60_000) return;
+  const since = taxYearFrom(pack);
+  const assets = paidAssets(chain);
+  const latest = await chain.server.getLatestLedger();
+  const got: WalletPayment[] = [];
+  for (const w of wallets) {
+    try {
+      got.push(...(w.address.startsWith('C') ? await walletPaymentsRpc(chain.server, w.address, assets, Math.max(latest.sequence - 17_000, 1)) : await walletPaymentsHorizon(horizonUrl(chain), w.address, assets, since)));
+    } catch (e) {
+      console.error('wallet', w.address, e);
+    }
+  }
+  const byId = new Map(o.payments.map((p) => [p.id, p]));
+  for (const p of got) byId.set(p.id, { ...p, amount: p.amount.toString() });
+  saveOutside(v.owner, { ...o, payments: [...byId.values()].sort((a, b) => (a.at < b.at ? 1 : -1)), readAt: Date.now() });
+}
+
+export interface OutsideView {
+  /** Every payment the other wallets received this tax year, with whether it counts as income. */
+  all: (WalletPayment & { income: boolean })[];
+  total: bigint;
+  pending: { vat: bigint; reserve: bigint; total: bigint };
+}
+
+/** This tax year's income in the business's other wallets, and what Kyros would have set aside from it. */
+export function outsideOf(v: VaultInfo, pack: RulePack | null): OutsideView {
+  const o = loadOutside(v.owner);
+  const wallets = new Set((v.wallets ?? []).map((w) => w.address));
+  const from = taxYearFrom(pack);
+  const own = ownAddresses(v);
+  const payments = o.payments.filter((p) => wallets.has(p.wallet) && p.at >= from && !own.includes(p.from)).map((p) => ({ ...p, amount: BigInt(p.amount) }));
+  const inc = outsideIncome(payments, { own, notIncome: o.notIncome, from });
+  const ids = new Set(inc.payments.map((p) => p.id));
+  return { all: payments.map((p) => ({ ...p, income: ids.has(p.id) })), total: inc.total, pending: pendingReserve(v.rule, inc.payments) };
+}
+
+/** The user says a payment is (or is not) income of the business. */
+export function setIncome(v: VaultInfo, id: string, income: boolean): void {
+  const o = loadOutside(v.owner);
+  const set = new Set(o.notIncome);
+  if (income) set.delete(id);
+  else set.add(id);
+  saveOutside(v.owner, { ...o, notIncome: [...set] });
+}
+
+/** Adds (or renames) one of the business's wallets. */
+export function addWallet(v: VaultInfo, address: string, label?: string): VaultInfo {
+  const wallets = [...(v.wallets ?? []).filter((w) => w.address !== address), { address, ...(label ? { label } : {}) }];
+  const next = { ...v, wallets };
+  saveVault(next);
+  const o = loadOutside(v.owner);
+  saveOutside(v.owner, { ...o, readAt: undefined });
+  return next;
+}
+
+export function removeWallet(v: VaultInfo, address: string): VaultInfo {
+  const next = { ...v, wallets: (v.wallets ?? []).filter((w) => w.address !== address) };
+  saveVault(next);
+  return next;
+}
+
+/**
+ * The vault's period figures plus the income the other wallets received,
+ * each payment in the period it arrived (for the prepayments on profit).
+ */
+export function figuresWithOutside(s: Snapshot, v: VaultInfo): PeriodFigures[] {
+  if (!s.periodKind) return s.figures;
+  const kind = s.periodKind;
+  const map = new Map(s.figures.map((f) => [f.id, { ...f }]));
+  for (const p of outsideOf(v, s.pack).all.filter((x) => x.income)) {
+    const id = periodOf(kind, BigInt(Math.floor(Date.parse(p.at) / 1000)));
+    const f = map.get(id) ?? { id, income: 0n, withheld: 0n, incomeHeld: 0n, incomePaid: 0n };
+    f.income += p.amount;
+    map.set(id, f);
+  }
+  return [...map.values()].sort((a, b) => a.id - b.id);
 }

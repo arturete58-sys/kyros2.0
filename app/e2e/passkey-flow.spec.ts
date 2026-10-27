@@ -126,6 +126,16 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await settle(page);
   await expect(page.getByTestId('shop-config')).toContainText('"2100": "C');
 
+  // Another wallet of the same business: read only, its income counts too.
+  const cfg = await (await page.request.get('./testnet.json')).json();
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByTestId('business-wallets').click();
+  await page.getByTestId('wallet-address').fill(cfg.taxAccount);
+  await page.getByTestId('wallet-add').click();
+  await settle(page);
+  await expect(page.getByTestId('wallets')).toContainText(`${cfg.taxAccount.slice(0, 6)}…${cfg.taxAccount.slice(-4)}`);
+  await expect(page.getByTestId('wallet-payments')).toBeVisible();
+
   // Moving to Portugal from today: a new vault with Portugal's rules, and the same payment address
   // moves to it after the notice (the passkey signs). The Spanish vault stays, with its reserve.
   await page.getByRole('button', { name: 'Ajustes' }).click();

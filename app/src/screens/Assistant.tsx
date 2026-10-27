@@ -24,7 +24,7 @@ import {
   type AssistantReply,
   type PeriodKind,
 } from 'kyros-sdk';
-import { convertNow, loadExpenses, noticeText, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
+import { convertNow, figuresWithOutside, loadExpenses, noticeText, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
 import { countryName, loadPack } from '../packs';
 import { getLang, t } from '../i18n';
 import { prefill, Tabs, TxLink, useApp } from '../ui';
@@ -54,7 +54,7 @@ function context(snap: Snapshot | null, vault: VaultInfo, chain: ReturnType<type
   // This year's income, withholding and income tax paid, from the vault's periods (dollars and euros together, as the app shows them).
   const kind = (snap?.periodKind as PeriodKind | null) ?? null;
   const year = new Date().getUTCFullYear();
-  const thisYear = kind ? (snap?.figures ?? []).filter((f) => new Date(Number(periodStart(kind, f.id)) * 1000).getUTCFullYear() === year) : [];
+  const thisYear = kind && snap ? figuresWithOutside(snap, vault).filter((f) => new Date(Number(periodStart(kind, f.id)) * 1000).getUTCFullYear() === year) : [];
   const u = (x: bigint) => Number(x) / 1e7;
   const cal = pack ? calendarOf(pack, vault.presetId) : null;
   return {

@@ -7,6 +7,7 @@ import { Button, LangPicker, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } 
 import { activityText, clientText } from './Start';
 import { ExpensesCard } from './Expenses';
 import { ArchivedBanner, MoveCard, PreviousVaults } from './Move';
+import { WalletsCard } from './Wallets';
 import { fmtDate as fmtDay, fmtDateTime, fmtTime, getLang, locale, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
@@ -310,6 +311,7 @@ export function Home() {
         )}
         {!vault.archivedOf && <PayAddress />}
         <ExpensesCard />
+        <WalletsCard />
         {received.length > 0 && (
           <div className="list">
             <h2>{t('lastPayments')}</h2>
@@ -665,6 +667,15 @@ export function Settings() {
         </div>
         <MoveCard />
         <PreviousVaults />
+        {!vault.archivedOf && (
+          <button className="card link-card" data-testid="business-wallets" onClick={() => go('wallets')}>
+            <div className="row spread">
+              <b>{t('walletsTitle')}</b>
+              <span aria-hidden>›</span>
+            </div>
+            <span className="small muted">{t('walletsSub')}</span>
+          </button>
+        )}
         {!vault.archivedOf && (
           <button className="card link-card" data-testid="sell-online" onClick={() => go('shop')}>
             <div className="row spread">

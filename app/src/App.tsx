@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chain } from './chain';
 import { loadConfig, type AppConfig } from './config';
-import { applyReadyCorrections, finishMove, freshVault, learnAbroadPayers, runDueScheduled, savedVault, saveVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
+import { applyReadyCorrections, finishMove, freshVault, refreshOutside, learnAbroadPayers, runDueScheduled, savedVault, saveVault, snapshot, sweepInbox, type Snapshot, type VaultInfo } from './kyros';
 import { countryName } from './packs';
 import { AppCtx, type Ctx, type Screen } from './ui';
 import { friendlyError } from './errors';
@@ -16,6 +16,7 @@ const Pay = lazy(() => Main().then((m) => ({ default: m.Pay })));
 const Request = lazy(() => Main().then((m) => ({ default: m.Request })));
 const Settings = lazy(() => Main().then((m) => ({ default: m.Settings })));
 const Expenses = lazy(() => import('./screens/Expenses').then((m) => ({ default: m.Expenses })));
+const Wallets = lazy(() => import('./screens/Wallets').then((m) => ({ default: m.Wallets })));
 const Shop = lazy(() => import('./screens/Shop').then((m) => ({ default: m.Shop })));
 const Move = lazy(() => import('./screens/Move').then((m) => ({ default: m.Move })));
 const Assistant = lazy(() => import('./screens/Assistant').then((m) => ({ default: m.Assistant })));
@@ -126,6 +127,10 @@ export default function App() {
       setVault(next);
       return;
     }
+    // What the business's other wallets received (at most every few minutes).
+    void refreshOutside(chain, vault, s.pack)
+      .then(() => setSnap((x) => (x && shown.current === vault.vault ? { ...x } : x)))
+      .catch((e) => console.error('wallets', e));
     // Wallets that paid the address for clients abroad are remembered in this browser.
     const base = freshVault(vault);
     if (learnAbroadPayers(base, s)) setVault({ ...base });
@@ -216,6 +221,7 @@ export default function App() {
   else if (screen === 'expenses') page = <Expenses />;
   else if (screen === 'move') page = <Move />;
   else if (screen === 'shop') page = <Shop />;
+  else if (screen === 'wallets') page = <Wallets />;
   else page = <Home />;
 
   return (
