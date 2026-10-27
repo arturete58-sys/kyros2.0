@@ -150,6 +150,8 @@ const notFoundYet = (e: Error) => /Account not found/i.test(e.message);
 
 export class KyrosClient {
   readonly server: rpc.Server;
+  /** The ledger of the last transaction this client saw applied: reads wait until the RPC has it. */
+  private seenLedger = 0;
   constructor(readonly o: KyrosClientOptions) {
     this.server = new rpc.Server(o.rpcUrl, { allowHttp: o.rpcUrl.startsWith('http://') });
   }
@@ -195,6 +197,7 @@ export class KyrosClient {
       done = await retrying(() => this.server.pollTransaction(sent.hash, { attempts: 30 }));
     }
     if (done.status !== 'SUCCESS') throw new KyrosError(`transaction ${sent.hash} ${done.status}`);
+    this.seenLedger = Math.max(this.seenLedger, (done as rpc.Api.GetSuccessfulTransactionResponse).ledger ?? 0);
     return { hash: sent.hash, returnValue: (done as rpc.Api.GetSuccessfulTransactionResponse).returnValue };
   }
 
@@ -218,7 +221,12 @@ export class KyrosClient {
       .addOperation(new Contract(contractId).call(method, ...args))
       .setTimeout(60)
       .build();
-    const sim = await retrying(() => this.server.simulateTransaction(tx));
+    let sim = await retrying(() => this.server.simulateTransaction(tx));
+    // A load-balanced RPC can answer from a node a ledger behind our last transaction: ask again.
+    for (let i = 0; i < 8 && sim.latestLedger < this.seenLedger; i++) {
+      await new Promise((r) => setTimeout(r, 1_000));
+      sim = await retrying(() => this.server.simulateTransaction(tx));
+    }
     if (rpc.Api.isSimulationError(sim)) throw new KyrosError(`${method} failed: ${sim.error}`);
     return (sim as rpc.Api.SimulateTransactionSuccessResponse).result!.retval;
   }
