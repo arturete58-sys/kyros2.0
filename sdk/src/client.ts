@@ -180,7 +180,12 @@ export class KyrosClient {
       if (r.status === 'TRY_AGAIN_LATER') throw new Error('TRY_AGAIN_LATER');
       return r;
     });
-    if (sent.status === 'ERROR') throw new KyrosError(`rejected: ${sent.errorResult?.toXDR('base64') ?? 'unknown'}`);
+    if (sent.status === 'ERROR') {
+      const e = new KyrosError(`rejected: ${sent.errorResult?.toXDR('base64') ?? 'unknown'}`);
+      // The RPC handed out a sequence number one ledger behind: nothing was applied.
+      if (sent.errorResult?.result().switch().name === 'txBadSeq') (e as KyrosError & { badSeq?: boolean }).badSeq = true;
+      throw e;
+    }
     // On a busy network a transaction can be dropped before it is included: send it again
     // (same hash, it can only apply once) until it lands or its time bounds expire.
     const deadline = Number(tx.timeBounds?.maxTime ?? 0) * 1000 || Date.now() + 120_000;
@@ -195,7 +200,15 @@ export class KyrosClient {
 
   /** prepare + submit, signed by `signer` as the source account. */
   async send(signer: Keypair, op: xdr.Operation): Promise<Sent> {
-    return this.submit(await this.prepare(signer.publicKey(), op), signer);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.submit(await this.prepare(signer.publicKey(), op), signer);
+      } catch (e) {
+        // A stale sequence number from a lagging RPC: build it again with a fresh one.
+        if (!(e as { badSeq?: boolean }).badSeq || attempt >= 3) throw e;
+        await new Promise((r) => setTimeout(r, 2_000 * (attempt + 1)));
+      }
+    }
   }
 
   /** Simulates a read-only call and returns its value. */
