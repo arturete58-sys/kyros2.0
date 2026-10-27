@@ -16,6 +16,7 @@ const Pay = lazy(() => Main().then((m) => ({ default: m.Pay })));
 const Request = lazy(() => Main().then((m) => ({ default: m.Request })));
 const Settings = lazy(() => Main().then((m) => ({ default: m.Settings })));
 const Expenses = lazy(() => import('./screens/Expenses').then((m) => ({ default: m.Expenses })));
+const Clients = lazy(() => import('./screens/Clients').then((m) => ({ default: m.Clients })));
 const Wallets = lazy(() => import('./screens/Wallets').then((m) => ({ default: m.Wallets })));
 const Shop = lazy(() => import('./screens/Shop').then((m) => ({ default: m.Shop })));
 const Move = lazy(() => import('./screens/Move').then((m) => ({ default: m.Move })));
@@ -222,6 +223,7 @@ export default function App() {
   else if (screen === 'move') page = <Move />;
   else if (screen === 'shop') page = <Shop />;
   else if (screen === 'wallets') page = <Wallets />;
+  else if (screen === 'clients') page = <Clients />;
   else page = <Home />;
 
   return (

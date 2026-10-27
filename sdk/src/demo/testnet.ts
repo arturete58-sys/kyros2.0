@@ -43,6 +43,7 @@ import { duesAfter } from '../periods.js';
 import { nextOpen } from '../workdays.js';
 import { changeCountryPlan, registrySyncPlan } from '../registry.js';
 import { abroadTerms, formatAmount, parseAmount } from '../split.js';
+import { clientTerms, clientTermsOp } from '../clients.js';
 
 const args = process.argv.slice(2);
 const flag = (n: string, d?: string) => {
@@ -320,6 +321,34 @@ async function main(): Promise<void> {
     detail: `expect_payer ${abExpectClient.hash.slice(0, 10)}…; freelancer +800, vault +200`,
   });
   const abProposedAt = Date.now();
+
+  log('one payment address per client: the same wallet pays a client at home and an EU business, swept together');
+  // A swept inbox cannot tell who paid: the address must say it. Each client gets their own,
+  // registered with that client's VAT; the same payer wallet, swept in one tick, still splits right.
+  const esPack = loadRulePack('es');
+  const homeClient = await c.deployInbox(k.keeper, inboxHash, abVault.contractId);
+  const euBusiness = await c.deployInbox(k.keeper, inboxHash, abVault.contractId);
+  const homeTerms = clientTerms(esPack, terms.rule, { country: 'ES', business: true });
+  const euTerms = clientTerms(esPack, terms.rule, { country: 'DE', business: true, vatId: 'DE123456789' });
+  await c.send(k.freelancer, clientTermsOp(c, abVault.contractId, homeClient.contractId, homeTerms));
+  await c.send(k.freelancer, clientTermsOp(c, abVault.contractId, euBusiness.contractId, euTerms));
+  const vatHeld = async () => {
+    const p = await c.currentPeriod(abVault.contractId);
+    let v = 0n;
+    for (const id of [p - 1, p]) v += (await c.period(abVault.contractId, id, token)).buckets.vat ?? 0n;
+    return v;
+  };
+  const vatBefore = await vatHeld();
+  await c.send(k.client, c.transferOp(token, k.client.publicKey(), homeClient.contractId, parseAmount('1210')));
+  await c.send(k.client, c.transferOp(token, k.client.publicKey(), euBusiness.contractId, parseAmount('1000')));
+  const perClient = await new Keeper(c, k.keeper, [{ inbox: homeClient.contractId, token }, { inbox: euBusiness.contractId, token }]).tick();
+  const vatAdded = (await vatHeld()) - vatBefore;
+  steps.push({
+    step: 'One payment address per client: the same wallet pays 1,210 KUSD to a client-at-home address and 1,000 KUSD to an EU business address, swept in one tick; VAT is reserved only for the first',
+    ok: perClient.length === 2 && perClient.every((x) => !x.error) && vatAdded === parseAmount('210'),
+    tx: perClient[0]?.hash,
+    detail: `VAT reserved: ${formatAmount(vatAdded)} (21% at home: 210; reverse charge: 0); addresses ${homeClient.contractId}, ${euBusiness.contractId}`,
+  });
 
   log('euro reserve: Soroswap testnet pool at Reflector\'s EUR/USD price, swapper, conversion proposed');
   let euro: { vault: string; proposedAt: number; eurUsd: bigint } | null = null;

@@ -126,6 +126,17 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await settle(page);
   await expect(page.getByTestId('shop-config')).toContainText('"2100": "C');
 
+  // One payment address per client: a German business with its VAT number pays into its own
+  // address, registered without VAT (reverse charge); the passkey signs its terms.
+  await page.getByRole('button', { name: 'Inicio' }).click();
+  await page.getByTestId('clients-link').click();
+  await page.getByTestId('client-name').fill('Müller GmbH');
+  await page.getByTestId('client-country').selectOption('DE');
+  await page.getByTestId('client-vat').fill('DE123456789');
+  await page.getByTestId('client-add').click();
+  await settle(page);
+  await expect(page.getByTestId('client')).toContainText('Sin IVA: inversión del sujeto pasivo');
+
   // Another wallet of the same business: read only, its income counts too.
   const cfg = await (await page.request.get('./testnet.json')).json();
   await page.getByRole('button', { name: 'Ajustes' }).click();

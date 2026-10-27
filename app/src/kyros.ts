@@ -34,6 +34,10 @@ import {
   walletPaymentsRpc,
   type PaidAsset,
   type WalletPayment,
+  clientTerms,
+  clientTermsOp,
+  type ClientProfile,
+  type ClientTerms,
   type CalendarPeriod,
   type MoveSchedule,
   type Expense,
@@ -110,6 +114,19 @@ export interface VaultInfo {
   shopInboxes?: Record<number, string>;
   /** The business's other wallets: what they receive is income of the same business. */
   wallets?: BusinessWallet[];
+  /** One payment address per client, each splitting with that client's VAT and withholding. */
+  clients?: ClientAddress[];
+}
+
+export interface ClientAddress extends ClientProfile {
+  id: string;
+  name: string;
+  inbox: string;
+  /** The terms registered in the vault for this address. */
+  terms: ClientTerms;
+  /** The client's cross-border consumer sales were above the One-Stop Shop threshold when it was made. */
+  oss?: boolean;
+  createdAt: string;
 }
 
 export interface BusinessWallet {
@@ -138,6 +155,8 @@ export interface PendingMove {
   newVault?: string;
   /** The vault followed the law's registry before (the move stops it). */
   wasFollowing?: boolean;
+  /** The clients' terms in the new country (another calendar: registered in the new vault). */
+  clientTerms?: Record<string, ClientTerms>;
   hashes?: string[];
   signedAt?: string;
 }
@@ -661,7 +680,7 @@ export const formatUnits6 = (x: bigint) => fmtNumber(Number(x) / 1e6, { minimumF
  */
 export async function sweepInbox(chain: Chain, v: VaultInfo): Promise<number> {
   let n = 0;
-  for (const inbox of [v.inbox, v.abroadInbox, ...Object.values(v.shopInboxes ?? {})].filter((x): x is string => !!x))
+  for (const inbox of [v.inbox, v.abroadInbox, ...Object.values(v.shopInboxes ?? {}), ...(v.clients ?? []).map((c) => c.inbox)].filter((x): x is string => !!x))
     for (const token of [...chain.dollarTokens, chain.cfg.tokens.eur.contract]) {
       let bal = 0n;
       try {
@@ -840,7 +859,8 @@ export function canSignMove(m: PendingMove): boolean {
 }
 
 /** Owner: signs the move. Same calendar: the rule for the day. Another calendar: a new vault and the payment address moving to it. */
-export async function signMove(chain: Chain, wallet: Wallet, v: VaultInfo, m: PendingMove, onStep: (s: string) => void): Promise<VaultInfo> {
+export async function signMove(chain: Chain, wallet: Wallet, v: VaultInfo, move: PendingMove, onStep: (s: string) => void): Promise<VaultInfo> {
+  let m = move;
   const hashes: string[] = [];
   const c = chain.client;
   const next: VaultInfo = { ...v, move: { ...m } };
@@ -878,10 +898,18 @@ export async function signMove(chain: Chain, wallet: Wallet, v: VaultInfo, m: Pe
     }
     // The addresses for selling online keep their VAT rate in the new vault.
     for (const [bps, inbox] of Object.entries(v.shopInboxes ?? {})) hashes.push(await wallet.signAndSend(shopInboxTermsOp(c, nv.contractId, inbox, Number(bps), m.rule)));
+    // Each client's address splits with that client's VAT in the new country.
+    const byClient: Record<string, ClientTerms> = {};
+    for (const cl of v.clients ?? []) {
+      byClient[cl.id] = clientTerms(pack, m.rule, cl, { crossBorderB2cEur: cl.oss ? Infinity : 0 });
+      hashes.push(await wallet.signAndSend(clientTermsOp(c, nv.contractId, cl.inbox, byClient[cl.id])));
+    }
+    m = { ...m, clientTerms: byClient };
     onStep(t('moveStepInbox'));
     hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(v.inbox, nv.contractId))));
     if (v.abroadInbox) hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(v.abroadInbox, nv.contractId))));
     for (const inbox of Object.values(v.shopInboxes ?? {})) hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(inbox, nv.contractId))));
+    for (const cl of v.clients ?? []) hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(cl.inbox, nv.contractId))));
     next.move = { ...m, newVault: nv.contractId, readyAt: String(nowSecs() + BigInt(cfg.noticeSecs)), hashes, signedAt: new Date().toISOString() };
   }
   saveVault(next);
@@ -904,6 +932,7 @@ export async function cancelMove(chain: Chain, wallet: Wallet, v: VaultInfo): Pr
       await wallet.signAndSend(chain.client.cancelMoveOp(v.inbox));
       if (v.abroadInbox) await wallet.signAndSend(chain.client.cancelMoveOp(v.abroadInbox));
       for (const inbox of Object.values(v.shopInboxes ?? {})) await wallet.signAndSend(chain.client.cancelMoveOp(inbox));
+      for (const cl of v.clients ?? []) await wallet.signAndSend(chain.client.cancelMoveOp(cl.inbox));
     }
   }
   const next = { ...v };
@@ -944,6 +973,7 @@ export async function finishMove(chain: Chain, v: VaultInfo, s: Snapshot): Promi
     abroadPayers: v.abroadPayers,
     shopInboxes: v.shopInboxes,
     wallets: v.wallets,
+    clients: (v.clients ?? []).map((cl) => ({ ...cl, terms: m.clientTerms?.[cl.id] ?? cl.terms })),
     owner: v.owner,
     answers,
     rule: m.rule,
@@ -1025,7 +1055,7 @@ export function paidAssets(chain: Chain): PaidAsset[] {
 
 /** The business's own addresses: money between them, or from its Kyros vaults, is not income. */
 export function ownAddresses(v: VaultInfo): string[] {
-  const of = (x: VaultInfo): string[] => [x.owner, x.vault, x.inbox, ...(x.abroadInbox ? [x.abroadInbox] : []), ...Object.values(x.shopInboxes ?? {})];
+  const of = (x: VaultInfo): string[] => [x.owner, x.vault, x.inbox, ...(x.abroadInbox ? [x.abroadInbox] : []), ...Object.values(x.shopInboxes ?? {}), ...(x.clients ?? []).map((c) => c.inbox)];
   return [...new Set([...of(v), ...(v.previous ?? []).flatMap(of), ...(v.wallets ?? []).map((w) => w.address)])];
 }
 
@@ -1120,4 +1150,46 @@ export function figuresWithOutside(s: Snapshot, v: VaultInfo): PeriodFigures[] {
     map.set(id, f);
   }
   return [...map.values()].sort((a, b) => a.id - b.id);
+}
+
+// ---- One payment address per client ----
+
+/**
+ * Makes a client's own payment address: an inbox (made by the fee payer) whose
+ * payments the vault splits with that client's VAT and withholding (the owner
+ * signs once). The address says who paid, so clients with different VAT never
+ * share one.
+ */
+export async function addClient(chain: Chain, wallet: Wallet, v: VaultInfo, pack: RulePack, c: ClientProfile & { name: string; oss?: boolean }, onStep: (s: string) => void): Promise<VaultInfo> {
+  const terms = clientTerms(pack, v.rule, c, { crossBorderB2cEur: c.oss ? Infinity : 0 });
+  await chain.ensureAccount(chain.feePayer.publicKey());
+  onStep(t('stepInbox'));
+  const inbox = await chain.client.deployInbox(chain.feePayer, Buffer.from(chain.cfg.wasm.inbox, 'hex'), v.vault);
+  onStep(t('clientSigning'));
+  await wallet.signAndSend(clientTermsOp(chain.client, v.vault, inbox.contractId, terms));
+  const client: ClientAddress = { ...c, id: inbox.contractId, inbox: inbox.contractId, terms, createdAt: new Date().toISOString() };
+  const next = { ...v, clients: [...(v.clients ?? []), client] };
+  saveVault(next);
+  return next;
+}
+
+/** The terms a client's address should have now (after a change of country or of the reserve). */
+export function clientTermsNow(v: VaultInfo, pack: RulePack, c: ClientAddress): ClientTerms {
+  return clientTerms(pack, v.rule, c, { crossBorderB2cEur: c.oss ? Infinity : 0 });
+}
+
+export const sameTerms = (a: ClientTerms, b: ClientTerms) =>
+  a.vatBps === b.vatBps && a.withholdingBps === b.withholdingBps && JSON.stringify(a.buckets.map((x) => [x.name, x.bps])) === JSON.stringify(b.buckets.map((x) => [x.name, x.bps]));
+
+/** Owner: registers a client's current terms again (signs once). */
+export async function updateClient(chain: Chain, wallet: Wallet, v: VaultInfo, pack: RulePack, id: string): Promise<VaultInfo> {
+  const clients = [...(v.clients ?? [])];
+  const i = clients.findIndex((c) => c.id === id);
+  if (i < 0) return v;
+  const terms = clientTermsNow(v, pack, clients[i]);
+  await wallet.signAndSend(clientTermsOp(chain.client, v.vault, clients[i].inbox, terms));
+  clients[i] = { ...clients[i], terms };
+  const next = { ...v, clients };
+  saveVault(next);
+  return next;
 }

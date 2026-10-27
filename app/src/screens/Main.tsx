@@ -95,6 +95,11 @@ function PayAddress() {
           {t('abroadMake')}
         </Button>
       )}
+      {twoAddresses && (
+        <button className="link small" data-testid="clients-link" onClick={() => go('clients')}>
+          {t('clientsLink')}
+        </button>
+      )}
       <button className="link small" data-testid="request" onClick={() => go('request')}>
         {t('specialPayment')}
       </button>
