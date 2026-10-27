@@ -1,0 +1,21 @@
+{
+  "name": "@kyros/shopify",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kyros for Shopify: buyers pick the Kyros manual payment method, then pay from any Stellar wallet; each payment lands in the seller's Kyros vault and the order is marked paid once the transfers are seen on chain.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/src/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/main.js",
+    "test": "npm run build && node --test dist/test/*.test.js"
+  },
+  "dependencies": {
+    "kyros-sdk": "file:../../sdk"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}

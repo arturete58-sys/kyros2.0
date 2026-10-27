@@ -28,6 +28,26 @@ jobs:
         working-directory: plugins/x402
         run: npm ci && npm test
 
+  shopify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: Shopify server tests, and a real testnet transfer checked on the Stellar RPC
+        working-directory: plugins/shopify
+        env:
+          KYROS_LIVE_RESULTS: ${{ github.workspace }}/docs/testnet/latest.json
+        run: npm ci && npm test
+      - name: Thank you page extension (types against Shopify's 2026-01 API)
+        working-directory: plugins/shopify/extensions/kyros-pay-link
+        run: npm ci && npm run check
+
   widget:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -44,7 +64,9 @@ jobs:
       - name: Build, and check the WooCommerce plugin ships this build
         run: |
           npx vite build
-          cmp dist/kyros-checkout.js ../woocommerce/kyros-checkout/assets/kyros-checkout.js || { echo "::error::rebuild the widget: cd plugins/checkout-widget && npm run build"; exit 1; }
+          for f in ../woocommerce/kyros-checkout/assets/kyros-checkout.js ../shopify/public/kyros-checkout.js; do
+            cmp dist/kyros-checkout.js "$f" || { echo "::error::rebuild the widget: cd plugins/checkout-widget && npm run build"; exit 1; }
+          done
 
   woocommerce:
     runs-on: ubuntu-latest

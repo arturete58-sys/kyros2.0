@@ -1,0 +1,20 @@
+# Thank you page block: a button (and a QR code) to pay the order with Kyros.
+# Add it to your Shopify app (`shopify app generate extension` creates the app; copy this folder
+# into its extensions/), then place the block in the checkout editor.
+api_version = "2026-01"
+
+[[extensions]]
+name = "Kyros pay link"
+handle = "kyros-pay-link"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/ThankYou.tsx"
+target = "purchase.thank-you.block.render"
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "pay_url"
+type = "single_line_text_field"
+name = "Kyros payment server"
+description = "Where Kyros for Shopify runs, e.g. https://pay.myshop.com"

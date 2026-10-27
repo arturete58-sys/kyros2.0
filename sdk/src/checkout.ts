@@ -159,3 +159,9 @@ export async function verifyCheckoutPayment(
   if (e.notBefore && Date.parse(closedAt) < Date.parse(e.notBefore)) return { ok: false, reason: 'too-old' };
   return { ok: true, from: rows[0].from, ledger: tx.ledger, closedAt };
 }
+
+/** `verifyCheckoutPayment` against the Stellar RPC at `rpcUrl` (for servers that do not use the Stellar SDK themselves). */
+export function checkoutVerifier(rpcUrl: string): (e: { hash: string; token: string; to: string; amount: bigint; notBefore?: string }) => Promise<CheckoutCheck> {
+  const server = new rpc.Server(rpcUrl, { allowHttp: rpcUrl.startsWith('http://') });
+  return (e) => verifyCheckoutPayment(server, e);
+}

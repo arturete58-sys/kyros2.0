@@ -1,6 +1,6 @@
 # Selling online with Kyros
 
-Plugins for sellers who get paid in stablecoins on Stellar: an online shop (WooCommerce) and a pay-per-use API (x402). Every sale lands in the seller's Kyros vault, which splits it on arrival: the VAT and the income-tax reserve stay locked until they are due, and the rest goes to the seller.
+Plugins for sellers who get paid in stablecoins on Stellar: an online shop (WooCommerce or Shopify) and a pay-per-use API (x402). Every sale lands in the seller's Kyros vault, which splits it on arrival: the VAT and the income-tax reserve stay locked until they are due, and the rest goes to the seller.
 
 None of them holds a key or the seller's money. The buyer pays from their own wallet straight into the seller's payment addresses, and the plugins only check on chain that the payment happened.
 
@@ -21,6 +21,20 @@ A payment gateway for the classic and the block checkout.
 - **Checks before an order is marked paid**: Horizon confirms the transfer, to the right address, of the exact amount, made after the order was created. A transaction pays one order only, once.
 
 The tests run in CI: the core in plain PHP, then inside WordPress with WooCommerce. An order there is paid with a real transfer made on testnet by the testnet demo.
+
+## Shopify (`shopify`)
+
+Shopify lets only approved payments partners add a payment method to its checkout. So Kyros works the way bank transfers do there: the buyer picks a manual payment method (for example "USDC on Stellar"), places the order, and pays right after, from any Stellar wallet. The order is marked paid when the transfers are seen on chain.
+
+- **A small server you run** (`npm run build && npm start`). It holds a Shopify Admin token with `read_orders` and `write_orders`, never a crypto key. You can run it on any Node host. Settings come from the environment: `SHOPIFY_SHOP`, `SHOPIFY_ADMIN_TOKEN`, `SHOPIFY_WEBHOOK_SECRET`, `KYROS_CONFIG` (from the Kyros app), `PUBLIC_URL`, and `STELLAR_RPC` on mainnet.
+- **What it does with each order:**
+  - The `orders/create` webhook (signature checked) turns the order into one transfer per VAT rate. The rates come from Shopify's tax lines, with prices including or excluding tax and after discounts.
+  - `/pay/<order>?n=<confirmation number>` shows `<kyros-checkout>`.
+  - Each transaction hash is checked on the Stellar RPC: right address, exact amount, after the order, used once.
+  - When every transfer is in, the order is marked paid (`orderMarkAsPaid`), with the transactions in a `kyros.transactions` metafield and a `kyros-paid` tag.
+- **The Thank you page** (`extensions/kyros-pay-link`, a checkout UI extension on the 2026-01 API): when the buyer chose a manual payment method, a "Pay now" button and a QR code (to pay from a phone wallet) lead to that page. `shopify.app.toml.example` has the scopes and the webhook.
+
+The tests cover a European order with VAT included, a US order with state and county tax, the webhook signature, and the whole flow against a stand-in for Shopify's Admin API. A live test checks a real testnet transfer on the Stellar RPC, and the extension is type-checked against Shopify's API.
 
 ## x402 (`x402`, `@kyros/x402`)
 
@@ -57,6 +71,6 @@ The shop's endpoint checks each hash with `verifyCheckoutPayment` (SDK, Node) or
 
 ## What is not here
 
-- **Shopify**: third-party payment methods at checkout need Shopify's approval as a payments partner.
+- **Shopify as a payment method at checkout**: that needs Shopify's approval as a payments partner. Until then, the manual payment method above.
 - **Stripe's crypto payments**: they settle into the merchant's Stripe balance, so the money never passes through the seller's own vault.
 - **Mixed carts**: a cart with several VAT rates takes one signature per rate. A single transfer would need the vault to accept several rates in one payment, which is a contract change.

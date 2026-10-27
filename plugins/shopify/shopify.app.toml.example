@@ -1,0 +1,15 @@
+# Copy to shopify.app.toml in your Shopify app (created with the Shopify CLI) and fill in your values.
+client_id = "YOUR_CLIENT_ID"
+name = "Kyros for Shopify"
+application_url = "https://pay.myshop.com"
+embedded = false
+
+[access_scopes]
+scopes = "read_orders,write_orders"
+
+[webhooks]
+api_version = "2025-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "orders/create" ]
+  uri = "https://pay.myshop.com/webhooks/orders-create"
