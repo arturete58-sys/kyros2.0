@@ -70,6 +70,8 @@ kyros_line($o, 'Book', '20.00', $red, '10');
 kyros_line($o, 'Gift card', '50.00', null, '0');
 kyros_line($o, 'Shipping', '5.00', $std, '21');
 $o->set_payment_method('kyros');
+$o->save();
+$o->update_taxes();
 $o->calculate_totals(false);
 $o->save();
 $p = WC_Gateway_Kyros::payments_for($o, $gateway->config());
@@ -80,6 +82,8 @@ kyros_check('the transfers add up to the order total', array_sum(array_column($p
 $paid = wc_create_order();
 kyros_line($paid, 'Consulting abroad', '1000.00', null, '0');
 $paid->set_payment_method('kyros');
+$paid->save();
+$paid->update_taxes();
 $paid->calculate_totals(false);
 $paid->set_date_created(strtotime($results['startedAt']));
 $paid->save();
@@ -98,6 +102,8 @@ kyros_check('the order is paid', wc_get_order($paid->get_id())->is_paid(), true)
 $again = wc_create_order();
 kyros_line($again, 'Consulting abroad', '1000.00', null, '0');
 $again->set_payment_method('kyros');
+$again->save();
+$again->update_taxes();
 $again->calculate_totals(false);
 $again->set_date_created(strtotime($results['startedAt']));
 $again->save();
