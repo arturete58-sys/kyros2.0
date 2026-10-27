@@ -18,3 +18,4 @@ export * from './workdays.js';
 export * from './installments.js';
 export * from './notice.js';
 export * from './agents/index.js';
+export * from './checkout.js';

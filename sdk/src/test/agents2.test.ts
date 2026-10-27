@@ -172,8 +172,8 @@ test('treasury agent with Blend v2: pool rates by its own model, and when to len
 });
 
 test('agent catalogue: what is switched on now', () => {
-  assert.deepEqual(AGENTS.filter((a) => a.status === 'active').map((a) => a.id), ['assistant', 'documents', 'reconcile', 'law', 'guardian', 'expenses', 'residence', 'payouts', 'treasury-fx']);
-  assert.equal(isActive('x402'), false);
+  assert.deepEqual(AGENTS.filter((a) => a.status === 'active').map((a) => a.id), ['assistant', 'documents', 'reconcile', 'law', 'guardian', 'expenses', 'residence', 'payouts', 'treasury-fx', 'x402']);
+  assert.equal(isActive('settlement'), false);
   assert.equal(isActive('guardian'), true);
 });
 
@@ -238,7 +238,9 @@ test('assistant: residence, moves, expenses, the guardian, x402 and paying throu
   assert.match(iban.text, /es correcto/);
   const badIban = await assistantReply('mi IBAN es ES91 2100 0418 4502 0005 1333', ctx());
   assert.match(badIban.text, /dígitos de control/);
-  assert.match((await assistantReply('Vendo una API con x402', ctx())).text, /x402/);
+  const x = await assistantReply('Vendo una API con x402', ctx());
+  assert.deepEqual([/@kyros\/x402/.test(x.text), x.actions[0]?.kind === 'go' && x.actions[0].screen], [true, 'shop']);
+  assert.match((await assistantReply('Tengo una tienda online en WooCommerce', ctx())).text, /plugin de Kyros para WooCommerce/);
 
   // An invoice: mine (register the payment) or a supplier's (an expense).
   const inv = await assistantDocument('Acme Hosting S.L. FACTURA Nº H-1 Base imponible 100,00 € IVA 21% 21,00 € Total 121,00 €', 'f.pdf', ctx());

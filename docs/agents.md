@@ -33,7 +33,7 @@ All of them are plain TypeScript in the SDK (`sdk/src/agents/`), with no languag
 | Payouts | Active | Platforms and DAOs paying many freelancers. |
 | Treasury: euros | Active | Users paid in dollars who owe euros. |
 | Treasury: yield | Ready | Needs a Blend v2 pool for the reserve's asset and the owner's strategy; until then it projects with a rate the user gives. |
-| x402 billing | Ready | Runs in the API seller's server, once there is one inbox per VAT rate. |
+| x402 billing | Active | The `@kyros/x402` plugin runs it in the seller's server; the app's Sell online screen makes one payment address per VAT rate (the same addresses serve the WooCommerce plugin, see `plugins/`). |
 | Settlement | Ready | Needs a regulated anchor paying out euros (mainnet); on testnet the destination is a test account. |
 
 ## The assistant

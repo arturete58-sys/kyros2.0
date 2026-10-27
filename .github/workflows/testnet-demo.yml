@@ -50,6 +50,8 @@ jobs:
       - name: Run the testnet demo
         working-directory: sdk
         run: bash ../scripts/run-and-annotate.sh "testnet demo" node dist/demo/testnet.js --wasm-dir ../contracts/target/wasm32v1-none/release --out ../docs/testnet
+      - name: The WooCommerce plugin sees a demo payment on Horizon
+        run: bash scripts/run-and-annotate.sh "horizon check" php plugins/woocommerce/tests/live-horizon.php docs/testnet/latest.json
       - name: Summary
         if: always()
         run: if [ -f docs/testnet/README.md ]; then cat docs/testnet/README.md >> "$GITHUB_STEP_SUMMARY"; fi

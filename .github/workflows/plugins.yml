@@ -1,0 +1,82 @@
+name: Plugins
+
+# The checkout plugins: x402 (against the real @x402/express middleware), the
+# <kyros-checkout> widget, and WooCommerce (its core in plain PHP, then inside
+# WordPress with WooCommerce, paying an order with a real testnet transfer
+# checked on Horizon).
+
+on:
+  push:
+    branches: [main]
+    paths: ['plugins/**', 'sdk/src/**', 'docs/testnet/latest.json', '.github/workflows/plugins.yml']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  x402:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: x402 plugin tests
+        working-directory: plugins/x402
+        run: npm ci && npm test
+
+  widget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: plugins/checkout-widget
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run check
+      - name: Build, and check the WooCommerce plugin ships this build
+        run: |
+          npx vite build
+          cmp dist/kyros-checkout.js ../woocommerce/kyros-checkout/assets/kyros-checkout.js || { echo "::error::rebuild the widget: cd plugins/checkout-widget && npm run build"; exit 1; }
+
+  woocommerce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wp
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli
+          tools: wp-cli
+      - name: Core tests (plain PHP)
+        run: php plugins/woocommerce/tests/core-test.php
+      - name: WordPress with WooCommerce and the plugin
+        run: |
+          mkdir -p /tmp/wp && cd /tmp/wp
+          wp core download --quiet
+          wp config create --dbname=wp --dbuser=root --dbpass=root --dbhost=127.0.0.1 --quiet
+          wp core install --url=http://localhost --title=Shop --admin_user=admin --admin_password=admin --admin_email=shop@example.com --skip-email --quiet
+          wp plugin install woocommerce --activate --quiet
+          ln -s "$GITHUB_WORKSPACE/plugins/woocommerce/kyros-checkout" wp-content/plugins/kyros-checkout
+          wp plugin activate kyros-checkout
+      - name: An order paid with a real testnet transfer
+        working-directory: /tmp/wp
+        run: bash "$GITHUB_WORKSPACE/scripts/run-and-annotate.sh" "woocommerce" wp eval-file "$GITHUB_WORKSPACE/plugins/woocommerce/tests/wp-integration.php" "$GITHUB_WORKSPACE/docs/testnet/latest.json"

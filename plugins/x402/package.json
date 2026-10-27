@@ -1,0 +1,29 @@
+{
+  "name": "@kyros/x402",
+  "version": "0.1.0",
+  "description": "Kyros for x402 sellers on Stellar: each paid request carries the buyer's VAT and pays into the Kyros address that splits it, so the VAT and the income-tax reserve are set aside on arrival.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "files": ["dist/src"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/test/*.test.js"
+  },
+  "dependencies": {
+    "kyros-sdk": "file:../../sdk"
+  },
+  "peerDependencies": {
+    "@x402/core": "^2.20.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.4",
+    "@x402/core": "^2.28.0",
+    "@x402/express": "^2.28.0",
+    "@x402/stellar": "^2.28.0",
+    "express": "^5.1.0",
+    "typescript": "^5.7.3"
+  }
+}

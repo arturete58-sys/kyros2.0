@@ -115,7 +115,7 @@ export interface AssistantContext {
 }
 
 export type AssistantAction =
-  | { kind: 'go'; screen: 'pay' | 'request' | 'settings' | 'activity' | 'home' | 'expenses'; label: string }
+  | { kind: 'go'; screen: 'pay' | 'request' | 'settings' | 'activity' | 'home' | 'expenses' | 'shop'; label: string }
   | { kind: 'move'; label: string; country: string; date: string }
   | { kind: 'attach'; accept: 'document' | 'csv'; label: string }
   | { kind: 'ask'; text: string }
@@ -163,7 +163,7 @@ const WORDS: [Intent, RegExp, number][] = [
   ['guard', /(sospechos|raro|extra[ñn]o|hacke|robad|robar|stolen|steal|suspicious|unusual|verd[äa]chtig|gestohlen|suspect|vol[ée]|sospett|rubat|suspeit|roubad|alguien (ha )?cambi|someone (has )?changed|no he sido yo|wasn.t me|cambios? pendientes?|pending changes?)/i, 5],
   ['residence', /(d[íi]as en|days in|tage in|jours (en|au|aux)|giorni in|dias em|residen|ans[äa]ssig|d[óo]nde tributo|where do i pay tax|wo zahle ich|o[uù] (dois-je|je) pa|dove pago|onde pago|183|convenio|tratado|treaty|doble imposici|double tax|doppelbesteuer|double imposition|doppia imposizion|dupla tributa|n[óo]mada|nomad)/i, 3],
   ['expense', /(gastos?\b|deducible|deducir|desgrav|ticket|recibo|receipt|expense|deductible|ausgabe|betriebsausgabe|absetz|d[ée]penses?|d[ée]ductible|spes[ae]|deducibil|despesas?|dedut[íi]vel|iva soportado|input vat|vorsteuer|tva d[ée]ductible|proveedor|supplier)/i, 3],
-  ['x402', /(x402|http 402|402 payment|agentes? de ia que pag|ai agents? pay|micropag|micropayment|vender (una )?api|sell (an )?api)/i, 6],
+  ['x402', /(x402|http 402|402 payment|agentes? de ia que pag|ai agents? pay|micropag|micropayment|vender (una )?api|sell (an )?api|woocommerce|shopify|e-?commerce|tienda (online|en l[ií]nea)|online (shop|store)|loja online|boutique en ligne|onlineshop|negozio online|vender online|sell online)/i, 6],
   ['settlement', /(\biban\b|anchor|transferencia a hacienda|domiciliaci|sep-?24|liquidar (el )?impuesto|bank transfer|[üu]berweisung|virement|bonifico|transfer[êe]ncia banc|pagar por banco|cuenta bancaria|bank account)/i, 4],
   ['late', /(tarde|retraso|atraso|recargo|multa|sanci[óo]n|late|penalt|fine|interest on late|s[äa]umnis|versp[äa]t|zu sp[äa]t|zuschlag|retard|p[ée]nalit|ritardo|sanzion|mora|atrasad)/i, 3],
   ['payTax', /(c[óo]mo pago|pagar (el|los|mis) impuesto|pay (my )?tax|how do i pay|steuer(n)? zahlen|wie zahle|payer (mes|les) imp[ôo]ts|comment payer|pagare le tasse|come pago|pagar (os )?impostos|como pago)/i, 4],
@@ -628,7 +628,7 @@ function guard(ctx: AssistantContext): AssistantReply {
 }
 
 /** An agent that is built but not switched on in the app yet: what it does and what turns it on (in its intro). */
-function ready(L: AssistantLang, id: Extract<AgentId, 'x402' | 'settlement'>, intro: TextKey): AssistantReply {
+function ready(L: AssistantLang, id: Extract<AgentId, 'settlement'>, intro: TextKey): AssistantReply {
   return { intent: id, text: say(L, intro), actions: [] };
 }
 
@@ -689,7 +689,11 @@ export async function assistantReply(question: string, ctx: AssistantContext): P
     case 'guard':
       return guard(ctx);
     case 'x402':
-      return ready(L, 'x402', 'x402Intro');
+      return {
+        intent: 'x402',
+        text: say(L, /(x402|402|api|agent)/i.test(question) ? 'x402Intro' : 'shopIntro'),
+        actions: [{ kind: 'go', screen: 'shop', label: say(L, 'a_sellOnline') }],
+      };
     case 'settlement':
       return settlement(question, ctx);
     case 'custody':

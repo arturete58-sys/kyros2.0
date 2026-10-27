@@ -38,7 +38,7 @@ export const AGENTS: AgentInfo[] = [
   { id: 'payouts', status: 'active', runs: 'device', why: 'Platforms and DAOs paying many freelancers at once: a checked CSV into one signature per run.' },
   { id: 'treasury-fx', status: 'active', runs: 'device', why: 'Users paid in dollars who owe tax in euros: when to convert, against the oracle and the due date.' },
   { id: 'treasury-yield', status: 'ready', runs: 'device', why: 'Needs a Blend v2 pool for the reserve’s asset on the network and the owner’s strategy; until then it projects with a rate the user gives.' },
-  { id: 'x402', status: 'ready', runs: 'seller-server', why: 'Runs in the API seller’s server: on when a seller sets up one Kyros inbox per VAT rate.' },
+  { id: 'x402', status: 'active', runs: 'seller-server', why: 'Runs in the API seller’s server through the @kyros/x402 plugin; the app’s Sell online screen makes one payment address per VAT rate. The same addresses serve the WooCommerce plugin.' },
   { id: 'settlement', status: 'ready', runs: 'device', why: 'Needs a regulated anchor paying out euros (mainnet); on testnet the tax destination is a plain account.' },
 ];
 

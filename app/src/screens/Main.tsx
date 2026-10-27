@@ -665,6 +665,15 @@ export function Settings() {
         </div>
         <MoveCard />
         <PreviousVaults />
+        {!vault.archivedOf && (
+          <button className="card link-card" data-testid="sell-online" onClick={() => go('shop')}>
+            <div className="row spread">
+              <b>{t('sellOnline')}</b>
+              <span aria-hidden>›</span>
+            </div>
+            <span className="small muted">{t('shopSub')}</span>
+          </button>
+        )}
         <h2>{t('eurosAndLaw')}</h2>
         <div className="card">
           <div className="row">

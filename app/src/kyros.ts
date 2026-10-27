@@ -26,6 +26,8 @@ import {
   guardAlerts,
   calendarOf,
   scheduleMove,
+  shopInboxTermsOp,
+  type ShopConfig,
   type CalendarPeriod,
   type MoveSchedule,
   type Expense,
@@ -98,6 +100,8 @@ export interface VaultInfo {
   previous?: VaultInfo[];
   /** Set while the app shows an earlier vault: the current one's address. */
   archivedOf?: string;
+  /** Payment addresses for selling online (a shop or an x402 API): VAT bps → inbox. */
+  shopInboxes?: Record<number, string>;
 }
 
 /**
@@ -644,7 +648,7 @@ export const formatUnits6 = (x: bigint) => fmtNumber(Number(x) / 1e6, { minimumF
  */
 export async function sweepInbox(chain: Chain, v: VaultInfo): Promise<number> {
   let n = 0;
-  for (const inbox of [v.inbox, v.abroadInbox].filter((x): x is string => !!x))
+  for (const inbox of [v.inbox, v.abroadInbox, ...Object.values(v.shopInboxes ?? {})].filter((x): x is string => !!x))
     for (const token of [...chain.dollarTokens, chain.cfg.tokens.eur.contract]) {
       let bal = 0n;
       try {
@@ -859,9 +863,12 @@ export async function signMove(chain: Chain, wallet: Wallet, v: VaultInfo, m: Pe
       onStep(t('abroadSigning'));
       hashes.push(await wallet.signAndSend(c.expectPayerOp(nv.contractId, v.abroadInbox, abroadTerms(m.rule))));
     }
+    // The addresses for selling online keep their VAT rate in the new vault.
+    for (const [bps, inbox] of Object.entries(v.shopInboxes ?? {})) hashes.push(await wallet.signAndSend(shopInboxTermsOp(c, nv.contractId, inbox, Number(bps), m.rule)));
     onStep(t('moveStepInbox'));
     hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(v.inbox, nv.contractId))));
     if (v.abroadInbox) hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(v.abroadInbox, nv.contractId))));
+    for (const inbox of Object.values(v.shopInboxes ?? {})) hashes.push(rememberMine(next, await wallet.signAndSend(c.proposeVaultOp(inbox, nv.contractId))));
     next.move = { ...m, newVault: nv.contractId, readyAt: String(nowSecs() + BigInt(cfg.noticeSecs)), hashes, signedAt: new Date().toISOString() };
   }
   saveVault(next);
@@ -883,6 +890,7 @@ export async function cancelMove(chain: Chain, wallet: Wallet, v: VaultInfo): Pr
     else {
       await wallet.signAndSend(chain.client.cancelMoveOp(v.inbox));
       if (v.abroadInbox) await wallet.signAndSend(chain.client.cancelMoveOp(v.abroadInbox));
+      for (const inbox of Object.values(v.shopInboxes ?? {})) await wallet.signAndSend(chain.client.cancelMoveOp(inbox));
     }
   }
   const next = { ...v };
@@ -921,6 +929,7 @@ export async function finishMove(chain: Chain, v: VaultInfo, s: Snapshot): Promi
     inbox: v.inbox,
     abroadInbox: v.abroadInbox,
     abroadPayers: v.abroadPayers,
+    shopInboxes: v.shopInboxes,
     owner: v.owner,
     answers,
     rule: m.rule,
@@ -937,4 +946,35 @@ export async function finishMove(chain: Chain, v: VaultInfo, s: Snapshot): Promi
 /** The app shows an earlier vault (to pay its taxes and release what is left). */
 export function viewPrevious(current: VaultInfo, prev: VaultInfo): VaultInfo {
   return { ...prev, archivedOf: current.vault };
+}
+
+// ---- Selling online (a shop or an x402 API) ----
+
+/**
+ * Makes the seller's payment addresses for selling online, one per VAT rate:
+ * each an inbox (made by the fee payer) whose payments the vault splits with
+ * that VAT and the vault's income-tax reserve (the owner signs once per rate).
+ */
+export async function addShopInboxes(chain: Chain, wallet: Wallet, v: VaultInfo, rates: number[], onStep: (s: string) => void): Promise<VaultInfo> {
+  const next: VaultInfo = { ...v, shopInboxes: { ...(v.shopInboxes ?? {}) } };
+  await chain.ensureAccount(chain.feePayer.publicKey());
+  for (const [i, bps] of rates.filter((r) => !next.shopInboxes![r]).entries()) {
+    onStep(t('shopStep', { pct: fmtNumber(bps / 100), i: i + 1 }));
+    const inbox = await chain.client.deployInbox(chain.feePayer, Buffer.from(chain.cfg.wasm.inbox, 'hex'), v.vault);
+    await wallet.signAndSend(shopInboxTermsOp(chain.client, v.vault, inbox.contractId, bps, v.rule));
+    next.shopInboxes![bps] = inbox.contractId;
+    saveVault(next);
+  }
+  return next;
+}
+
+/** What the seller pastes into the WooCommerce plugin or an x402 server. */
+export function shopConfig(chain: Chain, v: VaultInfo): ShopConfig {
+  const usd = chain.cfg.tokens.usd;
+  return {
+    network: chain.cfg.network,
+    asset: { code: usd.code, issuer: usd.issuer, contract: usd.contract },
+    inboxes: v.shopInboxes ?? {},
+    vault: v.vault,
+  };
 }

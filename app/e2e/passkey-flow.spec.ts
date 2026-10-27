@@ -118,6 +118,14 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await expect(page.getByTestId('ded-expenses')).toContainText('1000,00');
   await expect(page.getByTestId('deductions')).toContainText('pagas sobre el beneficio');
 
+  // Selling online: one payment address per VAT rate (the passkey signs each one's terms),
+  // and the settings for the WooCommerce plugin or an x402 server.
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByTestId('sell-online').click();
+  await page.getByTestId('shop-create').click();
+  await settle(page);
+  await expect(page.getByTestId('shop-config')).toContainText('"2100": "C');
+
   // Moving to Portugal from today: a new vault with Portugal's rules, and the same payment address
   // moves to it after the notice (the passkey signs). The Spanish vault stays, with its reserve.
   await page.getByRole('button', { name: 'Ajustes' }).click();

@@ -16,6 +16,7 @@ const Pay = lazy(() => Main().then((m) => ({ default: m.Pay })));
 const Request = lazy(() => Main().then((m) => ({ default: m.Request })));
 const Settings = lazy(() => Main().then((m) => ({ default: m.Settings })));
 const Expenses = lazy(() => import('./screens/Expenses').then((m) => ({ default: m.Expenses })));
+const Shop = lazy(() => import('./screens/Shop').then((m) => ({ default: m.Shop })));
 const Move = lazy(() => import('./screens/Move').then((m) => ({ default: m.Move })));
 const Assistant = lazy(() => import('./screens/Assistant').then((m) => ({ default: m.Assistant })));
 const Onboarding = lazy(() => import('./screens/Start').then((m) => ({ default: m.Onboarding })));
@@ -214,6 +215,7 @@ export default function App() {
   else if (screen === 'assistant') page = <Assistant />;
   else if (screen === 'expenses') page = <Expenses />;
   else if (screen === 'move') page = <Move />;
+  else if (screen === 'shop') page = <Shop />;
   else page = <Home />;
 
   return (

@@ -1,0 +1,21 @@
+{
+  "name": "@kyros/checkout-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "<kyros-checkout>: pays an order from any Stellar wallet, one transfer per VAT rate into the seller's Kyros payment addresses. One script, no server of its own.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node scripts/copy.mjs",
+    "check": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "^2.7.1",
+    "@stellar/stellar-sdk": "^16.3.1",
+    "buffer": "^6.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^5.4.10"
+  }
+}

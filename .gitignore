@@ -8,3 +8,4 @@ sdk/rule-packs/
 # testnet keeper working files
 sdk/keeper-state.json
 sdk/keeper.md
+plugins/*/dist/
