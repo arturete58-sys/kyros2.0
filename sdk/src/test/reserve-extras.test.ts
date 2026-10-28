@@ -47,6 +47,9 @@ test('input VAT comes back from the VAT held for its period, then later ones, ne
   ]);
   assert.equal(plan.total, 92);
   assert.equal(plan.unclaimed, 11);
+  // At an exchange rate the whole VAT comes back to the cent: 42 EUR at 1.1217 USD.
+  const fx = inputVatPlan([exp('2027-02-01', 200, 42)], [{ period: q1, token: 'USDC', available: 483n * U, perUnit: 1.1217, preferred: false }], q);
+  assert.deepEqual([fx.total, fx.unclaimed, fx.claims[0].amount], [42, 0, 471_100_000n]);
   // An expense after every period held gets nothing from earlier periods.
   const late = inputVatPlan([exp('2027-08-01', 100, 21)], held, q);
   assert.deepEqual([late.claims, late.unclaimed], [[], 21]);

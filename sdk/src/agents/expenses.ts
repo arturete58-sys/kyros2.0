@@ -355,9 +355,11 @@ export function inputVatPlan(expenses: Expense[], held: VatHeld[], periodOfDate:
       if (need <= 0) break;
       // Whole cents of the pack's currency, converted to token units, never more than the bucket has left.
       let units = BigInt(Math.round(need * h.perUnit * 100)) * BigInt(UNIT_7 / 100);
-      if (units > h.left) units = h.left;
+      const capped = units > h.left;
+      if (capped) units = h.left;
       if (units <= 0n) continue;
-      const cur = Math.floor((Number(units) / UNIT_7 / h.perUnit) * 100 + 1e-6) / 100;
+      // All of it fits: the whole amount; capped: what the units left are worth, rounded down to the cent.
+      const cur = capped ? Math.floor((Number(units) / UNIT_7 / h.perUnit) * 100 + 1e-6) / 100 : need;
       h.left -= units;
       need = Math.round((need - cur) * 100) / 100;
       got = Math.round((got + cur) * 100) / 100;

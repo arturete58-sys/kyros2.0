@@ -32,6 +32,18 @@ export function fixtureVault(): VaultInfo {
     deployedAt: 'fixture',
     abroadInbox: 'CBABROADFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     wallets: [{ address: 'GBEXCHANGEFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', label: 'Exchange' }],
+    clients: [
+      {
+        id: 'CCLIENTFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        inbox: 'CCLIENTFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        name: 'Studio Lisboa',
+        country: 'PT',
+        business: true,
+        vatId: 'PT123456789',
+        terms: { vatBps: 0, withholdingBps: 0, buckets: [{ name: 'irpf', bps: 2000 }], treatment: 'reverse-charge', evidence: 'fixture' },
+        createdAt: '2026-09-01T09:00:00Z',
+      },
+    ],
   };
 }
 
@@ -76,8 +88,9 @@ export function fixtureSnapshot(pack: RulePack, holidays?: HolidayData): Snapsho
     transfers: {
       // A client in Germany paid the address for clients abroad, then the usual one.
       abroad: [{ id: 't1', ledger: 5, closedAt: day('2026-09-21T10:00:00Z'), txHash: 'a1', token: usd, from: 'GCLIENTDEFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB', amount: 1_500n * U }],
-      general: [{ id: 't2', ledger: 9, closedAt: day('2026-10-16T16:40:00Z'), txHash: 'f1', token: usd, from: 'GCLIENTDEFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB', amount: 1_210n * U }],
-      byInbox: {},
+      general: [{ id: 't4', ledger: 8, closedAt: day('2026-10-12T10:00:00Z'), txHash: 'a4', token: usd, from: 'GMIXEDPAYERFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', amount: 1_210n * U }, { id: 't2', ledger: 9, closedAt: day('2026-10-16T16:40:00Z'), txHash: 'f1', token: usd, from: 'GCLIENTDEFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB', amount: 1_210n * U }],
+      // A wallet that paid the address without VAT of a Portuguese client, and the usual address with VAT.
+      byInbox: { CCLIENTFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA: [{ id: 't3', ledger: 7, closedAt: day('2026-10-10T10:00:00Z'), txHash: 'a3', token: usd, from: 'GMIXEDPAYERFIXTUREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', amount: 1_000n * U }] },
     },
     events: [
       { ledger: 9, closedAt: day('2026-10-16T16:42:00Z'), txHash: 'f1', kind: 'received', gross: 1_210n * U, net: 800n * U, vat: 210n * U, reserve: 410n * U },

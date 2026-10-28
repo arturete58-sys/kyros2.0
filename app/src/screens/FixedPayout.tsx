@@ -150,8 +150,11 @@ export function Payout() {
         <p className="muted">{t('payoutSub')}</p>
         <section className="card" data-testid="payout-now">
           <span className="tiny muted">{t('payoutNow')}</span>
-          <span className="mono small" title={now} data-testid="payout-address">
-            {short(now)} {now === vault.owner ? <span className="muted">{t('payoutSigner')}</span> : null}
+          <span className="small" data-testid="payout-address">
+            <span className="mono" title={now}>
+              {short(now)}
+            </span>{' '}
+            {now === vault.owner ? <span className="muted">{t('payoutSigner')}</span> : null}
           </span>
         </section>
         {pending && pending.readyAt > BigInt(Math.floor(Date.now() / 1000)) && (
