@@ -21,7 +21,10 @@
  * 13. the VAT is paid to the destination with an anchor-style memo (muxed address);
  * 14. a vault that keeps its reserve in euros: reserve received in KUSD is
  *     swapped into KEUR through the Soroswap testnet router, never below
- *     Reflector's EUR/USD price minus 1%.
+ *     Reflector's EUR/USD price minus 1%;
+ * 15. a fixed fee per period and a payout address, both after the notice: the fee
+ *     fills first from the net amount, the rest goes to the payout address; and
+ *     reserve deposited for income received elsewhere, which does not count as income.
  *
  * For the demo the vault uses 4-minute periods and a 2-minute notice, so the
  * whole cycle fits in one run; real vaults use the rule pack's quarters.
@@ -350,6 +353,40 @@ async function main(): Promise<void> {
     detail: `VAT reserved: ${formatAmount(vatAdded)} (21% at home: 210; reverse charge: 0); addresses ${homeClient.contractId}, ${euBusiness.contractId}`,
   });
 
+  log('fixed fee and payout address proposed with notice; reserve deposited without income');
+  // A fixed amount per period (the self-employed fee) comes out of the first payments of each period,
+  // and the net amount can go to another wallet of the owner's; both wait out the notice.
+  const fxVault = await c.deployVault(k.keeper, vaultHash, {
+    owner: k.freelancer.publicKey(),
+    rule: terms.rule,
+    taxDestination: k.taxAccount.publicKey(),
+    noticeSecs: 120n,
+    period: { kind: 'Seconds', seconds: 3_600n },
+    dues: duesAfter(0n),
+    tokens: [token],
+  });
+  const fxInbox = await c.deployInbox(k.keeper, inboxHash, fxVault.contractId);
+  const fxFee = parseAmount('100');
+  const fxFixed = await c.send(k.freelancer, c.proposeFixedOp(fxVault.contractId, [{ bucket: 'social', token, amount: fxFee }]));
+  const fxPayout = await c.send(k.freelancer, c.proposePayoutOp(fxVault.contractId, k.newDestination.publicKey()));
+  const fxProposedAt = Date.now();
+  const fxPending = await c.pendingFixed(fxVault.contractId);
+  steps.push({
+    step: 'Fixed fee and payout address: the owner proposes setting aside 100 KUSD per period before the net amount goes out, and paying the net amount to another wallet of theirs (2-minute notice)',
+    ok: (await c.payout(fxVault.contractId)) === k.freelancer.publicKey() && fxPending?.fixed[0]?.amount === fxFee && (await c.pendingPayout(fxVault.contractId))?.payout === k.newDestination.publicKey(),
+    tx: fxPayout.hash,
+    detail: `propose_fixed ${fxFixed.hash.slice(0, 10)}…; until the notice ends the net amount still goes to the signing wallet (vault ${fxVault.contractId})`,
+  });
+  const fxPid = await c.currentPeriod(fxVault.contractId);
+  const fxDep = await c.send(k.freelancer, c.depositOp(fxVault.contractId, { from: k.freelancer.publicKey(), token, period: fxPid, bucket: 'vat', amount: parseAmount('21') }));
+  const fxState = await c.period(fxVault.contractId, fxPid, token);
+  steps.push({
+    step: 'Reserve without income: the owner deposits the 21 KUSD of VAT on 121 received in another wallet; the vault holds it like any reserve, and the period\'s income stays 0',
+    ok: fxState.buckets.vat === parseAmount('21') && fxState.deposited === parseAmount('21') && fxState.income === 0n,
+    tx: fxDep.hash,
+    detail: `period ${fxPid}: vat ${formatAmount(fxState.buckets.vat ?? 0n)}, deposited ${formatAmount(fxState.deposited)}, income ${formatAmount(fxState.income)}`,
+  });
+
   log('euro reserve: Soroswap testnet pool at Reflector\'s EUR/USD price, swapper, conversion proposed');
   let euro: { vault: string; proposedAt: number; eurUsd: bigint } | null = null;
   let euroSkip = '';
@@ -510,6 +547,35 @@ async function main(): Promise<void> {
     ok: !corrRun?.error && abBack === abVat && (await c.corrections(abVault.contractId)).length === 0,
     tx: corrRun?.hash,
     detail: corrRun?.error ?? `${formatAmount(abBack)} KUSD back to the freelancer`,
+  });
+
+  log('after the notice: the fixed fee fills first and the net amount goes to the payout address');
+  const fxWait = fxProposedAt + 125_000 - Date.now();
+  if (fxWait > 0) await sleep(fxWait);
+  const fxKeeper = new Keeper(c, k.keeper, [{ inbox: fxInbox.contractId, token }]);
+  const fxBal = async () => ({ payout: await c.balance(token, k.newDestination.publicKey()), owner: await c.balance(token, k.freelancer.publicKey()), vault: await c.balance(token, fxVault.contractId) });
+  const fx0 = await fxBal();
+  await c.send(k.client, c.transferOp(token, k.client.publicKey(), fxInbox.contractId, parseAmount('1210')));
+  const [fxSweep1] = await fxKeeper.tick();
+  const fx1 = await fxBal();
+  steps.push({
+    step: 'After the notice a client pays 1,210 KUSD to the inbox: 100 go to the fixed fee first, the other 700 of the net amount to the payout address, nothing to the signing wallet',
+    ok: !fxSweep1?.error && fx1.payout - fx0.payout === parseAmount('700') && fx1.owner === fx0.owner && fx1.vault - fx0.vault === parseAmount('510'),
+    tx: fxSweep1?.hash,
+    detail: fxSweep1?.error ?? `payout address +${formatAmount(fx1.payout - fx0.payout)}, vault +${formatAmount(fx1.vault - fx0.vault)} (VAT 210, income tax 200, fixed fee 100)`,
+  });
+  const fxPid1 = await c.currentPeriod(fxVault.contractId);
+  await c.send(k.client, c.transferOp(token, k.client.publicKey(), fxInbox.contractId, parseAmount('121')));
+  // What the inbox will authorize: the vault's own prediction (a new period would take the fee again).
+  const fxQ2 = await c.quoteIn(fxVault.contractId, { from: fxInbox.contractId, token, gross: parseAmount('121') });
+  const fxPid2 = await c.currentPeriod(fxVault.contractId);
+  const [fxSweep2] = await fxKeeper.tick();
+  const fx2 = await fxBal();
+  steps.push({
+    step: 'Once the period\'s fee is set aside, the next payment (121 KUSD) splits as usual: 80 to the payout address',
+    ok: !fxSweep2?.error && fx2.payout - fx1.payout === fxQ2.net && fx2.vault - fx1.vault === fxQ2.reserve && (fxQ2.fixed === 0n ? fxQ2.net === parseAmount('80') : fxPid2 !== fxPid1),
+    tx: fxSweep2?.hash,
+    detail: fxSweep2?.error ?? `payout address +${formatAmount(fx2.payout - fx1.payout)}, vault +${formatAmount(fx2.vault - fx1.vault)}`,
   });
 
   log('the same Router with vaults from other countries');

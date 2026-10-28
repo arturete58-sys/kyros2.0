@@ -118,6 +118,37 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await expect(page.getByTestId('ded-expenses')).toContainText('1000,00');
   await expect(page.getByTestId('deductions')).toContainText('pagas sobre el beneficio');
 
+  // Input VAT: a new payment puts VAT in the reserve, and the VAT on the expense comes back from it
+  // (a correction the passkey signs; it applies by itself after the notice).
+  await page.getByRole('button', { name: 'Inicio' }).click();
+  await page.getByTestId('simulate-payment').click();
+  await settle(page);
+  await page.getByTestId('expenses-card').click();
+  await expect(page.getByTestId('input-vat')).toBeVisible({ timeout: 120_000 });
+  await page.getByTestId('input-vat-reclaim').click();
+  await settle(page);
+  await expect(page.getByTestId('expense-list')).toContainText('IVA recuperado');
+
+  // A fixed monthly fee (the self-employed fee) and another payout address, both with notice;
+  // the pending changes are shown and cancelled together.
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByTestId('fixed-link').click();
+  await page.getByTestId('fixed-monthly').fill('300');
+  await page.getByTestId('fixed-save').click();
+  await settle(page);
+  await expect(page.getByTestId('fixed-pending')).toContainText('900,00');
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByTestId('payout-link').click();
+  await expect(page.getByTestId('payout-now')).toContainText('la cartera que firma');
+  const payoutCfg = await (await page.request.get('./testnet.json')).json();
+  await page.getByTestId('payout-new').fill(payoutCfg.taxAccount);
+  await page.getByTestId('payout-save').click();
+  await settle(page);
+  await expect(page.getByTestId('payout-pending')).toContainText(payoutCfg.taxAccount.slice(0, 8));
+  await page.getByTestId('payout-pending').getByRole('button', { name: 'Cancelar el cambio' }).click();
+  await settle(page);
+  await expect(page.getByTestId('payout-pending')).toHaveCount(0);
+
   // Selling online: one payment address per VAT rate (the passkey signs each one's terms),
   // and the settings for the WooCommerce plugin or an x402 server.
   await page.getByRole('button', { name: 'Ajustes' }).click();
@@ -168,6 +199,22 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await expect(page.getByTestId('archived-banner')).toBeVisible();
   await page.getByRole('button', { name: 'Volver a la actual' }).click();
   await expect(page.locator('header.greet')).toContainText('Portugal');
+});
+
+test('Argentina: the monotributo can be chosen in onboarding, and its plan charges no IVA', async ({ page }) => {
+  await virtualFaceId(page);
+  await page.goto('./');
+  await page.getByTestId('create-passkey').click();
+  await settle(page);
+  await page.getByLabel('País').selectOption('ar');
+  await page.getByTestId('next-1').click();
+  await page.getByTestId('activity-software').click();
+  await page.getByTestId('next-2').click();
+  await page.getByTestId('client-business-local').click();
+  await page.getByTestId('regime-monotributo').click();
+  await page.getByTestId('next-3').click();
+  await expect(page.getByText('Tu plan está listo')).toBeVisible();
+  await expect(page.locator('.content')).toContainText('Sin IVA');
 });
 
 test('the user picks the language and it is remembered', async ({ page }) => {

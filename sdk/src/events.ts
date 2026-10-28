@@ -27,13 +27,20 @@ export interface VaultEventRow {
     | 'conversion_proposed'
     | 'correction_proposed'
     | 'strategy_stopped'
-    | 'conversion_stopped';
+    | 'conversion_stopped'
+    | 'deposited'
+    | 'payout_proposed'
+    | 'payout_applied'
+    | 'fixed_proposed'
+    | 'fixed_applied';
   token?: string;
   period?: number;
   gross?: bigint;
   net?: bigint;
   vat?: bigint;
   parts?: bigint[];
+  /** Taken from the net amount for the period's fixed amounts. */
+  fixed?: bigint;
   reserve?: bigint;
   amount?: bigint;
   bucket?: string;
@@ -48,6 +55,8 @@ export interface VaultEventRow {
   readyAt?: bigint;
   /** A proposed tax destination. */
   destination?: string;
+  /** A proposed or applied payout address. */
+  payout?: string;
   /** A proposed rule: its VAT and its reserve (sum of the buckets), bps. */
   rule?: { vatBps: number; reserveBps: number };
   /** A proposed yield adapter or swapper. */
@@ -74,6 +83,11 @@ const KINDS = new Set([
   'correction_proposed',
   'strategy_stopped',
   'conversion_stopped',
+  'deposited',
+  'payout_proposed',
+  'payout_applied',
+  'fixed_proposed',
+  'fixed_applied',
 ]);
 
 /** Every Kyros event of `vault` from `startLedger` on (RPC keeps a limited window of history). */
@@ -95,7 +109,11 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
         rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, amount: big(v.amount) });
         continue;
       }
-      if (kind === 'rule_proposed' || kind === 'destination_proposed' || kind === 'strategy_proposed' || kind === 'conversion_proposed' || kind === 'correction_proposed') {
+      if (kind === 'payout_applied' || kind === 'fixed_applied') {
+        rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, payout: v.payout !== undefined ? String(v.payout) : undefined });
+        continue;
+      }
+      if (kind === 'rule_proposed' || kind === 'destination_proposed' || kind === 'strategy_proposed' || kind === 'conversion_proposed' || kind === 'correction_proposed' || kind === 'payout_proposed' || kind === 'fixed_proposed') {
         const rule = v.rule as { vat_bps: number; buckets: { bps: number }[] } | undefined;
         const c = v.correction as { period: number; token: string; bucket: string; amount: bigint; ready_at: bigint } | undefined;
         const st = (v.strategy ?? v.conversion) as { adapter?: string; swapper?: string } | undefined;
@@ -106,6 +124,7 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
           kind,
           readyAt: big(v.ready_at ?? c?.ready_at),
           destination: v.destination !== undefined ? String(v.destination) : undefined,
+          payout: v.payout !== undefined ? String(v.payout) : undefined,
           rule: rule ? { vatBps: Number(rule.vat_bps), reserveBps: rule.buckets.reduce((a, b) => a + Number(b.bps), 0) } : undefined,
           adapter: st ? String(st.adapter ?? st.swapper) : undefined,
           id: kind === 'correction_proposed' ? Number(topics[2]) : undefined,
@@ -141,6 +160,7 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
         net: big(v.net),
         vat: big(v.vat),
         parts: Array.isArray(v.parts) ? (v.parts as bigint[]).map((p) => BigInt(p)) : undefined,
+        fixed: big(v.fixed),
         reserve: big(v.reserve),
         amount: big(v.amount),
         bucket: v.bucket !== undefined ? String(v.bucket) : undefined,
@@ -236,7 +256,7 @@ export function toCsv(rows: VaultEventRow[], explorerTx = (h: string) => `https:
       f(r.gross),
       f(r.net),
       f(r.vat),
-      r.parts ? f(r.parts.reduce((a, b) => a + b, 0n)) : '',
+      r.parts ? f(r.parts.reduce((a, b) => a + b, r.fixed ?? 0n)) : '',
       f(r.amount),
       r.bucket ?? '',
       r.reference ?? '',

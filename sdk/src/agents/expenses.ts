@@ -36,6 +36,8 @@ export interface Expense {
   deductible: boolean;
   /** Where it came from: an invoice's number, or a transaction hash. */
   ref?: string;
+  /** Input VAT already taken back from the vault's VAT reserve (see `inputVatPlan`), in the pack's currency. */
+  vatReclaimed?: number;
 }
 
 const CATEGORIES: [ExpenseCategory, RegExp][] = [
@@ -297,4 +299,76 @@ export function deductionSummary(
     },
     reserve: { recommendedBefore: impact.recommendedBefore, recommendedAfter: impact.recommendedAfter, currentBps: impact.currentBps, proposal: rule.buckets.length ? impact.proposal : undefined },
   };
+}
+
+// ---- Input VAT against the VAT reserve ----
+
+/** VAT a vault holds for one period in one token, and what is already being taken back. */
+export interface VatHeld {
+  period: number;
+  token: string;
+  /** What the period's `vat` bucket holds, minus open corrections of it (token units). */
+  available: bigint;
+  /** Token units per unit of the pack's currency (1 when the token is in that currency). */
+  perUnit: number;
+  /** The token is in the pack's currency: used first. */
+  preferred: boolean;
+}
+
+export interface InputVatPlan {
+  /** Corrections to propose: VAT taken back from a period's bucket, in token units. */
+  claims: { period: number; token: string; amount: bigint }[];
+  /** Input VAT each expense gets back by this plan, in the pack's currency (index into the list given). */
+  byExpense: { index: number; vat: number }[];
+  /** Input VAT taken back by the plan, and what is left because the vault holds too little VAT. */
+  total: number;
+  unclaimed: number;
+}
+
+const UNIT_7 = 10_000_000;
+
+/**
+ * Input VAT netted against the VAT reserve. A registered business deducts the
+ * VAT on its supplier invoices from the VAT it collected in its VAT return, so
+ * the vault holds more VAT than the return will ask for. This plans the
+ * corrections that take that difference back: each deductible expense's input
+ * VAT not yet taken back, from the VAT held for its own period first, then
+ * later ones (the deduction goes in the return of the period of the invoice,
+ * or a later one), in the pack's currency first. Never more than a bucket
+ * holds; what does not fit stays `unclaimed`.
+ */
+export function inputVatPlan(expenses: Expense[], held: VatHeld[], periodOfDate: (date: string) => number): InputVatPlan {
+  const left = held.map((h) => ({ ...h, left: h.available }));
+  const claims = new Map<string, { period: number; token: string; amount: bigint }>();
+  const byExpense: InputVatPlan['byExpense'] = [];
+  let total = 0;
+  let unclaimed = 0;
+  const order = expenses.map((e, index) => ({ e, index })).sort((a, b) => (a.e.date < b.e.date ? -1 : a.e.date > b.e.date ? 1 : 0));
+  for (const { e, index } of order) {
+    if (!e.deductible) continue;
+    let need = Math.round((e.inputVat - (e.vatReclaimed ?? 0)) * 100) / 100;
+    if (need <= 0) continue;
+    const from = periodOfDate(e.date);
+    const pool = left.filter((h) => h.period >= from && h.left > 0n).sort((a, b) => a.period - b.period || Number(b.preferred) - Number(a.preferred));
+    let got = 0;
+    for (const h of pool) {
+      if (need <= 0) break;
+      // Whole cents of the pack's currency, converted to token units, never more than the bucket has left.
+      let units = BigInt(Math.round(need * h.perUnit * 100)) * BigInt(UNIT_7 / 100);
+      if (units > h.left) units = h.left;
+      if (units <= 0n) continue;
+      const cur = Math.floor((Number(units) / UNIT_7 / h.perUnit) * 100 + 1e-6) / 100;
+      h.left -= units;
+      need = Math.round((need - cur) * 100) / 100;
+      got = Math.round((got + cur) * 100) / 100;
+      const k = `${h.period}|${h.token}`;
+      const c = claims.get(k) ?? { period: h.period, token: h.token, amount: 0n };
+      c.amount += units;
+      claims.set(k, c);
+    }
+    if (got > 0) byExpense.push({ index, vat: got });
+    total = Math.round((total + got) * 100) / 100;
+    unclaimed = Math.round((unclaimed + Math.max(0, need)) * 100) / 100;
+  }
+  return { claims: [...claims.values()].sort((a, b) => a.period - b.period), byExpense, total, unclaimed };
 }

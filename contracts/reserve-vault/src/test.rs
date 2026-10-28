@@ -1270,3 +1270,180 @@ fn terms_in_use_are_never_archived_while_payments_keep_coming() {
     assert_eq!(s.vat, 0);
     assert_eq!(ttl(&w), full);
 }
+
+fn fee(w: &W, amount: i128) -> Vec<Fixed> {
+    vec![
+        &w.e,
+        Fixed {
+            bucket: Symbol::new(&w.e, "fee"),
+            token: w.token.clone(),
+            amount,
+        },
+    ]
+}
+
+#[test]
+fn a_fixed_amount_is_set_aside_from_the_first_payments_of_each_period() {
+    let w = world();
+    w.v.propose_fixed(&fee(&w, 300 * UNIT));
+    // Not before the notice.
+    let s = w.v.receive(&w.payer, &w.token, &(121 * UNIT), &r(&w));
+    assert_eq!((s.fixed, s.net), (0, 80 * UNIT));
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    // 1210 gross: 800 net, of which 300 go to the fee.
+    let q = w.v.quote_in(&w.payer, &w.token, &r(&w), &(1_210 * UNIT));
+    let s = w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(&w));
+    assert_eq!(q, s);
+    assert_eq!(
+        (s.fixed, s.net, s.reserve),
+        (300 * UNIT, 500 * UNIT, 710 * UNIT)
+    );
+    // The fee is full: the next payment splits as usual.
+    let s = w.v.receive(&w.payer, &w.token, &(121 * UNIT), &r(&w));
+    assert_eq!((s.fixed, s.net), (0, 80 * UNIT));
+    let id = w.v.current_period();
+    let p = w.v.period(&id, &w.token);
+    assert_eq!(p.buckets.get(symbol_short!("fee")).unwrap(), 300 * UNIT);
+    assert_eq!(p.fixed.get(symbol_short!("fee")).unwrap(), 300 * UNIT);
+    // The fee is not income: only the bases count.
+    assert_eq!(p.income, 1_200 * UNIT);
+    // A payment smaller than what is left of the fee goes to it whole.
+    w.e.ledger().set_timestamp(APR_1_2027 + 86_400);
+    let s = w.v.receive(&w.payer, &w.token, &(121 * UNIT), &r(&w));
+    assert_eq!((s.fixed, s.net, s.reserve), (80 * UNIT, 0, 121 * UNIT));
+    assert_eq!(bal(&w, &w.owner), (80 + 500 + 80) * UNIT);
+    // The fee can be paid to the tax destination at any time.
+    w.v.pay_tax(&id, &w.token, &symbol_short!("fee"), &(300 * UNIT));
+    assert_eq!(bal(&w, &w.tax), 300 * UNIT);
+}
+
+#[test]
+fn fixed_amounts_must_be_valid() {
+    let w = world();
+    assert_eq!(
+        w.v.try_propose_fixed(&fee(&w, 0)),
+        Err(Ok(VaultError::InvalidFixed))
+    );
+    let other =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
+    let bad = vec![
+        &w.e,
+        Fixed {
+            bucket: Symbol::new(&w.e, "fee"),
+            token: other,
+            amount: UNIT,
+        },
+    ];
+    assert_eq!(
+        w.v.try_propose_fixed(&bad),
+        Err(Ok(VaultError::InvalidFixed))
+    );
+    let vat = vec![
+        &w.e,
+        Fixed {
+            bucket: symbol_short!("vat"),
+            token: w.token.clone(),
+            amount: UNIT,
+        },
+    ];
+    assert_eq!(
+        w.v.try_propose_fixed(&vat),
+        Err(Ok(VaultError::InvalidFixed))
+    );
+    let mut twice = fee(&w, UNIT);
+    twice.append(&fee(&w, UNIT));
+    assert_eq!(
+        w.v.try_propose_fixed(&twice),
+        Err(Ok(VaultError::InvalidFixed))
+    );
+    // A proposal can be cancelled during the notice, and an empty list removes the fee.
+    w.v.propose_fixed(&fee(&w, UNIT));
+    w.v.cancel();
+    assert_eq!(w.v.pending_fixed(), None);
+    w.v.propose_fixed(&Vec::new(&w.e));
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    w.v.apply_pending();
+    assert_eq!(w.v.config().fixed.len(), 0);
+}
+
+#[test]
+fn a_deposit_adds_reserve_but_not_income() {
+    let w = world();
+    let id = w.v.current_period();
+    w.v.deposit(&w.payer, &w.token, &id, &symbol_short!("vat"), &(21 * UNIT));
+    let p = w.v.period(&id, &w.token);
+    assert_eq!(p.buckets.get(symbol_short!("vat")).unwrap(), 21 * UNIT);
+    assert_eq!(
+        (p.reserved, p.deposited, p.income),
+        (21 * UNIT, 21 * UNIT, 0)
+    );
+    assert_eq!(bal(&w, &w.v.address), 21 * UNIT);
+    // It is locked like any reserve, and can go to the tax destination.
+    assert_eq!(w.v.try_release(&id, &w.token), Err(Ok(VaultError::NotDue)));
+    w.v.pay_tax(&id, &w.token, &symbol_short!("vat"), &(21 * UNIT));
+    assert_eq!(bal(&w, &w.tax), 21 * UNIT);
+    // Only into buckets the vault knows, and not into a period that has not started.
+    assert_eq!(
+        w.v.try_deposit(&w.payer, &w.token, &id, &symbol_short!("nope"), &UNIT),
+        Err(Ok(VaultError::UnknownBucket))
+    );
+    assert_eq!(
+        w.v.try_deposit(&w.payer, &w.token, &(id + 1), &symbol_short!("vat"), &UNIT),
+        Err(Ok(VaultError::FuturePeriod))
+    );
+    assert_eq!(
+        w.v.try_deposit(&w.payer, &w.token, &id, &symbol_short!("vat"), &0),
+        Err(Ok(VaultError::InvalidAmount))
+    );
+    // An earlier period is fine (income received elsewhere last quarter).
+    w.e.ledger().set_timestamp(APR_1_2027 + 86_400);
+    w.v.deposit(
+        &w.payer,
+        &w.token,
+        &id,
+        &symbol_short!("irpf"),
+        &(20 * UNIT),
+    );
+    assert_eq!(
+        w.v.period(&id, &w.token)
+            .buckets
+            .get(symbol_short!("irpf"))
+            .unwrap(),
+        20 * UNIT
+    );
+}
+
+#[test]
+fn the_net_amount_goes_to_the_payout_address_after_the_notice() {
+    let w = world();
+    let bank = Address::generate(&w.e);
+    assert_eq!(w.v.payout(), w.owner);
+    w.v.propose_payout(&bank);
+    w.v.receive(&w.payer, &w.token, &(121 * UNIT), &r(&w));
+    assert_eq!(bal(&w, &w.owner), 80 * UNIT);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert_eq!(w.v.payout(), bank);
+    w.v.receive(&w.payer, &w.token, &(121 * UNIT), &r(&w));
+    assert_eq!(bal(&w, &bank), 80 * UNIT);
+    // Releases go there too; the owner still signs.
+    let q = w.v.current_period();
+    w.e.ledger().set_timestamp(APR_1_2027 + DUE_OFFSET);
+    w.v.release(&q, &w.token);
+    assert_eq!(bal(&w, &bank), (80 + 82) * UNIT);
+    assert_eq!(w.v.owner(), w.owner);
+}
+
+#[test]
+fn a_payout_change_can_be_cancelled_during_the_notice() {
+    let w = world();
+    let bank = Address::generate(&w.e);
+    w.v.propose_payout(&bank);
+    w.v.cancel();
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert_eq!(w.v.payout(), w.owner);
+    assert_eq!(
+        w.v.try_apply_pending(),
+        Err(Ok(VaultError::NoPendingChange))
+    );
+}

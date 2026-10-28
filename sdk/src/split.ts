@@ -25,7 +25,9 @@ export interface Split {
   vat: bigint;
   /** One per rule bucket, in order. */
   parts: bigint[];
-  /** vat + sum(parts) */
+  /** Taken from the net amount for the vault's fixed amounts per period (0 in the pure split). */
+  fixed: bigint;
+  /** vat + sum(parts) + fixed */
   reserve: bigint;
   /** gross - reserve: what the user can spend at once. */
   net: bigint;
@@ -59,7 +61,7 @@ export function split(rule: Rule, gross: bigint): Split {
   const vat = gross - base;
   const parts = rule.buckets.map((b) => (base * BigInt(b.bps)) / BPS);
   const reserve = parts.reduce((a, p) => a + p, vat);
-  return { gross, base, vat, parts, reserve, net: gross - reserve };
+  return { gross, base, vat, parts, fixed: 0n, reserve, net: gross - reserve };
 }
 
 /**
@@ -74,7 +76,7 @@ export function splitWithheld(rule: Rule, withholdingBps: number, gross: bigint)
   const vat = (base * BigInt(rule.vatBps)) / BPS;
   const parts = rule.buckets.map((b) => (base * BigInt(b.bps)) / BPS);
   const reserve = parts.reduce((a, p) => a + p, vat);
-  return { gross, base, vat, parts, reserve, net: gross - reserve };
+  return { gross, base, vat, parts, fixed: 0n, reserve, net: gross - reserve };
 }
 
 /** Same check as the contract: the withholding and the buckets take at most the whole base. */
@@ -109,4 +111,32 @@ export function parseAmount(text: string, decimals = 7): bigint {
  */
 export function abroadTerms(rule: Rule): { vatBps: number; withholdingBps: number; buckets: Bucket[] } {
   return { vatBps: 0, withholdingBps: 0, buckets: rule.buckets.map((b) => ({ ...b })) };
+}
+
+/** A fixed amount set aside each period in `bucket`, in `token` (the vault's `Fixed`). */
+export interface Fixed {
+  bucket: string;
+  token: string;
+  amount: bigint;
+}
+
+/**
+ * What the vault's fixed amounts take from a payment's net amount, as
+ * `receive` does: in order, for fixed amounts in `token`, until what the
+ * period has set aside so far (`filled`) reaches each amount.
+ */
+export function withFixed(s: Split, fixed: Fixed[], token: string, filled: Record<string, bigint>): Split {
+  let left = s.net;
+  let took = 0n;
+  for (const f of fixed) {
+    if (left <= 0n) break;
+    if (f.token !== token) continue;
+    const want = f.amount - (filled[f.bucket] ?? 0n);
+    const take = want < left ? want : left;
+    if (take > 0n) {
+      took += take;
+      left -= take;
+    }
+  }
+  return { ...s, fixed: s.fixed + took, net: s.net - took, reserve: s.reserve + took };
 }

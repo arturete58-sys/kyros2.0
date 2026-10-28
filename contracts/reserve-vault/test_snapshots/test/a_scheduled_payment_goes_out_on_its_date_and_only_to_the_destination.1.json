@@ -574,6 +574,14 @@
                           },
                           {
                             "key": {
+                              "symbol": "fixed"
+                            },
+                            "val": {
+                              "vec": []
+                            }
+                          },
+                          {
+                            "key": {
                               "symbol": "notice_secs"
                             },
                             "val": {
@@ -583,6 +591,14 @@
                           {
                             "key": {
                               "symbol": "owner"
+                            },
+                            "val": {
+                              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                            }
+                          },
+                          {
+                            "key": {
+                              "symbol": "payout"
                             },
                             "val": {
                               "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -759,6 +775,22 @@
                     },
                     "val": {
                       "i128": "0"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "deposited"
+                    },
+                    "val": {
+                      "i128": "0"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "fixed"
+                    },
+                    "val": {
+                      "map": []
                     }
                   },
                   {
@@ -1011,6 +1043,14 @@
                           },
                           {
                             "key": {
+                              "symbol": "fixed"
+                            },
+                            "val": {
+                              "vec": []
+                            }
+                          },
+                          {
+                            "key": {
                               "symbol": "notice_secs"
                             },
                             "val": {
@@ -1020,6 +1060,14 @@
                           {
                             "key": {
                               "symbol": "owner"
+                            },
+                            "val": {
+                              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                            }
+                          },
+                          {
+                            "key": {
+                              "symbol": "payout"
                             },
                             "val": {
                               "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"

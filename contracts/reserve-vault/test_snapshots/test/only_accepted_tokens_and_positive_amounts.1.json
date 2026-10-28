@@ -263,6 +263,14 @@
                           },
                           {
                             "key": {
+                              "symbol": "fixed"
+                            },
+                            "val": {
+                              "vec": []
+                            }
+                          },
+                          {
+                            "key": {
                               "symbol": "notice_secs"
                             },
                             "val": {
@@ -272,6 +280,14 @@
                           {
                             "key": {
                               "symbol": "owner"
+                            },
+                            "val": {
+                              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                            }
+                          },
+                          {
+                            "key": {
+                              "symbol": "payout"
                             },
                             "val": {
                               "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"

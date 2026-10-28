@@ -392,3 +392,37 @@ fn an_inbox_for_clients_abroad_sweeps_by_its_own_terms() {
     w.e.set_auths(&[]);
     assert_eq!(w.inbox.sweep(&w.token).vat, 21 * UNIT);
 }
+
+#[test]
+fn an_inbox_pays_the_payout_address_and_fills_the_fixed_amount_first() {
+    let w = world();
+    let bank = Address::generate(&w.e);
+    w.vault.propose_payout(&bank);
+    w.vault.propose_fixed(&vec![
+        &w.e,
+        kyros_types::Fixed {
+            bucket: Symbol::new(&w.e, "fee"),
+            token: w.token.clone(),
+            amount: 100 * UNIT,
+        },
+    ]);
+    w.e.ledger().set_timestamp(1_802_260_800 + 86_400);
+    TokenClient::new(&w.e, &w.token).transfer(&w.payer, &w.inbox.address, &(242 * UNIT));
+    // The inbox authorizes exactly what the vault does, fixed amount included, with no mocked auths.
+    w.e.set_auths(&[]);
+    let s = w.inbox.sweep(&w.token);
+    // 242 = 200 base + 42 VAT; 40 income-tax reserve; 160 net, of which 100 go to the fee.
+    assert_eq!(
+        (s.vat, s.fixed, s.net, s.reserve),
+        (42 * UNIT, 100 * UNIT, 60 * UNIT, 182 * UNIT)
+    );
+    assert_eq!(bal(&w, &bank), 60 * UNIT);
+    assert_eq!(bal(&w, &w.owner), 0);
+    // Once the period's fee is set aside, payments split as usual.
+    w.e.mock_all_auths();
+    TokenClient::new(&w.e, &w.token).transfer(&w.payer, &w.inbox.address, &(121 * UNIT));
+    w.e.set_auths(&[]);
+    let s = w.inbox.sweep(&w.token);
+    assert_eq!((s.fixed, s.net), (0, 80 * UNIT));
+    assert_eq!(bal(&w, &bank), 140 * UNIT);
+}

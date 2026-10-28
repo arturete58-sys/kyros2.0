@@ -232,8 +232,8 @@ impl CctpPay {
         // The vault pulls the money from here; authorize exactly the two
         // transfers its split will make, nothing else.
         let v = VaultClient::new(&e, &p.vault);
-        let s = v.quote_for(&me, &p.reference, &gross);
-        let owner = v.owner();
+        let s = v.quote_in(&me, &token, &p.reference, &gross);
+        let owner = v.payout();
         let transfer = Symbol::new(&e, "transfer");
         let mut auths: Vec<InvokerContractAuthEntry> = Vec::new(&e);
         if s.net > 0 {

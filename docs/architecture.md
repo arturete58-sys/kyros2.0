@@ -4,7 +4,7 @@ Four Soroban contracts hold every rule that touches money or rates, and two adap
 
 | Contract | Instances | Admin | Functions |
 | --- | --- | --- | --- |
-| Reserve Vault | one per user | none; the user is owner | `receive`, `quote`, `pay_tax`, `pay_tax_to`, `release`, `propose_rule`, `propose_rule_at`, `propose_destination`, `cancel`, `apply_pending`, `follow`, `unfollow`, `expect_invoice`, `forget_invoice`, `propose_conversion`, `stop_conversion`, `convert`, `propose_strategy`, `stop_strategy`, `invest`, `harvest`, reads |
+| Reserve Vault | one per user | none; the user is owner | `receive`, `quote`, `pay_tax`, `pay_tax_to`, `release`, `propose_rule`, `propose_rule_at`, `propose_destination`, `propose_payout`, `propose_fixed`, `deposit`, `cancel`, `apply_pending`, `follow`, `unfollow`, `expect_invoice`, `forget_invoice`, `propose_conversion`, `stop_conversion`, `convert`, `propose_strategy`, `stop_strategy`, `invest`, `harvest`, reads |
 | Router | one, shared | none, no storage | `pay`, `quote` |
 | Inbox | one per user | none; moved only by the vault owner, with notice | `sweep`, `return_unaccepted`, `propose_vault`, `cancel_move` |
 | Rate Registry | one per network | publisher (a multisig of rule-pack maintainers); holds no money | `seed`, `publish`, `withdraw`, `set_admin`, `rate`, `rate_at`, `schedule`, `min_notice` |
@@ -44,13 +44,13 @@ sequenceDiagram
   participant V as Reserve Vault
   P->>I: SEP-41 transfer(payer, inbox, 121)
   K->>I: sweep(token)
-  I->>V: quote(121)
+  I->>V: payout(), quote_in(inbox, token, 0x00.., 121)
   I->>I: authorize exactly two transfers for the vault
   I->>V: receive(inbox, token, 121, 0x00..)
-  V-->>I: net 80 to the owner, reserve 41 in the vault
+  V-->>I: net 80 to the payout address, reserve 41 in the vault
 ```
 
-If no keeper runs, the money waits in the inbox, can only ever go to the owner and the vault, and anyone can sweep it. A token the vault does not accept goes back to the owner through `return_unaccepted`.
+If no keeper runs, the money waits in the inbox, can only ever go to the owner's payout address and the vault, and anyone can sweep it. A token the vault does not accept goes to the payout address through `return_unaccepted`.
 
 ## One fiscal period in the vault
 
@@ -130,6 +130,12 @@ The chain does not say where a payer is, so the usual payment address keeps rese
 - `expect_payer(payer, terms)` (owner) registers terms for a payer address, used by `receive` when a payment has no invoice terms. The app makes a second inbox on first use and registers it with no VAT and the same income-tax buckets; payments through it split that way. The Inbox and the CCTP receiver authorize exactly the transfers `quote_for(from, reference, gross)` returns, which applies the same terms as `receive`. A client wallet can be registered the same way, so its payments through the Router or a payment link split by its terms. `forget_payer` removes them.
 - When a wallet seen paying the address for clients abroad pays the usual one, the app offers to take that VAT back: `propose_correction(period, token, bucket, amount)` (owner, at most what the bucket holds) can be applied by anyone with `apply_correction` once the vault's notice has passed, and pays the owner at most what the bucket still holds; the owner can `cancel_correction` until then. The app and the keeper apply ready corrections. At most 20 are open at once.
 
+## Fixed amounts, reserve without income and the payout address
+
+- `propose_fixed(fixed)` (owner, with notice; an empty list removes them) sets up to four fixed amounts per period, each `{bucket, token, amount}`: Spain's self-employed fee, for example, 3 x the monthly fee per quarter in a `social` bucket. `receive` takes them from the net amount of the period's first payments in that token until the period's amount is set aside (`PeriodState.fixed` counts it), on top of the percentages; it is not income. `quote_in(from, token, reference, gross)` returns exactly what `receive` will do now, fixed amounts included, and is what the Inbox and the CCTP receiver authorize. The `vat` bucket cannot be fixed.
+- `deposit(from, token, period, bucket, amount)` adds reserve to a bucket of the current period or an earlier one, e.g. the VAT and income-tax reserve on income received in another wallet, or VAT a client at home paid to the address without VAT. It is locked and payable like any reserve, counted in `PeriodState.deposited`, and does not change the period's income.
+- `propose_payout(address)` (owner, with notice) sets where the net amount, releases, corrections and yield go; by default the owner. The owner still signs everything; the guardian flags a payout change nobody proposed from the owner's device, and `cancel` withdraws it during the notice.
+
 ## Euro reserve, yield and anchors
 
 `convert(period)` swaps a period's reserve into the currency the tax is owed in, through the swapper and the SEP-40 oracle the owner chose with notice, never below the oracle price minus the owner's tolerance. A yield strategy chosen with notice can hold up to a share of the reserve; the buckets keep their amounts, the owner takes what it earns with `harvest`, and payments out withdraw what they need. `pay_tax_to` pays the tax destination with an anchor's memo as muxed id. See [euro-reserve-yield-anchors.md](euro-reserve-yield-anchors.md).
@@ -160,15 +166,15 @@ Ten agents in the SDK read, check and prepare without holding funds or keys: law
 
 ## Storage
 
-- Instance: config (owner, rule, tax destination, notice, period kind, due rules per bucket, accepted tokens) and pending changes. Extended on every write.
-- Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination (in total and per bucket), released, converted, income booked and income tax withheld by clients. Extended on every write, to about 13 months.
+- Instance: config (owner, payout address, rule, fixed amounts, tax destination, notice, period kind, due rules per bucket, accepted tokens) and pending changes. Extended on every write.
+- Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination (in total and per bucket), released, converted, income booked, income tax withheld by clients, what the fixed amounts have set aside and what was deposited. Extended on every write, to about 13 months.
 - Persistent: due dates set from a notice, per period and bucket, and scheduled payments; instance: the list of open scheduled payments (at most 40).
 - Instance: the conversion and the strategy, and their pending proposals.
 - Persistent: what the buckets hold per token across periods (for yield), the terms of each registered invoice and payer, and open corrections; instance: the list of open corrections (at most 20).
 
 ## Errors
 
-`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice`, `InvalidPeriod`, `InvalidDue`, `DueTooSoon`, `UnknownPayment`, `NotYet`, `TooMany`, `UnknownPayer`, `UnknownCorrection` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries`, `InvalidHolidays`, `YearStarted` (registry).
+`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice`, `InvalidPeriod`, `InvalidDue`, `DueTooSoon`, `UnknownPayment`, `NotYet`, `TooMany`, `UnknownPayer`, `UnknownCorrection`, `InvalidFixed`, `FuturePeriod` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries`, `InvalidHolidays`, `YearStarted` (registry).
 
 ## Security notes
 

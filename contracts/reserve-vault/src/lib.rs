@@ -43,6 +43,14 @@
 //!   strategy the owner chose with notice, one strategy instance per vault.
 //!   The buckets keep their amounts; what the strategy earns on top is the
 //!   owner's (`harvest`). Payments out withdraw from the strategy as needed.
+//! - **Fixed amounts per period (opt-in).** A fixed amount (e.g. the monthly
+//!   self-employed fee) is set aside from the first payments of each period,
+//!   before the net amount goes out, on top of the percentages.
+//! - **Reserve without income.** Anyone can add reserve to a bucket
+//!   (`deposit`), e.g. the VAT on income received in another wallet; it does
+//!   not count as income.
+//! - **Payout address.** The net amount (and whatever the vault returns) goes
+//!   to the payout address, the owner unless they set another one with notice.
 //! - **Paying through an anchor.** `pay_tax_to` sends to the destination
 //!   with a muxed id (the anchor's memo), so an anchor can match the payment
 //!   and send euros to the owner's bank account.
@@ -52,8 +60,9 @@
 #![no_std]
 use kyros_types::{
     civil_from_days, due_at, next_open, period_end, period_of, split, split_withheld, valid_due,
-    valid_period, validate, validate_withholding, vat_symbol, Asset, Due, OracleClient, PeriodKind,
-    RegistryClient, Rule, Split, SwapClient, YieldClient, BPS, MAX_SHIFT_DAYS,
+    valid_period, validate, validate_withholding, vat_symbol, Asset, Due, Fixed, OracleClient,
+    PeriodKind, RegistryClient, Rule, Split, SwapClient, YieldClient, BPS, MAX_FIXED,
+    MAX_SHIFT_DAYS,
 };
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, token, Address, BytesN,
@@ -133,6 +142,11 @@ pub enum VaultError {
     TooMany = 33,
     UnknownPayer = 34,
     UnknownCorrection = 35,
+    /// Fixed amounts that cannot be used (too many, not positive, the `vat`
+    /// bucket, a token the vault does not accept, the same bucket twice).
+    InvalidFixed = 36,
+    /// A deposit into a period that has not started.
+    FuturePeriod = 37,
 }
 
 /// Most corrections waiting at once.
@@ -174,7 +188,11 @@ pub struct Feed {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     pub owner: Address,
+    /// Where the net amount, releases and corrections go (the owner by default).
+    pub payout: Address,
     pub rule: Rule,
+    /// Fixed amounts set aside each period before the net amount goes out.
+    pub fixed: Vec<Fixed>,
     pub tax_destination: Address,
     /// Seconds a proposed rule or destination waits before it can apply.
     pub notice_secs: u64,
@@ -284,6 +302,22 @@ pub struct PendingDestination {
     pub ready_at: u64,
 }
 
+/// A proposed payout address, waiting for its notice period.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingPayout {
+    pub payout: Address,
+    pub ready_at: u64,
+}
+
+/// Proposed fixed amounts per period, waiting for their notice period.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingFixed {
+    pub fixed: Vec<Fixed>,
+    pub ready_at: u64,
+}
+
 /// What one period holds for one token.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -304,6 +338,10 @@ pub struct PeriodState {
     pub withheld: i128,
     /// What has been paid to the tax destination from each bucket.
     pub paid_buckets: Map<Symbol, i128>,
+    /// How much of each fixed amount the period's payments have set aside so far.
+    pub fixed: Map<Symbol, i128>,
+    /// Reserve added with `deposit` (not income).
+    pub deposited: i128,
 }
 
 /// How reserve received in `from_token` is turned into `to_token`.
@@ -386,6 +424,8 @@ enum Key {
     Correction(u32),
     CorrectionIds,
     NextCorrection,
+    PendingPayout,
+    PendingFixed,
 }
 
 #[contractevent(topics = ["kyros_vault", "received"])]
@@ -401,7 +441,47 @@ pub struct Received {
     pub net: i128,
     pub vat: i128,
     pub parts: Vec<i128>,
+    /// Taken from the net amount for the period's fixed amounts.
+    pub fixed: i128,
     pub reserve: i128,
+}
+
+#[contractevent(topics = ["kyros_vault", "deposited"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Deposited {
+    #[topic]
+    pub token: Address,
+    #[topic]
+    pub period: u32,
+    pub from: Address,
+    pub bucket: Symbol,
+    pub amount: i128,
+}
+
+#[contractevent(topics = ["kyros_vault", "payout_proposed"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PayoutProposed {
+    pub payout: Address,
+    pub ready_at: u64,
+}
+
+#[contractevent(topics = ["kyros_vault", "payout_applied"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PayoutApplied {
+    pub payout: Address,
+}
+
+#[contractevent(topics = ["kyros_vault", "fixed_proposed"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FixedProposed {
+    pub fixed: Vec<Fixed>,
+    pub ready_at: u64,
+}
+
+#[contractevent(topics = ["kyros_vault", "fixed_applied"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FixedApplied {
+    pub fixed: Vec<Fixed>,
 }
 
 #[contractevent(topics = ["kyros_vault", "tax_paid"])]
@@ -596,6 +676,8 @@ pub struct VatUnfollowed {
 pub struct ChangeCancelled {
     pub rule: bool,
     pub destination: bool,
+    pub payout: bool,
+    pub fixed: bool,
 }
 
 fn now(e: &Env) -> u64 {
@@ -625,6 +707,14 @@ fn pending_destination(e: &Env) -> Option<PendingDestination> {
     e.storage().instance().get(&Key::PendingDestination)
 }
 
+fn pending_payout(e: &Env) -> Option<PendingPayout> {
+    e.storage().instance().get(&Key::PendingPayout)
+}
+
+fn pending_fixed(e: &Env) -> Option<PendingFixed> {
+    e.storage().instance().get(&Key::PendingFixed)
+}
+
 /// The config in force now: a pending change counts once its notice has passed,
 /// even before anyone calls `apply_pending`.
 fn active(e: &Env) -> Config {
@@ -637,6 +727,16 @@ fn active(e: &Env) -> Config {
     if let Some(p) = pending_destination(e) {
         if now(e) >= p.ready_at {
             c.tax_destination = p.destination;
+        }
+    }
+    if let Some(p) = pending_payout(e) {
+        if now(e) >= p.ready_at {
+            c.payout = p.payout;
+        }
+    }
+    if let Some(p) = pending_fixed(e) {
+        if now(e) >= p.ready_at {
+            c.fixed = p.fixed;
         }
     }
     c
@@ -677,6 +777,8 @@ fn load_period(e: &Env, id: u32, token: &Address) -> PeriodState {
             income: 0,
             withheld: 0,
             paid_buckets: Map::new(e),
+            fixed: Map::new(e),
+            deposited: 0,
         })
 }
 
@@ -811,6 +913,52 @@ fn split_for(
     }
 }
 
+/// What each fixed amount in `token` takes from `net`, in order, until the
+/// period's amount is set aside: (bucket, amount) pairs with amount > 0.
+fn fixed_takes(
+    e: &Env,
+    c: &Config,
+    token: &Address,
+    p: &PeriodState,
+    net: i128,
+) -> Vec<(Symbol, i128)> {
+    let mut out = Vec::new(e);
+    let mut left = net;
+    for f in c.fixed.iter() {
+        if left <= 0 {
+            break;
+        }
+        if f.token != *token {
+            continue;
+        }
+        let want = f.amount - p.fixed.get(f.bucket.clone()).unwrap_or(0);
+        let take = want.min(left);
+        if take > 0 {
+            out.push_back((f.bucket, take));
+            left -= take;
+        }
+    }
+    out
+}
+
+fn check_fixed(e: &Env, c: &Config, fixed: &Vec<Fixed>) -> Result<(), VaultError> {
+    if fixed.len() > MAX_FIXED {
+        return Err(VaultError::InvalidFixed);
+    }
+    let vat = vat_symbol(e);
+    for (i, f) in fixed.iter().enumerate() {
+        if f.amount <= 0 || f.bucket == vat || !c.tokens.contains(&f.token) {
+            return Err(VaultError::InvalidFixed);
+        }
+        for other in fixed.iter().skip(i + 1) {
+            if other.bucket == f.bucket {
+                return Err(VaultError::InvalidFixed);
+            }
+        }
+    }
+    Ok(())
+}
+
 fn check_rule(e: &Env, rule: &Rule) -> Result<(), VaultError> {
     validate(e, rule).map_err(|_| VaultError::InvalidRule)
 }
@@ -880,8 +1028,10 @@ impl ReserveVault {
             return Err(VaultError::NoTokens);
         }
         let c = Config {
+            payout: owner.clone(),
             owner,
             rule,
+            fixed: Vec::new(&e),
             tax_destination,
             notice_secs,
             period,
@@ -922,6 +1072,19 @@ impl ReserveVault {
         stored_config(&e).owner
     }
 
+    /// Where the net amount, releases and corrections go now.
+    pub fn payout(e: Env) -> Address {
+        active(&e).payout
+    }
+
+    pub fn pending_payout(e: Env) -> Option<PendingPayout> {
+        pending_payout(&e)
+    }
+
+    pub fn pending_fixed(e: Env) -> Option<PendingFixed> {
+        pending_fixed(&e)
+    }
+
     pub fn accepts(e: Env, token: Address) -> bool {
         stored_config(&e).tokens.contains(&token)
     }
@@ -936,6 +1099,26 @@ impl ReserveVault {
     /// authorize the exact transfers (the Inbox, the CCTP receiver) ask this.
     pub fn quote_for(e: Env, from: Address, reference: BytesN<32>, gross: i128) -> Split {
         split_for(&e, &effective(&e).rule, &from, &reference, gross).1
+    }
+
+    /// Exactly what `receive` will do for this payment now, in `token`: the
+    /// split of `quote_for` with the period's fixed amounts taken from the net.
+    pub fn quote_in(
+        e: Env,
+        from: Address,
+        token: Address,
+        reference: BytesN<32>,
+        gross: i128,
+    ) -> Split {
+        let c = effective(&e);
+        let mut s = split_for(&e, &c.rule, &from, &reference, gross).1;
+        let p = load_period(&e, period_of(&c.period, now(&e)), &token);
+        for (_, take) in fixed_takes(&e, &c, &token, &p, s.net).iter() {
+            s.fixed += take;
+        }
+        s.net -= s.fixed;
+        s.reserve += s.fixed;
+        s
     }
 
     pub fn current_period(e: Env) -> u32 {
@@ -967,7 +1150,7 @@ impl ReserveVault {
     // ---- Money in ----
 
     /// Pulls `gross` of `token` from `from` (who must authorize the transfers):
-    /// the net amount to the owner, the reserve into the vault, booked to the
+    /// the net amount to the payout address, the reserve into the vault, booked to the
     /// current period. Called by the Router (the payer authorizes) and by the
     /// user's Inbox (the inbox contract authorizes).
     pub fn receive(
@@ -985,17 +1168,31 @@ impl ReserveVault {
         if !c.tokens.contains(&token) {
             return Err(VaultError::TokenNotAccepted);
         }
-        let (rule, s) = split_for(&e, &c.rule, &from, &reference, gross);
+        let (rule, mut s) = split_for(&e, &c.rule, &from, &reference, gross);
         c.rule = rule;
+        let id = period_of(&c.period, now(&e));
+        let mut p = load_period(&e, id, &token);
+        // The period's fixed amounts come first, out of the net amount.
+        for (bucket, take) in fixed_takes(&e, &c, &token, &p, s.net).iter() {
+            p.buckets.set(
+                bucket.clone(),
+                p.buckets.get(bucket.clone()).unwrap_or(0) + take,
+            );
+            p.fixed.set(
+                bucket.clone(),
+                p.fixed.get(bucket.clone()).unwrap_or(0) + take,
+            );
+            s.fixed += take;
+        }
+        s.net -= s.fixed;
+        s.reserve += s.fixed;
         let t = token::Client::new(&e, &token);
         if s.net > 0 {
-            t.transfer(&from, &c.owner, &s.net);
+            t.transfer(&from, &c.payout, &s.net);
         }
         if s.reserve > 0 {
             t.transfer(&from, &e.current_contract_address(), &s.reserve);
         }
-        let id = period_of(&c.period, now(&e));
-        let mut p = load_period(&e, id, &token);
         let vat = vat_symbol(&e);
         p.buckets
             .set(vat.clone(), p.buckets.get(vat).unwrap_or(0) + s.vat);
@@ -1019,10 +1216,60 @@ impl ReserveVault {
             net: s.net,
             vat: s.vat,
             parts: s.parts.clone(),
+            fixed: s.fixed,
             reserve: s.reserve,
         }
         .publish(&e);
         Ok(s)
+    }
+
+    /// Adds `amount` of `token` from `from` to `bucket` of `period` (the
+    /// current one or an earlier one), e.g. the VAT and income-tax reserve on
+    /// income received in another wallet. It is reserve like any other
+    /// (locked until the bucket's due date, payable to the tax destination)
+    /// but not income: the period's income does not change.
+    pub fn deposit(
+        e: Env,
+        from: Address,
+        token: Address,
+        period: u32,
+        bucket: Symbol,
+        amount: i128,
+    ) -> Result<(), VaultError> {
+        from.require_auth();
+        if amount <= 0 {
+            return Err(VaultError::InvalidAmount);
+        }
+        let c = active(&e);
+        if !c.tokens.contains(&token) {
+            return Err(VaultError::TokenNotAccepted);
+        }
+        if period > period_of(&c.period, now(&e)) {
+            return Err(VaultError::FuturePeriod);
+        }
+        if !Self::bucket_names(&e, &c).contains(&bucket) {
+            return Err(VaultError::UnknownBucket);
+        }
+        token::Client::new(&e, &token).transfer(&from, &e.current_contract_address(), &amount);
+        let mut p = load_period(&e, period, &token);
+        p.buckets.set(
+            bucket.clone(),
+            p.buckets.get(bucket.clone()).unwrap_or(0) + amount,
+        );
+        p.reserved += amount;
+        p.deposited += amount;
+        save_period(&e, period, &token, &p);
+        add_held(&e, &token, amount);
+        bump_instance(&e);
+        Deposited {
+            token,
+            period,
+            from,
+            bucket,
+            amount,
+        }
+        .publish(&e);
+        Ok(())
     }
 
     // ---- Money out ----
@@ -1097,7 +1344,7 @@ impl ReserveVault {
         save_period(&e, period, &token, &p);
         add_held(&e, &token, -total);
         ensure_liquid(&e, &token, total)?;
-        token::Client::new(&e, &token).transfer(&e.current_contract_address(), &c.owner, &total);
+        token::Client::new(&e, &token).transfer(&e.current_contract_address(), &c.payout, &total);
         Released {
             token,
             period,
@@ -1310,6 +1557,45 @@ impl ReserveVault {
             ready_at,
         }
         .publish(&e);
+        Ok(ready_at)
+    }
+
+    /// Proposes a new payout address (where the net amount, releases and
+    /// corrections go); it applies after `notice_secs`. The owner still signs.
+    pub fn propose_payout(e: Env, payout: Address) -> Result<u64, VaultError> {
+        let c = active(&e);
+        c.owner.require_auth();
+        Self::fold(&e);
+        let ready_at = now(&e) + c.notice_secs;
+        e.storage().instance().set(
+            &Key::PendingPayout,
+            &PendingPayout {
+                payout: payout.clone(),
+                ready_at,
+            },
+        );
+        bump_instance(&e);
+        PayoutProposed { payout, ready_at }.publish(&e);
+        Ok(ready_at)
+    }
+
+    /// Proposes the fixed amounts set aside each period (an empty list
+    /// removes them); they apply after `notice_secs`.
+    pub fn propose_fixed(e: Env, fixed: Vec<Fixed>) -> Result<u64, VaultError> {
+        let c = active(&e);
+        c.owner.require_auth();
+        check_fixed(&e, &c, &fixed)?;
+        Self::fold(&e);
+        let ready_at = now(&e) + c.notice_secs;
+        e.storage().instance().set(
+            &Key::PendingFixed,
+            &PendingFixed {
+                fixed: fixed.clone(),
+                ready_at,
+            },
+        );
+        bump_instance(&e);
+        FixedProposed { fixed, ready_at }.publish(&e);
         Ok(ready_at)
     }
 
@@ -1555,7 +1841,7 @@ impl ReserveVault {
             ensure_liquid(&e, &x.token, amount)?;
             token::Client::new(&e, &x.token).transfer(
                 &e.current_contract_address(),
-                &c.owner,
+                &c.payout,
                 &amount,
             );
         }
@@ -1809,7 +2095,7 @@ impl ReserveVault {
         }
         ensure_liquid(&e, &token, surplus)?;
         let amount = surplus.min(token::Client::new(&e, &token).balance(&me));
-        token::Client::new(&e, &token).transfer(&me, &c.owner, &amount);
+        token::Client::new(&e, &token).transfer(&me, &c.payout, &amount);
         Harvested { token, amount }.publish(&e);
         Ok(amount)
     }
@@ -1820,8 +2106,14 @@ impl ReserveVault {
         let t = now(&e);
         let r = pending_rule(&e).filter(|p| t < p.ready_at).is_some();
         let d = pending_destination(&e).filter(|p| t < p.ready_at).is_some();
-        if !r && !d {
-            return if pending_rule(&e).is_some() || pending_destination(&e).is_some() {
+        let o = pending_payout(&e).filter(|p| t < p.ready_at).is_some();
+        let f = pending_fixed(&e).filter(|p| t < p.ready_at).is_some();
+        if !r && !d && !o && !f {
+            return if pending_rule(&e).is_some()
+                || pending_destination(&e).is_some()
+                || pending_payout(&e).is_some()
+                || pending_fixed(&e).is_some()
+            {
                 Err(VaultError::AlreadyInForce)
             } else {
                 Err(VaultError::NoPendingChange)
@@ -1833,9 +2125,17 @@ impl ReserveVault {
         if d {
             e.storage().instance().remove(&Key::PendingDestination);
         }
+        if o {
+            e.storage().instance().remove(&Key::PendingPayout);
+        }
+        if f {
+            e.storage().instance().remove(&Key::PendingFixed);
+        }
         ChangeCancelled {
             rule: r,
             destination: d,
+            payout: o,
+            fixed: f,
         }
         .publish(&e);
         Ok(())
@@ -1843,7 +2143,11 @@ impl ReserveVault {
 
     /// Writes pending changes whose notice has passed into the config. Anyone can call it.
     pub fn apply_pending(e: Env) -> Result<(), VaultError> {
-        if pending_rule(&e).is_none() && pending_destination(&e).is_none() {
+        if pending_rule(&e).is_none()
+            && pending_destination(&e).is_none()
+            && pending_payout(&e).is_none()
+            && pending_fixed(&e).is_none()
+        {
             return Err(VaultError::NoPendingChange);
         }
         if !Self::fold(&e) {
@@ -1951,6 +2255,11 @@ impl ReserveVault {
                 v.push_back(k);
             }
         }
+        for f in c.fixed.iter() {
+            if !v.contains(&f.bucket) {
+                v.push_back(f.bucket);
+            }
+        }
         v
     }
 
@@ -1994,6 +2303,22 @@ impl ReserveVault {
                     destination: p.destination,
                 }
                 .publish(e);
+                applied = true;
+            }
+        }
+        if let Some(p) = pending_payout(e) {
+            if t >= p.ready_at {
+                c.payout = p.payout.clone();
+                e.storage().instance().remove(&Key::PendingPayout);
+                PayoutApplied { payout: p.payout }.publish(e);
+                applied = true;
+            }
+        }
+        if let Some(p) = pending_fixed(e) {
+            if t >= p.ready_at {
+                c.fixed = p.fixed.clone();
+                e.storage().instance().remove(&Key::PendingFixed);
+                FixedApplied { fixed: p.fixed }.publish(e);
                 applied = true;
             }
         }

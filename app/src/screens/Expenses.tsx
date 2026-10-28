@@ -18,7 +18,8 @@ import {
   periodStart,
   type RulePack,
 } from 'kyros-sdk';
-import { figuresWithOutside, loadExpenses, noticeText, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
+import { figuresWithOutside, inputVatFor, loadExpenses, noticeText, reclaimInputVat, rememberMine, saveExpenses, type Snapshot, type VaultInfo } from '../kyros';
+import { noticeWords } from './Move';
 import { countryName } from '../packs';
 import { fmtDate, fmtNumber, getLang, t } from '../i18n';
 import { Button, pct, Tabs, Top, TxLink, useApp } from '../ui';
@@ -84,6 +85,8 @@ export function Expenses() {
   const file = useRef<HTMLInputElement>(null);
   const pack = snap?.pack ?? null;
   const d = useMemo(() => (vault && pack && pack.id === vault.answers.packId ? safeDeductions(vault, pack, list, snap) : null), [vault, pack, list, snap]);
+  // Input VAT the VAT reserve can give back (registered businesses only).
+  const iv = useMemo(() => (vault && snap && !vault.archivedOf && d?.summary.vat.recoverable ? inputVatFor(chain, vault, snap, list) : null), [vault, snap, list, d, chain]);
   if (!vault || !wallet) return null;
   const lang = getLang();
   const country = countryName(pack?.country ?? vault.answers.packId.toUpperCase());
@@ -176,6 +179,27 @@ export function Expenses() {
             )}
             {hash && <TxLink hash={hash} />}
             {tx.note && <p className="tiny muted">{tx.note}</p>}
+          </section>
+        )}
+
+        {iv && iv.total > 0 && (
+          <section className="card ok" data-testid="input-vat">
+            <p style={{ fontWeight: 600 }}>{t('ivTitle', { vat: vatName })}</p>
+            <p className="small">{t('ivBody', { vat: vatName, amount: m(iv.total), notice: noticeWords(chain.cfg.noticeSecs) })}</p>
+            {iv.unclaimed > 0 && <p className="tiny muted">{t('ivShort', { amount: m(iv.unclaimed), vat: vatName })}</p>}
+            <Button
+              small
+              testid="input-vat-reclaim"
+              onClick={() =>
+                run(t('ivButton', { amount: m(iv.total) }), async (step) => {
+                  if (!snap) return;
+                  setList(await reclaimInputVat(chain, wallet, vault, snap, step));
+                  await refresh();
+                })
+              }
+            >
+              {t('ivButton', { amount: m(iv.total) })}
+            </Button>
           </section>
         )}
 
@@ -291,6 +315,7 @@ export function Expenses() {
                     <div style={{ textAlign: 'right' }}>
                       <b className="num">{m(e.base)}</b>
                       {e.inputVat > 0 && <div className="tiny muted">+ {m(e.inputVat)} {vatName}</div>}
+                      {(e.vatReclaimed ?? 0) > 0 && <div className="tiny ok">{t('ivDone', { vat: vatName })}: {m(e.vatReclaimed!)}</div>}
                     </div>
                     <div className="col" style={{ gap: 4 }}>
                       <button className="link tiny" onClick={() => save(list.map((x, j) => (j === i ? { ...x, deductible: !x.deductible } : x)))}>

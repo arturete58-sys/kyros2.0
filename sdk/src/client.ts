@@ -36,13 +36,15 @@ import {
   periodKindToScVal,
   ruleFromNative,
   ruleToScVal,
+  fixedFromNative,
+  fixedToScVal,
   splitFromScVal,
   u32,
   u64,
   type Conversion,
   type Payout,
 } from './scval.js';
-import type { Rule, Split } from './split.js';
+import type { Fixed, Rule, Split } from './split.js';
 
 export interface KyrosClientOptions {
   rpcUrl: string;
@@ -55,7 +57,11 @@ export interface KyrosClientOptions {
 
 export interface VaultConfig {
   owner: string;
+  /** Where the net amount, releases and corrections go (the owner unless changed). */
+  payout: string;
   rule: Rule;
+  /** Fixed amounts set aside each period before the net amount goes out. */
+  fixed: Fixed[];
   taxDestination: string;
   noticeSecs: bigint;
   period: PeriodKind;
@@ -78,6 +84,10 @@ export interface PeriodState {
   withheld: bigint;
   /** Paid to the tax destination, per bucket. */
   paidBuckets: Record<string, bigint>;
+  /** How much of each fixed amount the period's payments have set aside. */
+  fixed: Record<string, bigint>;
+  /** Reserve added with `deposit` (not income). */
+  deposited: bigint;
 }
 
 /** A payment to the tax destination that anyone can run from `at` on. */
@@ -373,6 +383,24 @@ export class KyrosClient {
     return new Contract(vault).call('propose_destination', addr(destination));
   }
 
+  /** Owner: a new address for the net amount, releases and corrections; applies after the notice. */
+  proposePayoutOp(vault: string, payout: string): xdr.Operation {
+    return new Contract(vault).call('propose_payout', addr(payout));
+  }
+
+  /** Owner: the fixed amounts set aside each period (empty removes them); apply after the notice. */
+  proposeFixedOp(vault: string, fixed: Fixed[]): xdr.Operation {
+    return new Contract(vault).call('propose_fixed', fixedToScVal(fixed));
+  }
+
+  /**
+   * `from` adds `amount` of reserve to `bucket` of `period` (current or
+   * earlier), e.g. the VAT on income received in another wallet. Not income.
+   */
+  depositOp(vault: string, p: { from: string; token: string; period: number; bucket: string; amount: bigint }): xdr.Operation {
+    return new Contract(vault).call('deposit', addr(p.from), addr(p.token), u32(p.period), xdr.ScVal.scvSymbol(p.bucket), i128(p.amount));
+  }
+
   /** Owner: cancel the pending rule and destination changes still inside their notice. */
   cancelChangeOp(vault: string): xdr.Operation {
     return new Contract(vault).call('cancel');
@@ -517,10 +545,31 @@ export class KyrosClient {
     return splitFromScVal(await this.read(vault, 'quote', i128(gross)));
   }
 
+  /** Exactly what `receive` will do now for a payment from `from` in `token` (fixed amounts included). */
+  async quoteIn(vault: string, p: { from: string; token: string; reference?: Uint8Array; gross: bigint }): Promise<Split> {
+    return splitFromScVal(await this.read(vault, 'quote_in', addr(p.from), addr(p.token), bytes32(p.reference ?? new Uint8Array(32)), i128(p.gross)));
+  }
+
+  async payout(vault: string): Promise<string> {
+    return String(scValToNative(await this.read(vault, 'payout')));
+  }
+
+  async pendingPayout(vault: string): Promise<{ payout: string; readyAt: bigint } | null> {
+    const n = scValToNative(await this.read(vault, 'pending_payout')) as { payout: string; ready_at: bigint } | null | undefined;
+    return n ? { payout: String(n.payout), readyAt: BigInt(n.ready_at) } : null;
+  }
+
+  async pendingFixed(vault: string): Promise<{ fixed: Fixed[]; readyAt: bigint } | null> {
+    const n = scValToNative(await this.read(vault, 'pending_fixed')) as { fixed: unknown; ready_at: bigint } | null | undefined;
+    return n ? { fixed: fixedFromNative(n.fixed), readyAt: BigInt(n.ready_at) } : null;
+  }
+
   async config(vault: string): Promise<VaultConfig> {
     const n = scValToNative(await this.read(vault, 'config')) as Record<string, unknown>;
     return {
       owner: String(n.owner),
+      payout: String(n.payout ?? n.owner),
+      fixed: fixedFromNative(n.fixed),
       rule: ruleFromNative(n.rule as Record<string, unknown>),
       taxDestination: String(n.tax_destination),
       noticeSecs: BigInt(n.notice_secs as bigint),
@@ -560,6 +609,8 @@ export class KyrosClient {
       income: BigInt((n.income as bigint | undefined) ?? 0n),
       withheld: BigInt((n.withheld as bigint | undefined) ?? 0n),
       paidBuckets: map(n.paid_buckets),
+      fixed: map(n.fixed),
+      deposited: BigInt((n.deposited as bigint | undefined) ?? 0n),
     };
   }
 

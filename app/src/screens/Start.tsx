@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { split, type ActivityId, type ClientKind, type RulePack } from 'kyros-sdk';
+import { regimeChoices, split, type ActivityId, type ClientKind, type RulePack } from 'kyros-sdk';
 import { countries, countryName, loadPack } from '../packs';
 import { createVault, followLaw, makePlan, money, type Answers } from '../kyros';
 import { fmtNumber, t, type Key } from '../i18n';
@@ -142,16 +142,19 @@ export function Onboarding() {
   const [client, setClient] = useState<ClientKind>('business-local');
   const [revenue, setRevenue] = useState('45000');
   const [follow, setFollow] = useState(true);
+  const [regime, setRegime] = useState<string | undefined>(undefined);
+  const regimes = useMemo(() => (pack ? regimeChoices(pack) : []), [pack]);
 
   useEffect(() => {
     loadPack(packId).then((p) => {
       setPack(p);
       setRegion(p.regions?.length ? p.regions.find((r) => r.id === 'MD')?.id ?? p.regions[0].id : undefined);
+      setRegime(undefined);
     });
   }, [packId]);
 
-  const answers: Answers = { packId, region, resident, activity, client, revenue: Number(revenue) || 0 };
-  const plan = useMemo(() => (pack && step === 4 ? makePlan(pack, answers) : null), [pack, step, packId, region, activity, client, revenue]);
+  const answers: Answers = { packId, region, resident, activity, client, revenue: Number(revenue) || 0, ...(regime ? { regime } : {}) };
+  const plan = useMemo(() => (pack && step === 4 ? makePlan(pack, answers) : null), [pack, step, packId, region, activity, client, revenue, regime]);
 
   if (step === 1)
     return (
@@ -230,6 +233,15 @@ export function Onboarding() {
           {CLIENTS.map((k) => (
             <Option key={k} testid={`client-${k}`} on={client === k} title={clientText(k)[0]} sub={clientText(k)[1]} onClick={() => setClient(k)} />
           ))}
+          {regimes.length > 0 && (
+            <>
+              <h2>{t('regimeQ')}</h2>
+              <Option testid="regime-general" on={!regime} title={t('regimeAuto')} sub={t('regimeAutoSub', { vat: pack?.vatName ?? t('vat') })} onClick={() => setRegime(undefined)} />
+              {regimes.map((r) => (
+                <Option key={r.id} testid={`regime-${r.id}`} on={regime === r.id} title={r.label.split(':')[0]} sub={t('regimeSub', { vat: pack?.vatName ?? t('vat') })} onClick={() => setRegime(r.id)} />
+              ))}
+            </>
+          )}
           <div className="field">
             <label htmlFor="revenue">{t('revenueQ', { cur: pack?.currency ?? 'EUR' })}</label>
             <input id="revenue" className="input" inputMode="numeric" value={revenue} onChange={(e) => setRevenue(e.target.value.replace(/[^\d]/g, ''))} />

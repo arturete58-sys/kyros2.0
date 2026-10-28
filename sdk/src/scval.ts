@@ -1,7 +1,7 @@
 /** ScVal encoding of the contract types (Soroban `#[contracttype]`: structs are maps with sorted symbol keys, enums are vectors). */
 import { Address, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
 import type { Due, Dues, PeriodKind } from './periods.js';
-import type { Rule, Split } from './split.js';
+import type { Fixed, Rule, Split } from './split.js';
 
 const sym = (s: string) => xdr.ScVal.scvSymbol(s);
 
@@ -166,9 +166,18 @@ export function splitFromScVal(v: xdr.ScVal): Split {
     base: big(n.base),
     vat: big(n.vat),
     parts: (n.parts as unknown[]).map(big),
+    fixed: big(n.fixed ?? 0),
     reserve: big(n.reserve),
     net: big(n.net),
   };
+}
+
+export function fixedToScVal(fixed: Fixed[]): xdr.ScVal {
+  return xdr.ScVal.scvVec(fixed.map((f) => struct({ bucket: sym(f.bucket), token: addr(f.token), amount: i128(f.amount) })));
+}
+
+export function fixedFromNative(v: unknown): Fixed[] {
+  return ((v ?? []) as { bucket: string; token: string; amount: bigint }[]).map((f) => ({ bucket: String(f.bucket), token: String(f.token), amount: BigInt(f.amount) }));
 }
 
 export function ruleFromNative(n: Record<string, unknown>): Rule {

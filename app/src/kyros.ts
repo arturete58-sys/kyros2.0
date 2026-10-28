@@ -36,6 +36,16 @@ import {
   type WalletPayment,
   clientTerms,
   clientTermsOp,
+  inputVatPlan,
+  mixedPayers,
+  outsideDeposits,
+  fixedPerPeriod,
+  type AddressPayment,
+  type Fixed,
+  type InputVatPlan,
+  type MixedPayer,
+  type ReserveDeposit,
+  type VatHeld,
   type ClientProfile,
   type ClientTerms,
   type CalendarPeriod,
@@ -71,6 +81,8 @@ export interface Answers {
   activity: ActivityId;
   client: ClientKind;
   revenue: number;
+  /** A regime picked by name rather than by VAT (Argentina's monotributo). */
+  regime?: string;
 }
 
 export interface Plan {
@@ -80,7 +92,7 @@ export interface Plan {
 }
 
 export function makePlan(pack: RulePack, a: Answers): Plan {
-  const setup = suggestSetup(pack, { activity: a.activity, client: a.client, revenue: a.revenue, region: a.region });
+  const setup = suggestSetup(pack, { activity: a.activity, client: a.client, revenue: a.revenue, region: a.region, presetId: a.regime });
   return { setup, rule: setup.rule, pack };
 }
 
@@ -349,8 +361,16 @@ export interface Snapshot {
   events: VaultEventRow[];
   /** Tax being taken back, applied by itself once the notice has passed. */
   corrections: Correction[];
-  /** Who paid each payment address lately (the address for clients abroad, if any). */
-  transfers: { general: Transfer[]; abroad: Transfer[] };
+  /** Who paid each payment address lately (the address for clients abroad, if any; shop and client addresses by inbox). */
+  transfers: { general: Transfer[]; abroad: Transfer[]; byInbox: Record<string, Transfer[]> };
+  /** Where the net amount goes now (the owner unless changed), and a change waiting for its notice. */
+  payout: string | null;
+  pendingPayout: { payout: string; readyAt: bigint } | null;
+  /** Fixed amounts set aside each period, and a change waiting for its notice. */
+  fixed: Fixed[];
+  pendingFixed: { fixed: Fixed[]; readyAt: bigint } | null;
+  /** How much of each fixed amount the current period has set aside, per token. */
+  fixedFilled: Record<string, Record<string, bigint>>;
   /** Pending changes the guardian flags (a new destination, rule, adapter, correction, inbox move). */
   guard: GuardAlert[];
   /** The rule the vault applies now (read from the chain). */
@@ -450,13 +470,19 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const latest = await safe(() => chain.server.getLatestLedger(), { sequence: 0 } as { sequence: number });
   const since = Math.max(latest.sequence - 17_000, 1);
   const allTokens = [...dollars, eur.contract];
-  const [events, corrections, general, abroad, moves] = await Promise.all([
+  const otherInboxes = [...Object.values(v.shopInboxes ?? {}), ...(v.clients ?? []).map((x) => x.inbox)];
+  const [events, corrections, general, abroad, moves, others, pendingPayout, pendingFixed] = await Promise.all([
     safe(() => vaultEvents(chain.server, v.vault, since), []),
     safe(() => c.corrections(v.vault), [] as Correction[]),
     safe(() => transfersInto(chain.server, allTokens, v.inbox, since), [] as Transfer[]),
     v.abroadInbox ? safe(() => transfersInto(chain.server, allTokens, v.abroadInbox!, since), [] as Transfer[]) : Promise.resolve([] as Transfer[]),
     safe(() => inboxMoves(chain.server, v.inbox, since), []),
+    Promise.all(otherInboxes.map(async (i) => [i, await safe(() => transfersInto(chain.server, allTokens, i, since), [] as Transfer[])] as const)),
+    safe(() => c.pendingPayout(v.vault), null),
+    safe(() => c.pendingFixed(v.vault), null),
   ]);
+  const fixedFilled: Snapshot['fixedFilled'] = {};
+  for (const st of states) if (st && st.id === period && Object.keys(st.p.fixed ?? {}).length) fixedFilled[st.tk] = st.p.fixed;
   // The guardian: anything pending that the owner did not propose from here, or that goes somewhere unknown.
   const known = new Set([chain.cfg.taxAccount, ...(chain.cfg.conversion ? [chain.cfg.conversion.swapper] : [])]);
   const guard = guardAlerts(events, moves, {
@@ -483,7 +509,12 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     feed,
     events: events.reverse(),
     corrections,
-    transfers: { general, abroad },
+    transfers: { general, abroad, byInbox: Object.fromEntries(others) },
+    payout: live?.payout ?? null,
+    pendingPayout,
+    fixed: live?.fixed ?? [],
+    pendingFixed,
+    fixedFilled,
     guard,
     rule: live?.rule ?? null,
     dues: conf?.dues ?? null,
@@ -1030,6 +1061,8 @@ const outsideKey = (owner: string) => `kyros.outside.${owner}`;
 interface OutsideStore {
   payments: (Omit<WalletPayment, 'amount'> & { amount: string })[];
   notIncome: string[];
+  /** Payments whose reserve was deposited into the vault. */
+  setAside?: string[];
   readAt?: number;
 }
 function loadOutside(vault: string): OutsideStore {
@@ -1092,10 +1125,13 @@ export async function refreshOutside(chain: Chain, v: VaultInfo, pack: RulePack 
 }
 
 export interface OutsideView {
-  /** Every payment the other wallets received this tax year, with whether it counts as income. */
-  all: (WalletPayment & { income: boolean })[];
+  /** Every payment the other wallets received this tax year, with whether it counts as income and whether its reserve was set aside. */
+  all: (WalletPayment & { income: boolean; setAside: boolean })[];
   total: bigint;
+  /** What Kyros would have set aside from the income not set aside yet. */
   pending: { vat: bigint; reserve: bigint; total: bigint };
+  /** The income payments whose reserve is not in the vault yet. */
+  toSetAside: WalletPayment[];
 }
 
 /** This tax year's income in the business's other wallets, and what Kyros would have set aside from it. */
@@ -1107,7 +1143,9 @@ export function outsideOf(v: VaultInfo, pack: RulePack | null): OutsideView {
   const payments = o.payments.filter((p) => wallets.has(p.wallet) && p.at >= from && !own.includes(p.from)).map((p) => ({ ...p, amount: BigInt(p.amount) }));
   const inc = outsideIncome(payments, { own, notIncome: o.notIncome, from });
   const ids = new Set(inc.payments.map((p) => p.id));
-  return { all: payments.map((p) => ({ ...p, income: ids.has(p.id) })), total: inc.total, pending: pendingReserve(v.rule, inc.payments) };
+  const done = new Set(o.setAside ?? []);
+  const toSetAside = inc.payments.filter((p) => !done.has(p.id));
+  return { all: payments.map((p) => ({ ...p, income: ids.has(p.id), setAside: done.has(p.id) })), total: inc.total, pending: pendingReserve(v.rule, toSetAside), toSetAside };
 }
 
 /** The user says a payment is (or is not) income of the business. */
@@ -1192,4 +1230,185 @@ export async function updateClient(chain: Chain, wallet: Wallet, v: VaultInfo, p
   const next = { ...v, clients };
   saveVault(next);
   return next;
+}
+
+// ---- Reserve added after the fact, input VAT, fixed amounts, payout address ----
+
+const tokenCode = (chain: Chain, token: string): 'EURC' | 'USDC' => (token === chain.cfg.tokens.eur.contract ? 'EURC' : 'USDC');
+
+/** Token units per unit of the pack's currency, when Kyros can tell (the same currency, or euros and dollars at the deployment's rate). */
+export function perUnit(chain: Chain, token: string, currency: string): { perUnit: number; preferred: boolean } | null {
+  const code = tokenCode(chain, token) === 'EURC' ? 'EUR' : 'USD';
+  if (code === currency) return { perUnit: 1, preferred: true };
+  const r = Number(chain.cfg.conversion?.eurUsdAtDeploy ?? NaN);
+  if (!Number.isFinite(r) || r <= 0) return null;
+  if (currency === 'EUR' && code === 'USD') return { perUnit: r, preferred: false };
+  if (currency === 'USD' && code === 'EUR') return { perUnit: 1 / r, preferred: false };
+  return null;
+}
+
+/** What the owner's main wallet holds of `token`. */
+async function ownerBalance(chain: Chain, v: VaultInfo, token: string): Promise<bigint> {
+  try {
+    return await chain.client.balance(token, v.owner);
+  } catch {
+    return 0n;
+  }
+}
+
+/** The period a late deposit goes to: the payment's own, unless that period's VAT is already past due (then the current one). */
+function depositPeriod(s: Snapshot, at: string): number {
+  if (!s.periodKind) return s.period;
+  const id = periodOf(s.periodKind, BigInt(Math.floor(Date.parse(at) / 1000)));
+  const due = s.dues ? dueAt(s.periodKind, id, dueOf(s.dues, 'vat')) : 0n;
+  return due && due <= BigInt(Math.floor(Date.now() / 1000)) ? s.period : Math.min(id, s.period);
+}
+
+/** Owner: deposits each amount from the main wallet (one signature each). Refuses if the wallet holds too little. */
+async function depositAll(chain: Chain, wallet: Wallet, v: VaultInfo, deps: ReserveDeposit[], onStep: (s: string) => void): Promise<string[]> {
+  const need = new Map<string, bigint>();
+  for (const d of deps) need.set(d.token, (need.get(d.token) ?? 0n) + d.amount);
+  for (const [token, amount] of need) {
+    const has = await ownerBalance(chain, v, token);
+    if (has < amount) throw new Error(t('depositShort', { need: money(amount, tokenCode(chain, token)), has: money(has, tokenCode(chain, token)) }));
+  }
+  const hashes: string[] = [];
+  for (const d of deps) {
+    onStep(t('depositing', { amount: money(d.amount, tokenCode(chain, d.token)) }));
+    hashes.push(await wallet.signAndSend(chain.client.depositOp(v.vault, { from: v.owner, token: d.token, period: d.period, bucket: d.bucket, amount: d.amount })));
+  }
+  return hashes;
+}
+
+/** Sets aside in the vault the reserve on income the other wallets received (from the main wallet; not income again). */
+export async function setAsideOutside(chain: Chain, wallet: Wallet, v: VaultInfo, s: Snapshot, onStep: (s: string) => void): Promise<number> {
+  const view = outsideOf(v, s.pack);
+  const assets = paidAssets(chain);
+  const deps = outsideDeposits(s.rule ?? v.rule, view.toSetAside, (at) => depositPeriod(s, at), (code) => assets.find((a) => a.code === code)?.contract);
+  if (!deps.length) return 0;
+  await depositAll(chain, wallet, v, deps, onStep);
+  const o = loadOutside(v.owner);
+  saveOutside(v.owner, { ...o, setAside: [...new Set([...(o.setAside ?? []), ...view.toSetAside.map((p) => p.id)])] });
+  return deps.length;
+}
+
+/** The VAT the vault holds per period and token, minus what open corrections already take back. */
+export function vatHeld(chain: Chain, s: Snapshot, currency: string): VatHeld[] {
+  const out: VatHeld[] = [];
+  for (const h of s.held) {
+    if (h.bucket !== 'vat') continue;
+    const u = perUnit(chain, h.token, currency);
+    if (!u) continue;
+    const taken = s.corrections.filter((c) => c.bucket === 'vat' && c.period === h.period && c.token === h.token).reduce((a, c) => a + c.amount, 0n);
+    if (h.amount - taken > 0n) out.push({ period: h.period, token: h.token, available: h.amount - taken, ...u });
+  }
+  return out;
+}
+
+/** Input VAT on the year's expenses that the VAT reserve can give back now. */
+export function inputVatFor(chain: Chain, v: VaultInfo, s: Snapshot, list = loadExpenses(v.vault)): InputVatPlan | null {
+  if (!s.pack || !s.periodKind) return null;
+  const kind = s.periodKind;
+  return inputVatPlan(list, vatHeld(chain, s, s.pack.currency), (d) => periodOf(kind, BigInt(Math.floor(Date.parse(`${d}T12:00:00Z`) / 1000))));
+}
+
+/** Owner: proposes the corrections of the plan (they apply by themselves after the notice) and marks the expenses. */
+export async function reclaimInputVat(chain: Chain, wallet: Wallet, v: VaultInfo, s: Snapshot, onStep: (s: string) => void): Promise<Expense[]> {
+  const list = loadExpenses(v.vault);
+  const plan = inputVatFor(chain, v, s, list);
+  if (!plan || !plan.claims.length) return list;
+  for (const c of plan.claims) {
+    onStep(t('reclaimingInputVat', { amount: money(c.amount, tokenCode(chain, c.token)) }));
+    rememberMine(v, await wallet.signAndSend(chain.client.proposeCorrectionOp(v.vault, { period: c.period, token: c.token, bucket: 'vat', amount: c.amount })));
+  }
+  const next = list.map((e, i) => {
+    const got = plan.byExpense.find((x) => x.index === i)?.vat ?? 0;
+    return got ? { ...e, vatReclaimed: Math.round(((e.vatReclaimed ?? 0) + got) * 100) / 100 } : e;
+  });
+  saveExpenses(v.vault, next);
+  return next;
+}
+
+/** Every payment into the user's payment addresses lately, with the VAT each address splits with. */
+export function addressPayments(v: VaultInfo, s: Snapshot): AddressPayment[] {
+  const home = s.rule?.vatBps ?? v.rule.vatBps;
+  const of = (to: string, vatBps: number, xs: Transfer[]) => xs.map((x) => ({ id: x.id, from: x.from, to, token: x.token, amount: x.amount, at: x.closedAt, vatBps }));
+  const shops = Object.entries(v.shopInboxes ?? {}).flatMap(([bps, inbox]) => of(inbox, Number(bps), s.transfers.byInbox?.[inbox] ?? []));
+  const clients = (v.clients ?? []).flatMap((c) => of(c.inbox, c.terms.vatBps, s.transfers.byInbox?.[c.inbox] ?? []));
+  return [...of(v.inbox, home, s.transfers.general), ...(v.abroadInbox ? of(v.abroadInbox, 0, s.transfers.abroad) : []), ...shops, ...clients];
+}
+
+/** Wallets that paid an address with VAT and one without (one of the two was wrong for that client). */
+export function mixedOf(v: VaultInfo, s: Snapshot): MixedPayer[] {
+  const own = new Set(ownAddresses(v));
+  return mixedPayers(
+    addressPayments(v, s).filter((p) => !own.has(p.from)),
+    s.rule?.vatBps ?? v.rule.vatBps,
+    v.settled ?? [],
+  );
+}
+
+function settleAll(v: VaultInfo, ids: string[]): void {
+  v.settled = [...new Set([...(v.settled ?? []), ...ids])].slice(-400);
+  saveVault(v);
+}
+
+/** The client pays with VAT: the VAT missing from its payments without VAT is set aside now (from the main wallet). */
+export async function setAsideMissingVat(chain: Chain, wallet: Wallet, v: VaultInfo, s: Snapshot, m: MixedPayer, onStep: (s: string) => void): Promise<void> {
+  const home = s.rule?.vatBps ?? v.rule.vatBps;
+  const byKey = new Map<string, ReserveDeposit>();
+  for (const p of m.withoutVat) {
+    const period = depositPeriod(s, p.at);
+    const vat = split({ vatBps: home, buckets: [] }, p.amount).vat;
+    const k = `${period}|${p.token}`;
+    const d = byKey.get(k) ?? { period, token: p.token, bucket: 'vat', amount: 0n };
+    d.amount += vat;
+    byKey.set(k, d);
+  }
+  await depositAll(chain, wallet, v, [...byKey.values()].filter((d) => d.amount > 0n), onStep);
+  settleAll(v, [...m.withVat, ...m.withoutVat].map((p) => p.id));
+}
+
+/** The client pays without VAT: the VAT reserved on its payments with VAT is taken back (after the notice). */
+export async function reclaimMixedVat(chain: Chain, wallet: Wallet, v: VaultInfo, s: Snapshot, m: MixedPayer, onStep: (s: string) => void): Promise<void> {
+  if (!s.periodKind) return;
+  const kind = s.periodKind;
+  const left = new Map<string, bigint>();
+  for (const h of s.held) if (h.bucket === 'vat') left.set(`${h.period}|${h.token}`, (left.get(`${h.period}|${h.token}`) ?? 0n) + h.amount);
+  for (const c of s.corrections) if (c.bucket === 'vat') left.set(`${c.period}|${c.token}`, (left.get(`${c.period}|${c.token}`) ?? 0n) - c.amount);
+  const claims = new Map<string, { period: number; token: string; amount: bigint }>();
+  for (const p of m.withVat) {
+    const period = periodOf(kind, BigInt(Math.floor(Date.parse(p.at) / 1000)));
+    const k = `${period}|${p.token}`;
+    const want = split({ vatBps: p.vatBps, buckets: [] }, p.amount).vat;
+    const avail = left.get(k) ?? 0n;
+    const amount = want < avail ? want : avail;
+    if (amount <= 0n) continue;
+    left.set(k, avail - amount);
+    const c = claims.get(k) ?? { period, token: p.token, amount: 0n };
+    c.amount += amount;
+    claims.set(k, c);
+  }
+  for (const c of claims.values()) {
+    onStep(t('reclaiming'));
+    rememberMine(v, await wallet.signAndSend(chain.client.proposeCorrectionOp(v.vault, { ...c, bucket: 'vat' })));
+  }
+  settleAll(v, [...m.withVat, ...m.withoutVat].map((p) => p.id));
+}
+
+/** Owner: a fixed amount per month set aside from the first payments of each period (applies after the notice). */
+export async function proposeFixedFee(chain: Chain, wallet: Wallet, v: VaultInfo, s: Snapshot, monthly: number, token: string): Promise<string> {
+  if (!s.periodKind) throw new Error('period unknown');
+  const fixed: Fixed[] = monthly > 0 ? [{ bucket: 'social', token, amount: fixedPerPeriod(monthly, s.periodKind) }] : [];
+  return rememberMine(v, await wallet.signAndSend(chain.client.proposeFixedOp(v.vault, fixed)));
+}
+
+/** Owner: a new address for the net amount, releases and corrections (applies after the notice). */
+export async function proposePayout(chain: Chain, wallet: Wallet, v: VaultInfo, address: string): Promise<string> {
+  return rememberMine(v, await wallet.signAndSend(chain.client.proposePayoutOp(v.vault, address)));
+}
+
+/** Owner: withdraws every change still inside its notice (rule, destination, payout address, fixed amounts). */
+export async function cancelPending(chain: Chain, wallet: Wallet, v: VaultInfo): Promise<string> {
+  return wallet.signAndSend(chain.client.cancelChangeOp(v.vault));
 }

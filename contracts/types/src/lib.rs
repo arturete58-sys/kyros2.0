@@ -30,7 +30,9 @@ pub struct Rule {
 }
 
 /// The result of applying a rule to a gross amount. `parts[i]` belongs to
-/// `rule.buckets[i]`; `reserve = vat + sum(parts)`; `net + reserve = gross`.
+/// `rule.buckets[i]`; `reserve = vat + sum(parts) + fixed`; `net + reserve = gross`.
+/// `fixed` is what a vault takes from the net amount for its fixed amounts
+/// per period (e.g. a monthly social-security fee); the pure split leaves it 0.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Split {
@@ -38,9 +40,24 @@ pub struct Split {
     pub base: i128,
     pub vat: i128,
     pub parts: Vec<i128>,
+    pub fixed: i128,
     pub reserve: i128,
     pub net: i128,
 }
+
+/// A fixed amount set aside each period in `bucket`, in `token`, before the
+/// net amount goes out: the first payments of the period fill it (e.g. the
+/// Spanish self-employed fee, 3 x the monthly fee per quarter).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Fixed {
+    pub bucket: Symbol,
+    pub token: Address,
+    pub amount: i128,
+}
+
+/// Most fixed amounts a vault may have.
+pub const MAX_FIXED: u32 = 4;
 
 /// How the vault groups reserves into fiscal periods. Calendar periods use
 /// UTC; `Months(n)` are n-month periods from January (2: bimonthly, 4:
@@ -186,6 +203,7 @@ pub fn split_withheld(e: &Env, rule: &Rule, withholding_bps: u32, gross: i128) -
         base,
         vat,
         parts,
+        fixed: 0,
         reserve,
         net: gross - reserve,
     }
@@ -215,6 +233,7 @@ fn split_plain(e: &Env, rule: &Rule, gross: i128) -> Split {
         base,
         vat,
         parts,
+        fixed: 0,
         reserve,
         net: gross - reserve,
     }
@@ -384,16 +403,22 @@ pub struct InvoiceTerms {
 /// The part of the Reserve Vault that the Router, the Inbox and the CCTP receiver call.
 #[contractclient(name = "VaultClient")]
 pub trait VaultApi {
-    /// The vault owner, who receives the net amount.
+    /// The vault owner, who signs for it.
     fn owner(e: Env) -> Address;
+    /// Where the net amount goes (the owner unless they set another address).
+    fn payout(e: Env) -> Address;
     /// The split the current rule gives for `gross`.
     fn quote(e: Env, gross: i128) -> Split;
     /// The split `receive` will make for this payer and reference (invoice
     /// terms, then the payer's terms, then the rule).
     fn quote_for(e: Env, from: Address, reference: BytesN<32>, gross: i128) -> Split;
+    /// Exactly what `receive` will do now for this payment in `token`: the
+    /// `quote_for` split with the period's fixed amounts taken from the net.
+    fn quote_in(e: Env, from: Address, token: Address, reference: BytesN<32>, gross: i128)
+        -> Split;
     /// Whether the vault accepts `token`.
     fn accepts(e: Env, token: Address) -> bool;
-    /// Pulls `gross` of `token` from `from`: the net amount to the owner, the
+    /// Pulls `gross` of `token` from `from`: the net amount to the payout address, the
     /// reserve to the vault, booked to the current period.
     fn receive(e: Env, from: Address, token: Address, gross: i128, reference: BytesN<32>) -> Split;
     /// Seconds a change to the vault waits before it takes effect.

@@ -87,19 +87,44 @@ function pickPreset(pack: RulePack, wantVat: number, rate?: string): RulePackPre
 }
 
 /**
+ * Regimes the user picks rather than their VAT: a simplified regime that
+ * charges no VAT and pays one fee or a share of revenue instead. The VAT and
+ * the client alone never lead to them, so onboarding asks.
+ */
+export const REGIMES: Record<string, string[]> = {
+  // Argentina: the monotributo replaces IVA, Ganancias and the autónomos contributions with one monthly fee by category.
+  AR: ['monotributo'],
+};
+
+/** The regimes of `REGIMES` the pack has, with their preset labels. */
+export function regimeChoices(pack: RulePack): { id: string; label: string }[] {
+  return (REGIMES[pack.country] ?? []).flatMap((id) => {
+    const p = pack.presets.find((x) => x.id === id);
+    return p ? [{ id, label: p.label }] : [];
+  });
+}
+
+/**
  * Suggests the vault setup for an activity and a client. `revenue` (annual, in
  * the pack's currency) sizes the reserve; `region` adds the regional income tax.
+ * `presetId` picks a regime of `regimeChoices` (e.g. Argentina's monotributo):
+ * no VAT is charged and its reserve is checked against that regime.
  */
 export function suggestSetup(
   pack: RulePack,
-  s: { activity: ActivityId; client: ClientKind; revenue?: number; expenses?: number; region?: string; date?: Date | string },
+  s: { activity: ActivityId; client: ClientKind; revenue?: number; expenses?: number; region?: string; date?: Date | string; presetId?: string },
 ): Setup {
   const date = s.date ?? new Date();
   const rates = vatRatesOn(pack, date);
   const reasons: string[] = [];
   const eu = EU.has(pack.country);
+  const regime = s.presetId ? regimeChoices(pack).find((r) => r.id === s.presetId) : undefined;
+  if (s.presetId && !regime) throw new Error(`${s.presetId} is not a regime of ${pack.id}`);
   let vat: Setup['vat'];
-  if (!pack.vatRates?.length || rates.standard === undefined) {
+  if (regime) {
+    vat = { bps: 0, treatment: 'none' };
+    reasons.push(`${regime.label.split(':')[0]}: no ${pack.vatName ?? 'VAT'} is charged on the invoices in this regime.`);
+  } else if (!pack.vatRates?.length || rates.standard === undefined) {
     vat = { bps: 0, treatment: 'none' };
     reasons.push(`${pack.vatName ?? 'VAT'}: none in this jurisdiction, or not charged by this pack.`);
   } else if (s.client === 'abroad') {
@@ -127,7 +152,7 @@ export function suggestSetup(
       }
     }
   }
-  const preset = pickPreset(pack, vat.bps, vat.rate);
+  const preset = regime ? pack.presets.find((p) => p.id === regime.id)! : pickPreset(pack, vat.bps, vat.rate);
   reasons.push(`Regime: ${preset.label}.`);
   const revenue = s.revenue ?? 50_000;
   const input: ReserveInput = { revenue, expenses: s.expenses, activity: ACTIVITIES[s.activity].profile, region: s.region };

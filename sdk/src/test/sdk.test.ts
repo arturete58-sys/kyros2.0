@@ -158,7 +158,7 @@ test('contract types encode as Soroban expects (sorted struct keys, enum vectors
     entry('base', i(8n)), entry('gross', i(10n)), entry('net', i(7n)),
     entry('parts', xdr.ScVal.scvVec([i(1n)])), entry('reserve', i(3n)), entry('vat', i(2n)),
   ]);
-  assert.deepEqual(splitFromScVal(sv), { gross: 10n, base: 8n, vat: 2n, parts: [1n], reserve: 3n, net: 7n });
+  assert.deepEqual(splitFromScVal(sv), { gross: 10n, base: 8n, vat: 2n, parts: [1n], fixed: 0n, reserve: 3n, net: 7n });
 });
 
 test('SEP-7 links carry the transaction and the message', () => {

@@ -168,3 +168,19 @@ export function periodLabel(kind: PeriodKind, id: number): string {
       return `#${id}`;
   }
 }
+
+/** Months in one period of `kind` (a period counted in seconds counts as one month). */
+export function monthsIn(kind: PeriodKind): number {
+  switch (kind.kind) {
+    case 'Month':
+      return 1;
+    case 'Quarter':
+      return 3;
+    case 'Year':
+      return 12;
+    case 'Months':
+      return kind.months;
+    default:
+      return 1;
+  }
+}

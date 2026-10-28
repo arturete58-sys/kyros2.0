@@ -6,14 +6,14 @@
  */
 import { useState } from 'react';
 import { StrKey } from '@stellar/stellar-sdk';
-import { addWallet, money, outsideOf, ownAddresses, refreshOutside, removeWallet, setIncome } from '../kyros';
+import { addWallet, money, outsideOf, ownAddresses, refreshOutside, removeWallet, setAsideOutside, setIncome } from '../kyros';
 import { fmtDate, t } from '../i18n';
 import { Button, Tabs, Top, useApp } from '../ui';
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 export function Wallets() {
-  const { vault, snap, chain, go, setVault, run, refresh } = useApp();
+  const { vault, snap, chain, wallet, go, setVault, run, refresh } = useApp();
   const [address, setAddress] = useState('');
   const [label, setLabel] = useState('');
   const [error, setError] = useState('');
@@ -107,6 +107,7 @@ export function Wallets() {
                   <span className="muted">
                     {t('walletsFrom', { from: short(p.from) })} · {fmtDate(new Date(p.at))}
                   </span>
+                  {p.setAside && <span className="badge ok"> {t('walletsSetAsideDone')}</span>}
                   <br />
                   <span className="tiny muted">{t('walletsIsIncome')}</span>
                 </span>
@@ -126,7 +127,29 @@ export function Wallets() {
                     <b className="num">{money(view.pending.total)}</b>
                   </div>
                 </div>
-                <p className="small">{t('walletsPendingBody', { total: money(view.pending.total), vat: money(view.pending.vat), reserve: money(view.pending.reserve) })}</p>
+                {view.pending.total > 0n && (
+                  <>
+                    <p className="small">{t('walletsPendingBody', { total: money(view.pending.total), vat: money(view.pending.vat), reserve: money(view.pending.reserve) })}</p>
+                    {wallet && snap && !vault.archivedOf && (
+                      <>
+                        <Button
+                          small
+                          testid="wallets-set-aside"
+                          onClick={() =>
+                            run(t('walletsSetAside', { amount: money(view.pending.total) }), async (step) => {
+                              await setAsideOutside(chain, wallet, vault, snap, step);
+                              setTick((x) => x + 1);
+                              await refresh();
+                            })
+                          }
+                        >
+                          {t('walletsSetAside', { amount: money(view.pending.total) })}
+                        </Button>
+                        <p className="tiny muted">{t('walletsSetAsideBody')}</p>
+                      </>
+                    )}
+                  </>
+                )}
                 <p className="tiny muted">{t('walletsCounted')}</p>
               </>
             )}

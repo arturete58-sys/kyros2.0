@@ -670,6 +670,22 @@
                   },
                   {
                     "key": {
+                      "symbol": "deposited"
+                    },
+                    "val": {
+                      "i128": "0"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "fixed"
+                    },
+                    "val": {
+                      "map": []
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "income"
                     },
                     "val": {
@@ -820,6 +836,14 @@
                           },
                           {
                             "key": {
+                              "symbol": "fixed"
+                            },
+                            "val": {
+                              "vec": []
+                            }
+                          },
+                          {
+                            "key": {
                               "symbol": "notice_secs"
                             },
                             "val": {
@@ -829,6 +853,14 @@
                           {
                             "key": {
                               "symbol": "owner"
+                            },
+                            "val": {
+                              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
+                            }
+                          },
+                          {
+                            "key": {
+                              "symbol": "payout"
                             },
                             "val": {
                               "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"

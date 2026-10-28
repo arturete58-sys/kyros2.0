@@ -12,7 +12,7 @@
 import type { xdr } from '@stellar/stellar-sdk';
 import type { KyrosClient } from './client.js';
 import type { RulePack } from './rulepacks.js';
-import type { Rule } from './split.js';
+import { split, type Rule } from './split.js';
 import { x402Vat, type X402VatTreatment } from './agents/x402.js';
 
 export interface ClientProfile {
@@ -65,4 +65,58 @@ export function clientTerms(seller: RulePack, rule: Rule, c: ClientProfile, o: {
 /** Owner: payments arriving at the client's address split with the client's terms. */
 export function clientTermsOp(client: KyrosClient, vault: string, inbox: string, t: ClientTerms): xdr.Operation {
   return client.expectPayerOp(vault, inbox, { vatBps: t.vatBps, withholdingBps: t.withholdingBps, buckets: t.buckets });
+}
+
+// ---- One wallet, addresses with and without VAT ----
+
+/** A payment into one of the user's payment addresses, with the VAT that address splits with. */
+export interface AddressPayment {
+  id: string;
+  from: string;
+  /** The payment address (an inbox). */
+  to: string;
+  token: string;
+  amount: bigint;
+  at: string;
+  /** The VAT the address splits with, bps (0: an address without VAT). */
+  vatBps: number;
+}
+
+export interface MixedPayer {
+  from: string;
+  /** Its payments to addresses that reserve VAT, and to addresses that do not. */
+  withVat: AddressPayment[];
+  withoutVat: AddressPayment[];
+  /**
+   * If its payments without VAT did owe VAT at `homeVatBps` (a client at home
+   * paying the address for clients abroad), the VAT missing from the reserve.
+   */
+  missingVat: bigint;
+  /** If its payments with VAT did not owe it, the VAT reserved for them. */
+  extraVat: bigint;
+}
+
+/**
+ * Wallets that paid both an address with VAT and one without. The address
+ * decides the VAT, so one of the two is wrong for that client: either a
+ * client at home paid the address without VAT (the reserve is short of VAT,
+ * the dangerous case) or a client abroad paid one with VAT (too much set
+ * aside). Payments in `settled` (already answered) are left out.
+ */
+export function mixedPayers(payments: AddressPayment[], homeVatBps: number, settled: Iterable<string> = []): MixedPayer[] {
+  const done = new Set(settled);
+  const by = new Map<string, MixedPayer>();
+  for (const p of payments) {
+    if (done.has(p.id)) continue;
+    const m = by.get(p.from) ?? { from: p.from, withVat: [], withoutVat: [], missingVat: 0n, extraVat: 0n };
+    if (p.vatBps > 0) {
+      m.withVat.push(p);
+      m.extraVat += split({ vatBps: p.vatBps, buckets: [] }, p.amount).vat;
+    } else {
+      m.withoutVat.push(p);
+      m.missingVat += split({ vatBps: homeVatBps, buckets: [] }, p.amount).vat;
+    }
+    by.set(p.from, m);
+  }
+  return [...by.values()].filter((m) => m.withVat.length && m.withoutVat.length);
 }

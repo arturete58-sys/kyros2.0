@@ -17,7 +17,7 @@ import type { xdr } from '@stellar/stellar-sdk';
 import type { KyrosClient } from '../client.js';
 import type { InboxMove, VaultEventRow } from '../events.js';
 
-export type GuardKind = 'destination' | 'rule' | 'strategy' | 'conversion' | 'correction' | 'inbox-move';
+export type GuardKind = 'destination' | 'rule' | 'strategy' | 'conversion' | 'correction' | 'inbox-move' | 'payout' | 'fixed';
 
 export interface GuardAlert {
   kind: GuardKind;
@@ -40,6 +40,8 @@ const KIND: Partial<Record<VaultEventRow['kind'], GuardKind>> = {
   strategy_proposed: 'strategy',
   conversion_proposed: 'conversion',
   correction_proposed: 'correction',
+  payout_proposed: 'payout',
+  fixed_proposed: 'fixed',
 };
 
 /**
@@ -62,7 +64,7 @@ export function guardAlerts(
     if (kind) {
       if (r.readyAt !== undefined && r.readyAt <= o.now) continue;
       // A later cancellation or stop clears it.
-      const stops: Partial<Record<GuardKind, VaultEventRow['kind']>> = { destination: 'change_cancelled', rule: 'change_cancelled', strategy: 'strategy_stopped', conversion: 'conversion_stopped' };
+      const stops: Partial<Record<GuardKind, VaultEventRow['kind']>> = { destination: 'change_cancelled', rule: 'change_cancelled', payout: 'change_cancelled', fixed: 'change_cancelled', strategy: 'strategy_stopped', conversion: 'conversion_stopped' };
       // A later cancellation, a stop, or a newer proposal of the same kind clears it.
       const cleared = sorted.some((x) => x.ledger > r.ledger && (x.kind === stops[kind] || x.kind === r.kind));
       if (cleared) continue;
@@ -71,6 +73,8 @@ export function guardAlerts(
       let detail = '';
       let severity: GuardAlert['severity'] = 'critical';
       if (kind === 'destination') detail = r.destination ?? '';
+      else if (kind === 'payout') detail = r.payout ?? '';
+      else if (kind === 'fixed') severity = 'warning';
       else if (kind === 'rule') {
         detail = `${(r.rule?.reserveBps ?? 0) / 100}% reserve, ${(r.rule?.vatBps ?? 0) / 100}% VAT`;
         // A rule that keeps setting tax aside at about the same level is a routine change.
@@ -101,6 +105,8 @@ export function guardStopOp(client: KyrosClient, a: GuardAlert, vault: string, i
   switch (a.kind) {
     case 'destination':
     case 'rule':
+    case 'payout':
+    case 'fixed':
       return client.cancelChangeOp(vault);
     case 'strategy':
       return client.stopStrategyOp(vault);
@@ -123,6 +129,8 @@ export function guardMessage(a: GuardAlert, vault: string, appUrl?: string): str
     strategy: `a yield adapter (${a.detail})`,
     conversion: `a currency conversion through ${a.detail}`,
     correction: `a correction taking ${a.detail} units back`,
+    payout: `a new address for your income (${a.detail})`,
+    fixed: 'new fixed amounts set aside each period',
     'inbox-move': `the payment address moving to vault ${a.detail}`,
   };
   return `Kyros vault ${vault.slice(0, 6)}…: ${what[a.kind]} applies on ${when}. If it was not you, open Kyros and cancel it before then.${appUrl ? ` ${appUrl}` : ''}`;

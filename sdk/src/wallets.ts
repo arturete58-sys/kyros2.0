@@ -122,3 +122,38 @@ export function pendingReserve(rule: Rule, payments: WalletPayment[]): { vat: bi
   }
   return { vat, reserve: total - vat, total };
 }
+
+/** A deposit into the vault: reserve set aside after the fact, booked to a period and bucket (not income). */
+export interface ReserveDeposit {
+  period: number;
+  token: string;
+  bucket: string;
+  amount: bigint;
+}
+
+/**
+ * The deposits that set aside, for payments the vault did not split, what it
+ * would have: each payment's VAT into `vat` and its income-tax parts into the
+ * rule's buckets, in the period `periodFor` gives (the payment's own, or the
+ * current one once that period's VAT is past due), in the payment's token.
+ * Payments in a token `tokenOf` does not know are skipped.
+ */
+export function outsideDeposits(rule: Rule, payments: WalletPayment[], periodFor: (at: string) => number, tokenOf: (code: string) => string | undefined): ReserveDeposit[] {
+  const out = new Map<string, ReserveDeposit>();
+  const add = (period: number, token: string, bucket: string, amount: bigint) => {
+    if (amount <= 0n) return;
+    const k = `${period}|${token}|${bucket}`;
+    const d = out.get(k) ?? { period, token, bucket, amount: 0n };
+    d.amount += amount;
+    out.set(k, d);
+  };
+  for (const p of payments) {
+    const token = tokenOf(p.code);
+    if (!token) continue;
+    const period = periodFor(p.at);
+    const s = split(rule, p.amount);
+    add(period, token, 'vat', s.vat);
+    rule.buckets.forEach((b, i) => add(period, token, b.name, s.parts[i]));
+  }
+  return [...out.values()].sort((a, b) => a.period - b.period || (a.bucket < b.bucket ? -1 : 1));
+}

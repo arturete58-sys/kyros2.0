@@ -3,7 +3,7 @@
 //! Anyone can pay the inbox with an ordinary SEP-41 `transfer` (an x402
 //! payment, a wallet sending tokens to a contract address, an anchor
 //! payout). `sweep` then splits whatever the inbox holds through the user's
-//! vault: net to the owner, reserve to the vault. Anyone can call `sweep`;
+//! vault: net to the owner's payout address, reserve to the vault. Anyone can call `sweep`;
 //! the Kyros keeper calls it in the ledger after a payment arrives. If the
 //! keeper stops, the funds stay here and can only ever go to the owner and
 //! the vault.
@@ -185,10 +185,12 @@ impl Inbox {
             return Err(InboxError::NothingToSweep);
         }
         let v = VaultClient::new(&e, &vault(&e));
-        let owner = v.owner();
         let reference = BytesN::from_array(&e, &[0u8; 32]);
-        // The split the vault will make for this inbox (it may have its own terms, e.g. clients abroad).
-        let s = v.quote_for(&me, &reference, &gross);
+        // Where the net amount goes and the exact split the vault will make
+        // for this inbox (its own terms, e.g. one client's, and the period's
+        // fixed amounts).
+        let owner = v.payout();
+        let s = v.quote_in(&me, &token, &reference, &gross);
         // The vault pulls the money from this inbox, so the inbox authorizes
         // exactly these two transfers for the vault's call, nothing else.
         let transfer = Symbol::new(&e, "transfer");
@@ -234,7 +236,7 @@ impl Inbox {
         Ok(done)
     }
 
-    /// Sends a token the vault does not accept back to the vault owner, so
+    /// Sends a token the vault does not accept to the vault's payout address, so
     /// nothing sent by mistake is stuck here. Permissionless.
     pub fn return_unaccepted(e: Env, token: Address) -> Result<i128, InboxError> {
         let v = VaultClient::new(&e, &vault(&e));
@@ -247,7 +249,7 @@ impl Inbox {
         if amount <= 0 {
             return Err(InboxError::NothingToSweep);
         }
-        t.transfer(&me, &v.owner(), &amount);
+        t.transfer(&me, &v.payout(), &amount);
         Returned { token, amount }.publish(&e);
         Ok(amount)
     }

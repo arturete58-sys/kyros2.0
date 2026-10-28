@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, type AssistantTextKey } from 'kyros-sdk';
-import { abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
+import { mixedOf, reclaimMixedVat, setAsideMissingVat, abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
 import { Button, LangPicker, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
@@ -11,7 +11,7 @@ import { WalletsCard } from './Wallets';
 import { fmtDate as fmtDay, fmtDateTime, fmtTime, getLang, locale, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
-const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : 'bucketIncome');
+const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : b === 'social' ? 'bucketFixed' : 'bucketIncome');
 const fmtDate = (secs: bigint) => fmtDay(new Date(Number(secs) * 1000));
 
 /** The payment address: what the user shares so that every payment splits itself. */
@@ -177,6 +177,66 @@ function AbroadFixes({ pending = false }: { pending?: boolean }) {
   );
 }
 
+/** A wallet that paid an address with VAT and one without: the user says which was right. */
+function MixedPayers() {
+  const { snap, vault, wallet, chain, run, refresh, setVault, go } = useApp();
+  if (!snap || !vault || !wallet || vault.archivedOf) return null;
+  // Wallets the abroad check already asks about are left to it.
+  const asked = new Set(abroadSuspects(vault, snap).map((x) => x.from));
+  const list = mixedOf(vault, snap).filter((m) => !asked.has(m.from));
+  if (!list.length) return null;
+  const vatName = snap.pack?.vatName ?? t('vat');
+  const cur = (token: string) => (token === chain.cfg.tokens.eur.contract ? 'EURC' : 'USDC');
+  const sum = (xs: { amount: bigint }[]) => xs.reduce((a, x) => a + x.amount, 0n);
+  return (
+    <>
+      {list.map((m) => {
+        const c = cur(m.withVat[0].token);
+        return (
+          <section key={m.from} className="card warn" data-testid="mixed-payer">
+            <p className="small" style={{ fontWeight: 600 }}>
+              {t('mixTitle', { vat: vatName })}
+            </p>
+            <p className="small muted">{t('mixBody', { who: short(m.from), vat: vatName, with: money(sum(m.withVat), c), without: money(sum(m.withoutVat), c) })}</p>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <Button
+                small
+                testid="mixed-set-aside"
+                onClick={() =>
+                  run(t('mixYes', { amount: money(m.missingVat, c) }), async (step) => {
+                    await setAsideMissingVat(chain, wallet, vault, snap, m, step);
+                    setVault({ ...vault });
+                    await refresh();
+                  })
+                }
+              >
+                {t('mixYes', { amount: money(m.missingVat, c) })}
+              </Button>
+              <Button
+                small
+                kind="secondary"
+                testid="mixed-reclaim"
+                onClick={() =>
+                  run(t('mixNo', { amount: money(m.extraVat, c) }), async (step) => {
+                    await reclaimMixedVat(chain, wallet, vault, snap, m, step);
+                    setVault({ ...vault });
+                    await refresh();
+                  })
+                }
+              >
+                {t('mixNo', { amount: money(m.extraVat, c) })}
+              </Button>
+            </div>
+            <button className="link tiny" onClick={() => go('clients')}>
+              {t('mixHint')}
+            </button>
+          </section>
+        );
+      })}
+    </>
+  );
+}
+
 export function Home() {
   const { snap, vault, wallet, chain, run, refresh, go } = useApp();
   const [lastTx, setLastTx] = useState<string | null>(null);
@@ -227,6 +287,7 @@ export function Home() {
         <GuardCards />
         <MoveCard />
         <AbroadFixes />
+        <MixedPayers />
         {empty && (
           <section className="card start" data-testid="start-here">
             <h2 style={{ margin: 0, fontSize: 18 }}>{t('startTitle')}</h2>
@@ -682,6 +743,24 @@ export function Settings() {
           </button>
         )}
         {!vault.archivedOf && (
+          <button className="card link-card" data-testid="fixed-link" onClick={() => go('fixed')}>
+            <div className="row spread">
+              <b>{t('fixedTitle')}</b>
+              <span aria-hidden>›</span>
+            </div>
+            <span className="small muted">{t('fixedLink')}</span>
+          </button>
+        )}
+        {!vault.archivedOf && (
+          <button className="card link-card" data-testid="payout-link" onClick={() => go('payout')}>
+            <div className="row spread">
+              <b>{t('payoutTitle')}</b>
+              <span aria-hidden>›</span>
+            </div>
+            <span className="small muted">{t('payoutLink')}</span>
+          </button>
+        )}
+        {!vault.archivedOf && (
           <button className="card link-card" data-testid="sell-online" onClick={() => go('shop')}>
             <div className="row spread">
               <b>{t('sellOnline')}</b>
@@ -904,7 +983,8 @@ export function Alerts() {
         {!snap && <Skeleton rows={2} />}
         <GuardCards />
         <AbroadFixes pending />
-        {snap && items.length === 0 && !abroadSuspects(vault!, snap).length && !snap.corrections.length && !snap.guard.some((g) => !g.mine) && <p className="muted">{t('nothingPending')}</p>}
+        <MixedPayers />
+        {snap && items.length === 0 && !abroadSuspects(vault!, snap).length && !mixedOf(vault!, snap).length && !snap.corrections.length && !snap.guard.some((g) => !g.mine) && <p className="muted">{t('nothingPending')}</p>}
         {items.map((i) => (
           <div key={i.title + i.body} className={`card ${i.tone}`}>
             <p className="tiny" style={{ fontWeight: 700 }}>
