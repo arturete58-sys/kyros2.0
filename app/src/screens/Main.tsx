@@ -859,6 +859,9 @@ export function Settings() {
         <div className="card" data-testid="privacy">
           <p className="small">{t('privacyBody')}</p>
           <p className="small muted">{t('privacyChain')}</p>
+          <p className="small" data-testid="privacy-testnet" style={{ fontWeight: 500 }}>
+            {t('privacyTestnet')}
+          </p>
         </div>
       </div>
       <Tabs current="settings" />
