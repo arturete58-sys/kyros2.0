@@ -143,16 +143,23 @@ test('Bermuda and the Marshall Islands: the self-employed taxes and their dates'
   assert.deepEqual(t.rule, { vatBps: 0, buckets: [{ name: 'payroll_tax', bps: 50 }] });
   assert.equal(estimateTaxes(estimateFor(bm, 'self-employed')!, { revenue: 100_000, expenses: 20_000 }).incomeTax, 400);
   assert.equal(estimateTaxes(estimateFor(bm, 'self-employed')!, { revenue: 300_000, expenses: 0 }).incomeTax, 6_000);
+  // Social insurance: a fixed BMD 75.30 a week, suggested as a fixed fee (326.30 a month), not in the percentage reserve.
+  assert.equal(estimateTaxes(estimateFor(bm, 'self-employed')!, { revenue: 100_000, expenses: 20_000 }).social, 3_915.6);
+  const bmFee = fixedFeeSuggestion(bm, 'self-employed', t.rule, { revenue: 100_000 })!;
+  assert.deepEqual([bmFee.monthly, bmFee.inReserve], [326.3, false]);
   const q = periodOf(t.period, BigInt(Date.parse('2026-11-10T00:00:00Z') / 1000));
   assert.equal(new Date(Number(dueAt(t.period, q, t.dues.default) - 1n) * 1000).toISOString().slice(0, 10), '2027-01-15');
 
   const mh = loadRulePack('mh');
   // Small business: 3% of revenue above USD 10,000, USD 80 below; due on the last day of the month after the quarter.
   const g = termsFromPack(mh, 'gross-revenue', '2026-10-30');
-  assert.deepEqual(g.rule, { vatBps: 0, buckets: [{ name: 'gross_revenue_tax', bps: 300 }] });
+  assert.deepEqual(g.rule, { vatBps: 0, buckets: [{ name: 'gross_revenue_tax', bps: 300 }, { name: 'social_security', bps: 1725 }] });
   const est = estimateFor(mh, 'gross-revenue')!;
   assert.equal(estimateTaxes(est, { revenue: 8_000 }).incomeTax, 80);
   assert.equal(estimateTaxes(est, { revenue: 60_000 }).incomeTax, 1_500);
+  // Social security 12% and health fund 5.25% of gross earnings, each up to its yearly maximum (6,400 and 1,400).
+  assert.equal(estimateTaxes(est, { revenue: 20_000 }).social, 3_450);
+  assert.equal(estimateTaxes(est, { revenue: 60_000 }).social, 7_800);
   assert.equal(new Date(Number(dueAt(g.period, q, g.dues.default) - 1n) * 1000).toISOString().slice(0, 10), '2027-01-31');
   // Registered for consumption tax: 12% monthly, 21 days after the month; net profit tax due 31 December after the tax year.
   const c = termsFromPack(mh, 'consumption-tax', '2026-10-30');

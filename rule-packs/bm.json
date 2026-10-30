@@ -3,7 +3,7 @@
   "id": "bm",
   "country": "BM",
   "name": "Bermuda: self-employed",
-  "version": "2026.1",
+  "version": "2026.2",
   "reviewed": "2026-10-30",
   "currency": "BMD",
   "enforcement": {
@@ -50,7 +50,7 @@
   "presets": [
     {
       "id": "self-employed",
-      "label": "Self-employed: payroll tax on what you take out of the business (0.5% while your payroll is under BMD 200,000 a year); no income tax or VAT",
+      "label": "Self-employed: payroll tax on what you take out of the business (0.5% while your payroll is under BMD 200,000 a year); no income tax or VAT. Social insurance is a fixed weekly amount: set it aside as a fixed fee",
       "vatBps": 0,
       "buckets": [
         {
@@ -94,12 +94,24 @@
           ]
         ],
         "label": "Payroll tax 2026-27 at the standard rate of the payroll's band (0.5% under BMD 200,000, 2% to 350,000, 4.75% to 500,000, 7% to 1 million, 9.5% above), charged on the self-employed person's actual remuneration: what they take out of the business. The estimate uses the profit, the most a self-employed person can take out."
+      },
+      {
+        "name": "social_insurance",
+        "kind": "social",
+        "brackets": [
+          [
+            null,
+            0
+          ]
+        ],
+        "min": 3915.6,
+        "label": "Social insurance (Contributory Pensions Act): a self-employed person under 65 pays both shares, BMD 75.30 a week since 4 August 2025 (BMD 3,915.60 a year); BMD 37.65 at 65 or over. A fixed amount: Kyros can set it aside as a fixed fee per period."
       }
     ]
   },
   "notes": [
     "Bermuda has no personal income tax, no VAT and no sales tax. A self-employed person is deemed to employ himself and pays payroll tax at the standard rate on his actual remuneration, what he takes out of the business for personal use, up to BMD 1 million a year (Payroll Tax Act 1995, s. 3 and 14). Employees of the business add their own payroll tax.",
-    "Social insurance contributions (a fixed weekly amount) and health insurance are not included.",
+    "Social insurance is a fixed weekly amount (BMD 75.30 for a self-employed person under 65 since 4 August 2025), counted in the estimate and suggested as a fixed fee per period. Bermudians and their spouses aged 23 or over earning more than BMD 20,000 also pay a mandatory occupational pension (10% of declared earnings, at most BMD 5,000 a year, per the US Social Security Administration's survey); mandatory health insurance is a premium. Neither is included.",
     "The Bermudian dollar is pegged one to one to the US dollar. The government accepts tax payments in USDC since 2019, and is building a Bermuda Digital Dollar on Stellar.",
     "Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose."
   ],
@@ -125,6 +137,16 @@
     {
       "title": "Circle: Bermuda becomes the first national government to accept tax payments in USDC",
       "url": "https://www.circle.com/blog/bermuda-becomes-1st-national-government-to-accept-tax-payments-in-usdc-stablecoin"
+    },
+    {
+      "title": "Bernews: Social insurance contribution rate revised (August 2025)",
+      "url": "https://bernews.com/2025/08/social-insurance-contribution-rate-revised/"
+    },
+    {
+      "title": "US SSA: Social Security Programs Throughout the World, Bermuda",
+      "url": "https://www.ssa.gov/policy/docs/progdesc/ssptw/2018-2019/americas/bermuda.html",
+      "official": true,
+      "checked": "2026-10-30"
     }
   ]
 }
