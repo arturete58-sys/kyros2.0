@@ -5,8 +5,10 @@ import { mixedPayers, type AddressPayment } from '../clients.js';
 import { outsideDeposits, type WalletPayment } from '../wallets.js';
 import { fixedFeeSuggestion, fixedPerPeriod } from '../fixed.js';
 import { regimeChoices, suggestSetup } from '../activities.js';
-import { loadRulePack } from '../rulepacks.js';
-import { periodOf } from '../periods.js';
+import { loadRulePack, presetVatBps, termsFromPack } from '../rulepacks.js';
+import { estimateFor, estimateTaxes } from '../estimate.js';
+import { assetContract, flagsFromHorizon, holdersToAuthorize, issuerControls, SOVEREIGN_MONEY, sovereignFor } from '../sovereign.js';
+import { dueAt, periodOf } from '../periods.js';
 import { split, withFixed } from '../split.js';
 import { fixedToScVal, fixedFromNative, splitFromScVal } from '../scval.js';
 import { scValToNative, nativeToScVal, xdr } from '@stellar/stellar-sdk';
@@ -132,4 +134,47 @@ test('Argentina: the monotributo is offered in onboarding and charges no IVA', (
   // Without choosing it, a client at home leads to responsable inscripto with IVA.
   assert.equal(suggestSetup(ar, { activity: 'software', client: 'business-local', revenue: 20_000_000 }).presetId, 'responsable-inscripto');
   assert.throws(() => suggestSetup(ar, { activity: 'software', client: 'business-local', presetId: 'responsable-inscripto' }));
+});
+
+test('Bermuda and the Marshall Islands: the self-employed taxes and their dates', () => {
+  const bm = loadRulePack('bm');
+  const t = termsFromPack(bm, 'self-employed', '2026-10-30');
+  // No VAT; payroll tax at 0.5% while the payroll is under BMD 200,000, due on the 15th after each quarter.
+  assert.deepEqual(t.rule, { vatBps: 0, buckets: [{ name: 'payroll_tax', bps: 50 }] });
+  assert.equal(estimateTaxes(estimateFor(bm, 'self-employed')!, { revenue: 100_000, expenses: 20_000 }).incomeTax, 400);
+  assert.equal(estimateTaxes(estimateFor(bm, 'self-employed')!, { revenue: 300_000, expenses: 0 }).incomeTax, 6_000);
+  const q = periodOf(t.period, BigInt(Date.parse('2026-11-10T00:00:00Z') / 1000));
+  assert.equal(new Date(Number(dueAt(t.period, q, t.dues.default) - 1n) * 1000).toISOString().slice(0, 10), '2027-01-15');
+
+  const mh = loadRulePack('mh');
+  // Small business: 3% of revenue above USD 10,000, USD 80 below; due on the last day of the month after the quarter.
+  const g = termsFromPack(mh, 'gross-revenue', '2026-10-30');
+  assert.deepEqual(g.rule, { vatBps: 0, buckets: [{ name: 'gross_revenue_tax', bps: 300 }] });
+  const est = estimateFor(mh, 'gross-revenue')!;
+  assert.equal(estimateTaxes(est, { revenue: 8_000 }).incomeTax, 80);
+  assert.equal(estimateTaxes(est, { revenue: 60_000 }).incomeTax, 1_500);
+  assert.equal(new Date(Number(dueAt(g.period, q, g.dues.default) - 1n) * 1000).toISOString().slice(0, 10), '2027-01-31');
+  // Registered for consumption tax: 12% monthly, 21 days after the month; net profit tax due 31 December after the tax year.
+  const c = termsFromPack(mh, 'consumption-tax', '2026-10-30');
+  assert.deepEqual(c.period, { kind: 'Month' });
+  assert.equal(c.rule.vatBps, 1200);
+  const nov = periodOf(c.period, BigInt(Date.parse('2026-11-10T00:00:00Z') / 1000));
+  assert.equal(new Date(Number(dueAt(c.period, nov, c.dues.buckets.vat) - 1n) * 1000).toISOString().slice(0, 10), '2026-12-21');
+  assert.equal(new Date(Number(dueAt(c.period, nov, c.dues.default) - 1n) * 1000).toISOString().slice(0, 10), '2027-12-31');
+  // Before 1 October 2026 there was no consumption tax.
+  assert.throws(() => presetVatBps(mh, 'consumption-tax', '2026-09-30'), /not in force/);
+});
+
+test('public money on Stellar: what exists, and what the issuer can do with it in a vault', () => {
+  assert.deepEqual(sovereignFor('bm').map((m) => [m.name, m.status]), [['Bermuda Digital Dollar', 'announced']]);
+  assert.deepEqual(sovereignFor('MH').map((m) => m.kind), ['sovereign-bond']);
+  assert.deepEqual(sovereignFor('ES'), []);
+  for (const m of SOVEREIGN_MONEY) assert.ok(m.sources.length > 0, m.id);
+  // A typical central bank asset: holders need authorization, and the issuer can freeze and claw back.
+  const f = flagsFromHorizon({ asset_code: 'CBDC', asset_issuer: 'G', flags: { auth_required: true, auth_revocable: true, auth_clawback_enabled: true } });
+  assert.deepEqual(issuerControls(f), ['authorization', 'freeze', 'clawback']);
+  assert.deepEqual(issuerControls(flagsFromHorizon({ asset_code: 'USDC', asset_issuer: 'G', flags: {} })), []);
+  assert.deepEqual(holdersToAuthorize({ vault: 'CV', owner: 'GO', inboxes: ['CI', 'CV'] }), ['CV', 'CI', 'GO']);
+  const kusd = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+  assert.match(assetContract('USDC', kusd, 'Test SDF Network ; September 2015'), /^C[A-Z2-7]{55}$/);
 });

@@ -33,6 +33,12 @@ export async function connectClassicWallet(chain: Chain): Promise<Wallet> {
       const { signedTxXdr } = await StellarWalletsKit.signTransaction(tx.toXDR(), { networkPassphrase: chain.cfg.networkPassphrase, address });
       return chain.submit(TransactionBuilder.fromXDR(signedTxXdr, chain.cfg.networkPassphrase) as never);
     },
+    async signClassic(ops: xdr.Operation[]): Promise<string> {
+      const b = new TransactionBuilder(await chain.server.getAccount(address), { fee: '1000', networkPassphrase: chain.cfg.networkPassphrase });
+      ops.forEach((o) => b.addOperation(o));
+      const { signedTxXdr } = await StellarWalletsKit.signTransaction(b.setTimeout(120).build().toXDR(), { networkPassphrase: chain.cfg.networkPassphrase, address });
+      return chain.submit(TransactionBuilder.fromXDR(signedTxXdr, chain.cfg.networkPassphrase) as never);
+    },
     async disconnect() {
       await StellarWalletsKit.disconnect();
     },

@@ -24,7 +24,11 @@
  *     Reflector's EUR/USD price minus 1%;
  * 15. a fixed fee per period and a payout address, both after the notice: the fee
  *     fills first from the net amount, the rest goes to the payout address; and
- *     reserve deposited for income received elsewhere, which does not count as income.
+ *     reserve deposited for income received elsewhere, which does not count as income;
+ * 16. public money: a test digital dollar issued like a central bank's (holders need
+ *     the issuer's authorization) is added to a vault with notice; the vault splits a
+ *     payment in it once the issuer has authorized it, and pays the tax in it straight
+ *     to the tax office's account.
  *
  * For the demo the vault uses 4-minute periods and a 2-minute notice, so the
  * whole cycle fits in one run; real vaults use the rule pack's quarters.
@@ -33,7 +37,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Asset, BASE_FEE, Contract, Keypair, MuxedAccount, Account, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import { Asset, AuthClawbackEnabledFlag, AuthRequiredFlag, AuthRevocableFlag, BASE_FEE, Contract, Keypair, MuxedAccount, Account, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
 import { REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
 import { money, payableUnits, requestRef, requestTerms, requestTotals, type PaymentRequest } from '../payment-request.js';
 import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
@@ -370,6 +374,40 @@ async function main(): Promise<void> {
   const fxFixed = await c.send(k.freelancer, c.proposeFixedOp(fxVault.contractId, [{ bucket: 'social', token, amount: fxFee }]));
   const fxPayout = await c.send(k.freelancer, c.proposePayoutOp(fxVault.contractId, k.newDestination.publicKey()));
   const fxProposedAt = Date.now();
+
+  log('public money: a test digital dollar with issuer controls, proposed as a new currency');
+  // Issued like public money usually is: holders need the issuer's authorization, and the issuer
+  // can freeze and claw back. The vault starts with KUSD only and adds it with notice.
+  const centralBank = Keypair.random();
+  await fund(centralBank.publicKey());
+  await classic(c, centralBank, [Operation.setOptions({ setFlags: (AuthRequiredFlag | AuthRevocableFlag | AuthClawbackEnabledFlag) as never })]);
+  const cbAsset = new Asset('KCB', centralBank.publicKey());
+  for (const kp of [k.freelancer, k.client, k.taxAccount]) {
+    await classic(c, kp, [Operation.changeTrust({ asset: cbAsset })]);
+    await classic(c, centralBank, [Operation.setTrustLineFlags({ trustor: kp.publicKey(), asset: cbAsset, flags: { authorized: true } })]);
+  }
+  await classic(c, centralBank, [Operation.payment({ destination: k.client.publicKey(), asset: cbAsset, amount: '10000' })]);
+  await c.send(centralBank, Operation.createStellarAssetContract({ asset: cbAsset }));
+  const cbToken = cbAsset.contractId(PASS);
+  const cbVault = await c.deployVault(k.keeper, vaultHash, {
+    owner: k.freelancer.publicKey(),
+    rule: terms.rule,
+    taxDestination: k.taxAccount.publicKey(),
+    noticeSecs: 120n,
+    period: { kind: 'Seconds', seconds: 3_600n },
+    dues: duesAfter(0n),
+    tokens: [token],
+  });
+  const cbInbox = await c.deployInbox(k.keeper, inboxHash, cbVault.contractId);
+  const cbProposed = await c.send(k.freelancer, c.proposeTokenOp(cbVault.contractId, cbToken));
+  const cbProposedAt = Date.now();
+  const cbNotYet = await expectRefusal(() => c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: cbVault.contractId, token: cbToken, amount: parseAmount('121'), reference: invoiceReference('INV-CB-0') })), 'TokenNotAccepted');
+  steps.push({
+    step: 'Public money: a vault proposes accepting KCB, a test digital dollar issued like a central bank\'s (authorization required, freeze and clawback enabled); before the 2-minute notice a payment in it is refused',
+    ok: (await c.pendingToken(cbVault.contractId))?.token === cbToken && !(await c.accepts(cbVault.contractId, cbToken)),
+    tx: cbProposed.hash,
+    detail: `refused by the contract: ${cbNotYet}; vault ${cbVault.contractId}, asset ${cbToken}`,
+  });
   const fxPending = await c.pendingFixed(fxVault.contractId);
   steps.push({
     step: 'Fixed fee and payout address: the owner proposes setting aside 100 KUSD per period before the net amount goes out, and paying the net amount to another wallet of theirs (2-minute notice)',
@@ -576,6 +614,40 @@ async function main(): Promise<void> {
     ok: !fxSweep2?.error && fx2.payout - fx1.payout === fxQ2.net && fx2.vault - fx1.vault === fxQ2.reserve && (fxQ2.fixed === 0n ? fxQ2.net === parseAmount('80') : fxPid2 !== fxPid1),
     tx: fxSweep2?.hash,
     detail: fxSweep2?.error ?? `payout address +${formatAmount(fx2.payout - fx1.payout)}, vault +${formatAmount(fx2.vault - fx1.vault)}`,
+  });
+
+  log('public money after the notice: authorization, split, tax paid straight to the tax office');
+  const cbWait = cbProposedAt + 125_000 - Date.now();
+  if (cbWait > 0) await sleep(cbWait);
+  // The inbox needs the issuer's authorization to receive; the vault, to keep the reserve.
+  await c.send(centralBank, c.authorizeHolderOp(cbToken, cbInbox.contractId));
+  await c.send(k.client, c.transferOp(cbToken, k.client.publicKey(), cbInbox.contractId, parseAmount('1210')));
+  const cbKeeper = new Keeper(c, k.keeper, [{ inbox: cbInbox.contractId, token: cbToken }]);
+  const [cbBlocked] = await cbKeeper.tick();
+  steps.push({
+    step: 'A client pays 1,210 KCB to the inbox; until the issuer authorizes the vault to hold KCB, the sweep fails and the money waits in the inbox',
+    ok: !!cbBlocked?.error && (await c.balance(cbToken, cbInbox.contractId)) === parseAmount('1210'),
+    detail: (cbBlocked?.error ?? 'the sweep went through').slice(0, 200),
+  });
+  const cbAuth = await c.send(centralBank, c.authorizeHolderOp(cbToken, cbVault.contractId));
+  const cbOwner0 = await c.balance(cbToken, k.freelancer.publicKey());
+  const [cbSweep] = await cbKeeper.tick();
+  const cbGot = { owner: (await c.balance(cbToken, k.freelancer.publicKey())) - cbOwner0, vault: await c.balance(cbToken, cbVault.contractId) };
+  steps.push({
+    step: 'Once the issuer authorizes the vault, the sweep splits the 1,210 KCB: 800 to the freelancer, 410 kept in the vault in KCB',
+    ok: !cbSweep?.error && cbGot.owner === parseAmount('800') && cbGot.vault === parseAmount('410'),
+    tx: cbSweep?.hash ?? cbAuth.hash,
+    detail: cbSweep?.error ?? `freelancer +${formatAmount(cbGot.owner)} KCB, vault ${formatAmount(cbGot.vault)} KCB`,
+  });
+  let cbPid = await c.currentPeriod(cbVault.contractId);
+  if (!((await c.period(cbVault.contractId, cbPid, cbToken)).buckets.vat ?? 0n)) cbPid -= 1;
+  const cbTax0 = await c.balance(cbToken, k.taxAccount.publicKey());
+  const cbPaid = await c.send(k.freelancer, c.payTaxOp(cbVault.contractId, { period: cbPid, token: cbToken, bucket: 'vat', amount: parseAmount('210') }));
+  steps.push({
+    step: 'The VAT is paid in KCB straight to the tax office\'s Stellar account: no anchor, no conversion',
+    ok: (await c.balance(cbToken, k.taxAccount.publicKey())) - cbTax0 === parseAmount('210'),
+    tx: cbPaid.hash,
+    detail: `210 KCB to ${k.taxAccount.publicKey().slice(0, 8)}…`,
   });
 
   log('the same Router with vaults from other countries');

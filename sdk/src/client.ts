@@ -388,6 +388,16 @@ export class KyrosClient {
     return new Contract(vault).call('propose_payout', addr(payout));
   }
 
+  /** Owner: a token for the vault to accept from now on (a CBDC, a government's digital dollar); applies after the notice. */
+  proposeTokenOp(vault: string, token: string): xdr.Operation {
+    return new Contract(vault).call('propose_token', addr(token));
+  }
+
+  /** Issuer (the SAC admin) of an asset that needs authorization: lets `holder` (a vault or an inbox) hold it. */
+  authorizeHolderOp(sac: string, holder: string, authorized = true): xdr.Operation {
+    return new Contract(sac).call('set_authorized', addr(holder), xdr.ScVal.scvBool(authorized));
+  }
+
   /** Owner: the fixed amounts set aside each period (empty removes them); apply after the notice. */
   proposeFixedOp(vault: string, fixed: Fixed[]): xdr.Operation {
     return new Contract(vault).call('propose_fixed', fixedToScVal(fixed));
@@ -557,6 +567,15 @@ export class KyrosClient {
   async pendingPayout(vault: string): Promise<{ payout: string; readyAt: bigint } | null> {
     const n = scValToNative(await this.read(vault, 'pending_payout')) as { payout: string; ready_at: bigint } | null | undefined;
     return n ? { payout: String(n.payout), readyAt: BigInt(n.ready_at) } : null;
+  }
+
+  async pendingToken(vault: string): Promise<{ token: string; readyAt: bigint } | null> {
+    const n = scValToNative(await this.read(vault, 'pending_token')) as { token: string; ready_at: bigint } | null | undefined;
+    return n ? { token: String(n.token), readyAt: BigInt(n.ready_at) } : null;
+  }
+
+  async accepts(vault: string, token: string): Promise<boolean> {
+    return Boolean(scValToNative(await this.read(vault, 'accepts', addr(token))));
   }
 
   async pendingFixed(vault: string): Promise<{ fixed: Fixed[]; readyAt: bigint } | null> {

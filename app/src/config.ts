@@ -16,6 +16,8 @@ export interface AppConfig {
   /** Cross-chain payments: the Kyros CCTP receiver and Circle's testnet USDC they arrive in (older deployments have none). */
   cctp?: { receiver: string; usdc: Token };
   passkeyWalletWasmHash: string;
+  /** A test digital dollar issued like public money (holders need authorization); its issuer key lets the app authorize a vault on testnet. */
+  publicMoney?: Token & { issuerSecret: string };
 }
 
 export interface Token {

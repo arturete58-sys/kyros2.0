@@ -149,6 +149,16 @@ test('a freelancer signs up with a passkey, gets paid, registers an expected pay
   await settle(page);
   await expect(page.getByTestId('payout-pending')).toHaveCount(0);
 
+  // Public money: a test digital dollar issued like a central bank's (holders need the issuer's
+  // authorization). The app, as the test issuer, authorizes the vault and its addresses, and the
+  // passkey signs that the vault accepts it after the notice.
+  await page.getByRole('button', { name: 'Ajustes' }).click();
+  await page.getByTestId('public-money-link').click();
+  await expect(page.getByTestId('pm-test')).toBeVisible();
+  await page.getByTestId('pm-test-add').click();
+  await settle(page);
+  await expect(page.getByTestId('pm-accepted')).toContainText('Dólar digital de prueba');
+
   // Selling online: one payment address per VAT rate (the passkey signs each one's terms),
   // and the settings for the WooCommerce plugin or an x402 server.
   await page.getByRole('button', { name: 'Ajustes' }).click();

@@ -32,7 +32,9 @@ export interface VaultEventRow {
     | 'payout_proposed'
     | 'payout_applied'
     | 'fixed_proposed'
-    | 'fixed_applied';
+    | 'fixed_applied'
+    | 'token_proposed'
+    | 'token_added';
   token?: string;
   period?: number;
   gross?: bigint;
@@ -88,6 +90,8 @@ const KINDS = new Set([
   'payout_applied',
   'fixed_proposed',
   'fixed_applied',
+  'token_proposed',
+  'token_added',
 ]);
 
 /** Every Kyros event of `vault` from `startLedger` on (RPC keeps a limited window of history). */
@@ -109,11 +113,11 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
         rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, amount: big(v.amount) });
         continue;
       }
-      if (kind === 'payout_applied' || kind === 'fixed_applied') {
-        rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, payout: v.payout !== undefined ? String(v.payout) : undefined });
+      if (kind === 'payout_applied' || kind === 'fixed_applied' || kind === 'token_added') {
+        rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, payout: v.payout !== undefined ? String(v.payout) : undefined, token: v.token !== undefined ? String(v.token) : undefined });
         continue;
       }
-      if (kind === 'rule_proposed' || kind === 'destination_proposed' || kind === 'strategy_proposed' || kind === 'conversion_proposed' || kind === 'correction_proposed' || kind === 'payout_proposed' || kind === 'fixed_proposed') {
+      if (kind === 'rule_proposed' || kind === 'destination_proposed' || kind === 'strategy_proposed' || kind === 'conversion_proposed' || kind === 'correction_proposed' || kind === 'payout_proposed' || kind === 'fixed_proposed' || kind === 'token_proposed') {
         const rule = v.rule as { vat_bps: number; buckets: { bps: number }[] } | undefined;
         const c = v.correction as { period: number; token: string; bucket: string; amount: bigint; ready_at: bigint } | undefined;
         const st = (v.strategy ?? v.conversion) as { adapter?: string; swapper?: string } | undefined;
@@ -129,7 +133,7 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
           adapter: st ? String(st.adapter ?? st.swapper) : undefined,
           id: kind === 'correction_proposed' ? Number(topics[2]) : undefined,
           period: c ? Number(c.period) : undefined,
-          token: c ? String(c.token) : undefined,
+          token: c ? String(c.token) : v.token !== undefined && kind === 'token_proposed' ? String(v.token) : undefined,
           bucket: c ? String(c.bucket) : undefined,
           amount: c ? BigInt(c.amount) : undefined,
         });

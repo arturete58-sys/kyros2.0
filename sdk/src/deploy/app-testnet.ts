@@ -10,6 +10,10 @@
  *   - a deep Soroswap testnet pool KUSD/KEUR at Reflector's EUR/USD price,
  *     and the Kyros swapper over the Soroswap router;
  *   - a test "tax authority" account that tax payments go to;
+ *   - KDD, a test digital dollar issued the way public money usually is
+ *     (holders need the issuer's authorization; the issuer can freeze and
+ *     claw back), whose issuer secret is also published so the app can
+ *     authorize a user's vault on testnet and try a vault in public money;
  *   - the Kyros CCTP receiver over Circle's testnet CCTP, so a client can pay
  *     a vault with Circle's testnet USDC from Base, Ethereum, Arbitrum, OP or
  *     Avalanche testnets (vaults accept that USDC too).
@@ -18,7 +22,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { Asset, BASE_FEE, Contract, Keypair, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import { Asset, AuthClawbackEnabledFlag, AuthRequiredFlag, AuthRevocableFlag, BASE_FEE, Contract, Keypair, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
 import { KyrosClient } from '../client.js';
 import { REFLECTOR, SOROSWAP_ROUTER, STABLECOINS, stablecoinContract } from '../assets.js';
 import { STELLAR_CCTP } from '../cctp.js';
@@ -65,7 +69,7 @@ async function main(): Promise<void> {
   const wasmDir = flag('wasm-dir', '../contracts/target/wasm32v1-none/release')!;
   const out = flag('out', '../app/public/testnet.json')!;
   const wasm = (n: string) => readFileSync(join(wasmDir, `${n}.wasm`));
-  const k = { deployer: Keypair.random(), issuer: Keypair.random(), lp: Keypair.random(), tax: Keypair.random() };
+  const k = { deployer: Keypair.random(), issuer: Keypair.random(), lp: Keypair.random(), tax: Keypair.random(), centralBank: Keypair.random() };
   const c = new KyrosClient({ rpcUrl: RPC, networkPassphrase: PASS, readAs: k.deployer.publicKey() });
 
   log('funding accounts');
@@ -86,6 +90,14 @@ async function main(): Promise<void> {
   await c.send(k.issuer, Operation.createStellarAssetContract({ asset: eur }));
   const usdToken = usd.contractId(PASS);
   const eurToken = eur.contractId(PASS);
+
+  log('KDD, a test digital dollar with the controls public money usually has');
+  await classic(c, k.centralBank, [Operation.setOptions({ setFlags: (AuthRequiredFlag | AuthRevocableFlag | AuthClawbackEnabledFlag) as never })]);
+  const kdd = new Asset('KDD', k.centralBank.publicKey());
+  await classic(c, k.tax, [Operation.changeTrust({ asset: kdd })]);
+  await classic(c, k.centralBank, [Operation.setTrustLineFlags({ trustor: k.tax.publicKey(), asset: kdd, flags: { authorized: true } })]);
+  await c.send(k.centralBank, Operation.createStellarAssetContract({ asset: kdd }));
+  const kddToken = kdd.contractId(PASS);
 
   log('uploading the contracts');
   const vaultHash = await c.upload(k.deployer, wasm('kyros_reserve_vault'));
@@ -163,6 +175,9 @@ async function main(): Promise<void> {
     // Test tokens with no value: the app uses this key to give test money to a simulated client.
     faucetSecret: k.issuer.secret(),
     taxAccount: k.tax.publicKey(),
+    // A test digital dollar like public money: holders need the issuer's authorization. The issuer
+    // key is published on purpose (testnet, no value) so the app can authorize a vault to try it.
+    publicMoney: { code: 'KDD', issuer: k.centralBank.publicKey(), contract: kddToken, issuerSecret: k.centralBank.secret() },
     cctp: {
       receiver: cctp.contractId,
       usdc: { code: 'USDC', issuer: STABLECOINS.testnet.USDC.issuer, contract: stablecoinContract('testnet', 'USDC') },

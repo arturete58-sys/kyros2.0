@@ -426,3 +426,21 @@ fn an_inbox_pays_the_payout_address_and_fills_the_fixed_amount_first() {
     assert_eq!((s.fixed, s.net), (0, 80 * UNIT));
     assert_eq!(bal(&w, &bank), 140 * UNIT);
 }
+
+#[test]
+fn an_inbox_sweeps_a_currency_the_vault_added_after_the_notice() {
+    let w = world();
+    let cbdc =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
+    StellarAssetClient::new(&w.e, &cbdc).mint(&w.payer, &(1_000 * UNIT));
+    TokenClient::new(&w.e, &cbdc).transfer(&w.payer, &w.inbox.address, &(121 * UNIT));
+    // Not accepted yet: the inbox keeps it (it can only ever go to the owner or the vault).
+    assert!(w.inbox.try_sweep(&cbdc).is_err());
+    w.vault.propose_token(&cbdc);
+    w.e.ledger().set_timestamp(1_802_260_800 + 86_400);
+    w.e.set_auths(&[]);
+    let s = w.inbox.sweep(&cbdc);
+    assert_eq!((s.net, s.reserve), (80 * UNIT, 41 * UNIT));
+    assert_eq!(TokenClient::new(&w.e, &cbdc).balance(&w.owner), 80 * UNIT);
+}

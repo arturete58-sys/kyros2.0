@@ -26,7 +26,7 @@ All of them are plain TypeScript in the SDK (`sdk/src/agents/`), with no languag
 | Assistant | Active | Every user's way to the other agents. |
 | Documents | Active | Notices and invoices are the most common paperwork. |
 | Reconciliation | Active | Every figure explained; exports checked. |
-| Law | Active | Keeps 46 packs current every Monday. |
+| Law | Active | Keeps 48 packs current every Monday. |
 | Guardian | Active | Non-custody holds only if a stolen key cannot redirect the reserve unseen. |
 | Expenses | Active | Every country's deductions: the saving, input VAT, prepayments and a lower reserve when justified. |
 | Residence | Active | Freelancers who move: days, tests, and the change of country signed from the app. |

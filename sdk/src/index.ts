@@ -22,3 +22,4 @@ export * from './checkout.js';
 export * from './wallets.js';
 export * from './clients.js';
 export * from './fixed.js';
+export * from './sovereign.js';

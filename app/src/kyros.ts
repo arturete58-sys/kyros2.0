@@ -1,5 +1,5 @@
 /** What the app does with the Kyros contracts, on behalf of the connected wallet. */
-import { Keypair, scValToNative } from '@stellar/stellar-sdk';
+import { Asset, Keypair, Operation, scValToNative } from '@stellar/stellar-sdk';
 import { fmtNumber, t } from './i18n';
 import { allowanceData, balanceOfData, burnCalls, fastFeeBps, fetchAttestation, mintAndPayOp, type EvmChain } from 'kyros-sdk';
 import {
@@ -46,6 +46,11 @@ import {
   type MixedPayer,
   type ReserveDeposit,
   type VatHeld,
+  assetContract,
+  holdersToAuthorize,
+  issuerControls,
+  readIssuerFlags,
+  type IssuerControl,
   type ClientProfile,
   type ClientTerms,
   type CalendarPeriod,
@@ -128,6 +133,18 @@ export interface VaultInfo {
   wallets?: BusinessWallet[];
   /** One payment address per client, each splitting with that client's VAT and withholding. */
   clients?: ClientAddress[];
+  /** Public money (a CBDC, a government's digital dollar) the vault was asked to accept, and what it is worth like. */
+  publicTokens?: PublicToken[];
+}
+
+export interface PublicToken {
+  /** Its Stellar Asset Contract. */
+  contract: string;
+  code: string;
+  issuer: string;
+  /** Counted with the dollars or the euros. */
+  peg: 'usd' | 'eur';
+  name?: string;
 }
 
 export interface ClientAddress extends ClientProfile {
@@ -371,6 +388,10 @@ export interface Snapshot {
   pendingFixed: { fixed: Fixed[]; readyAt: bigint } | null;
   /** How much of each fixed amount the current period has set aside, per token. */
   fixedFilled: Record<string, Record<string, bigint>>;
+  /** The tokens the vault accepts now, a new one waiting for its notice, and where tax payments go. */
+  acceptedTokens: string[];
+  pendingToken: { token: string; readyAt: bigint } | null;
+  taxDestination: string | null;
   /** Pending changes the guardian flags (a new destination, rule, adapter, correction, inbox move). */
   guard: GuardAlert[];
   /** The rule the vault applies now (read from the chain). */
@@ -392,25 +413,28 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     }
   };
   // Dollars can be the test KUSD or Circle's USDC from another chain; the app shows them together.
-  const dollars = chain.dollarTokens;
+  const dollars = [...chain.dollarTokens, ...publicOf(v, 'usd')];
+  const euros = publicOf(v, 'eur');
   const none = { held: 0n, liquid: 0n, invested: 0n, surplus: 0n };
   const sum = (xs: bigint[]) => xs.reduce((a, b) => a + b, 0n);
   // Read every time: the rule changes when a proposal takes effect.
   const live = await safe(() => c.config(v.vault), null);
   if (live) configs.set(v.vault, { period: live.period, dues: live.dues });
   const conf = configs.get(v.vault) ?? null;
-  const [sUsds, sEur, pUsds, pEur, period] = await Promise.all([
+  const [sUsds, sEurs, pUsds, pEurs, period] = await Promise.all([
     Promise.all(dollars.map((d) => safe(() => c.balance(d, v.owner), 0n))),
-    safe(() => c.balance(eur.contract, v.owner), 0n),
+    Promise.all([eur.contract, ...euros].map((d) => safe(() => c.balance(d, v.owner), 0n))),
     Promise.all(dollars.map((d) => safe(() => c.position(v.vault, d), none))),
-    safe(() => c.position(v.vault, eur.contract), none),
+    Promise.all([eur.contract, ...euros].map((d) => safe(() => c.position(v.vault, d), none))),
     safe(() => c.currentPeriod(v.vault), 0),
   ]);
+  const sEur = sum(sEurs);
+  const pEur = { held: sum(pEurs.map((p) => p.held)) };
   // Every period since the vault was created can still hold reserve (the income tax is due long after).
   const first = conf ? periodOf(conf.period, BigInt(Math.floor(new Date(v.createdAt).getTime() / 1000))) : period;
   const ids: number[] = [];
   for (let id = Math.max(first, period - 40); id <= period; id++) ids.push(id);
-  const tokens: [string, 'usd' | 'eur'][] = [...dollars.map((d): [string, 'usd'] => [d, 'usd']), [eur.contract, 'eur']];
+  const tokens: [string, 'usd' | 'eur'][] = [...dollars.map((d): [string, 'usd'] => [d, 'usd']), ...[eur.contract, ...euros].map((d): [string, 'eur'] => [d, 'eur'])];
   const states = await Promise.all(ids.flatMap((id) => tokens.map(([tk, which]) => safe(async () => ({ id, tk, which, p: await c.period(v.vault, id, tk) }), null))));
   const pack = await safe(() => loadPack(v.answers.packId), null);
   const holidays = await safe(() => loadHolidays(v.answers.packId), undefined);
@@ -469,9 +493,9 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   ]);
   const latest = await safe(() => chain.server.getLatestLedger(), { sequence: 0 } as { sequence: number });
   const since = Math.max(latest.sequence - 17_000, 1);
-  const allTokens = [...dollars, eur.contract];
+  const allTokens = [...dollars, eur.contract, ...euros];
   const otherInboxes = [...Object.values(v.shopInboxes ?? {}), ...(v.clients ?? []).map((x) => x.inbox)];
-  const [events, corrections, general, abroad, moves, others, pendingPayout, pendingFixed] = await Promise.all([
+  const [events, corrections, general, abroad, moves, others, pendingPayout, pendingFixed, pendingToken] = await Promise.all([
     safe(() => vaultEvents(chain.server, v.vault, since), []),
     safe(() => c.corrections(v.vault), [] as Correction[]),
     safe(() => transfersInto(chain.server, allTokens, v.inbox, since), [] as Transfer[]),
@@ -480,6 +504,7 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     Promise.all(otherInboxes.map(async (i) => [i, await safe(() => transfersInto(chain.server, allTokens, i, since), [] as Transfer[])] as const)),
     safe(() => c.pendingPayout(v.vault), null),
     safe(() => c.pendingFixed(v.vault), null),
+    safe(() => c.pendingToken(v.vault), null),
   ]);
   const fixedFilled: Snapshot['fixedFilled'] = {};
   for (const st of states) if (st && st.id === period && Object.keys(st.p.fixed ?? {}).length) fixedFilled[st.tk] = st.p.fixed;
@@ -515,6 +540,9 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
     fixed: live?.fixed ?? [],
     pendingFixed,
     fixedFilled,
+    acceptedTokens: live?.tokens ?? [],
+    pendingToken,
+    taxDestination: live?.taxDestination ?? null,
     guard,
     rule: live?.rule ?? null,
     dues: conf?.dues ?? null,
@@ -712,7 +740,7 @@ export const formatUnits6 = (x: bigint) => fmtNumber(Number(x) / 1e6, { minimumF
 export async function sweepInbox(chain: Chain, v: VaultInfo): Promise<number> {
   let n = 0;
   for (const inbox of [v.inbox, v.abroadInbox, ...Object.values(v.shopInboxes ?? {}), ...(v.clients ?? []).map((c) => c.inbox)].filter((x): x is string => !!x))
-    for (const token of [...chain.dollarTokens, chain.cfg.tokens.eur.contract]) {
+    for (const token of [...chain.dollarTokens, chain.cfg.tokens.eur.contract, ...(v.publicTokens ?? []).map((p) => p.contract)]) {
       let bal = 0n;
       try {
         bal = await chain.client.balance(token, inbox);
@@ -920,7 +948,8 @@ export async function signMove(chain: Chain, wallet: Wallet, v: VaultInfo, move:
       noticeSecs: BigInt(cfg.noticeSecs),
       period: terms.period,
       dues: terms.dues,
-      tokens: [...chain.dollarTokens, cfg.tokens.eur.contract],
+      // The public money the old vault took comes along (issuer authorization permitting).
+      tokens: [...chain.dollarTokens, cfg.tokens.eur.contract, ...(v.publicTokens ?? []).map((p) => p.contract)].slice(0, 8),
     });
     if (v.abroadInbox) {
       // The address for clients abroad keeps booking without VAT in the new vault.
@@ -1236,6 +1265,11 @@ export async function updateClient(chain: Chain, wallet: Wallet, v: VaultInfo, p
 
 const tokenCode = (chain: Chain, token: string): 'EURC' | 'USDC' => (token === chain.cfg.tokens.eur.contract ? 'EURC' : 'USDC');
 
+/** The public money of a vault counted with the dollars or the euros. */
+function publicOf(v: VaultInfo, peg: 'usd' | 'eur'): string[] {
+  return (v.publicTokens ?? []).filter((p) => p.peg === peg).map((p) => p.contract);
+}
+
 /** Token units per unit of the pack's currency, when Kyros can tell (the same currency, or euros and dollars at the deployment's rate). */
 export function perUnit(chain: Chain, token: string, currency: string): { perUnit: number; preferred: boolean } | null {
   const code = tokenCode(chain, token) === 'EURC' ? 'EUR' : 'USD';
@@ -1411,4 +1445,97 @@ export async function proposePayout(chain: Chain, wallet: Wallet, v: VaultInfo, 
 /** Owner: withdraws every change still inside its notice (rule, destination, payout address, fixed amounts). */
 export async function cancelPending(chain: Chain, wallet: Wallet, v: VaultInfo): Promise<string> {
   return wallet.signAndSend(chain.client.cancelChangeOp(v.vault));
+}
+
+// ---- Public money (CBDCs, a government's digital dollar) ----
+
+export interface PublicTokenCheck {
+  contract: string;
+  /** The asset exists on this network. */
+  exists: boolean;
+  controls: IssuerControl[];
+  /** Addresses the issuer must authorize before they can hold it (when it needs authorization). */
+  toAuthorize: string[];
+  accepted: boolean;
+  /** On testnet, the app holds the test issuer's key and can authorize them itself. */
+  canAuthorizeHere: boolean;
+}
+
+const inboxesOf = (v: VaultInfo) => [v.inbox, ...(v.abroadInbox ? [v.abroadInbox] : []), ...Object.values(v.shopInboxes ?? {}), ...(v.clients ?? []).map((c) => c.inbox)];
+
+/** Looks an asset up: its contract, what its issuer can do in a vault, and who must be authorized. */
+export async function inspectPublicToken(chain: Chain, v: VaultInfo, s: Snapshot | null, code: string, issuer: string): Promise<PublicTokenCheck> {
+  const contract = assetContract(code, issuer, chain.cfg.networkPassphrase);
+  const flags = await readIssuerFlags(horizonUrl(chain), code, issuer);
+  const controls = flags ? issuerControls(flags) : [];
+  const pm = chain.cfg.publicMoney;
+  return {
+    contract,
+    exists: !!flags,
+    controls,
+    toAuthorize: controls.includes('authorization') ? holdersToAuthorize({ vault: v.vault, owner: v.owner, payout: s?.payout ?? undefined, inboxes: inboxesOf(v) }) : [],
+    accepted: (s?.acceptedTokens ?? []).includes(contract),
+    canAuthorizeHere: !!pm && pm.issuer === issuer && pm.code === code,
+  };
+}
+
+/**
+ * Owner: the vault accepts this public money after the notice. The owner's
+ * wallet trusts the asset if it is an account; on testnet, for the test
+ * digital dollar, the app authorizes the vault and its addresses with the
+ * published test issuer key (elsewhere the issuer does it).
+ */
+export async function addPublicToken(chain: Chain, wallet: Wallet, v: VaultInfo, check: PublicTokenCheck, token: Omit<PublicToken, 'contract'>, onStep: (s: string) => void): Promise<VaultInfo> {
+  const c = chain.client;
+  if (v.owner.startsWith('G')) {
+    let trusts = true;
+    try {
+      await c.balance(check.contract, v.owner);
+    } catch {
+      trusts = false;
+    }
+    if (!trusts && wallet.signClassic) {
+      onStep(t('pmTrust'));
+      await wallet.signClassic([Operation.changeTrust({ asset: new Asset(token.code, token.issuer) })]);
+    }
+  }
+  const pm = chain.cfg.publicMoney;
+  if (check.canAuthorizeHere && pm && check.toAuthorize.length) {
+    onStep(t('pmAuthorizing'));
+    const issuerKey = Keypair.fromSecret(pm.issuerSecret);
+    for (const holder of check.toAuthorize) await chain.sendAs(issuerKey, c.authorizeHolderOp(check.contract, holder));
+  }
+  onStep(t('pmSigning'));
+  rememberMine(v, await wallet.signAndSend(c.proposeTokenOp(v.vault, check.contract)));
+  const next = { ...v, publicTokens: [...(v.publicTokens ?? []).filter((p) => p.contract !== check.contract), { ...token, contract: check.contract }] };
+  saveVault(next);
+  return next;
+}
+
+/** Testnet: a test client pays `gross` of the test digital dollar through the Router (the test issuer authorizes and funds it). */
+export async function simulatePublicPayment(chain: Chain, v: VaultInfo, gross: bigint): Promise<string> {
+  const pm = chain.cfg.publicMoney;
+  if (!pm) throw new Error('no test public money on this deployment');
+  const client = localKey('test-client');
+  const issuerKey = Keypair.fromSecret(pm.issuerSecret);
+  await chain.ensureAccount(client.publicKey());
+  const asset = new Asset(pm.code, pm.issuer);
+  let balance = -1n;
+  try {
+    balance = await chain.client.balance(pm.contract, client.publicKey());
+  } catch {
+    balance = -1n;
+  }
+  if (balance < 0n) {
+    await chain.classicAs(client, [Operation.changeTrust({ asset })]);
+    await chain.classicAs(issuerKey, [Operation.setTrustLineFlags({ trustor: client.publicKey(), asset, flags: { authorized: true } })]);
+  }
+  if (balance < gross) await chain.classicAs(issuerKey, [Operation.payment({ destination: client.publicKey(), asset, amount: '20000' })]);
+  const ref = globalThis.crypto.getRandomValues(new Uint8Array(32));
+  return chain.sendAs(client, chain.client.payOp(chain.cfg.router, { from: client.publicKey(), vault: v.vault, token: pm.contract, amount: gross, reference: ref }));
+}
+
+/** Owner: tax payments go straight to the tax office's own Stellar account, after the notice. */
+export async function proposeTaxOffice(chain: Chain, wallet: Wallet, v: VaultInfo, address: string): Promise<string> {
+  return rememberMine(v, await wallet.signAndSend(chain.client.proposeDestinationOp(v.vault, address)));
 }

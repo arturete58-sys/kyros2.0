@@ -9,5 +9,7 @@ export interface Wallet {
   label: string;
   /** Signs `op` as the owner and submits it. Returns the transaction hash. */
   signAndSend(op: xdr.Operation): Promise<string>;
+  /** Classic accounts only: signs and submits classic operations (a trustline). */
+  signClassic?(ops: xdr.Operation[]): Promise<string>;
   disconnect(): Promise<void>;
 }

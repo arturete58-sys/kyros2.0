@@ -51,6 +51,9 @@
 //!   not count as income.
 //! - **Payout address.** The net amount (and whatever the vault returns) goes
 //!   to the payout address, the owner unless they set another one with notice.
+//! - **New currencies, with notice.** The owner can add a token the vault
+//!   accepts (`propose_token`), e.g. a central bank digital currency or a
+//!   government's digital dollar issued on Stellar; it applies after the notice.
 //! - **Paying through an anchor.** `pay_tax_to` sends to the destination
 //!   with a muxed id (the anchor's memo), so an anchor can match the payment
 //!   and send euros to the owner's bank account.
@@ -147,7 +150,12 @@ pub enum VaultError {
     InvalidFixed = 36,
     /// A deposit into a period that has not started.
     FuturePeriod = 37,
+    /// The vault already accepts that token.
+    AlreadyAccepted = 38,
 }
+
+/// Most tokens a vault accepts.
+pub const MAX_TOKENS: u32 = 8;
 
 /// Most corrections waiting at once.
 pub const MAX_CORRECTIONS: u32 = 20;
@@ -318,6 +326,14 @@ pub struct PendingFixed {
     pub ready_at: u64,
 }
 
+/// A token proposed for the vault to accept, waiting for its notice period.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingToken {
+    pub token: Address,
+    pub ready_at: u64,
+}
+
 /// What one period holds for one token.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -426,6 +442,7 @@ enum Key {
     NextCorrection,
     PendingPayout,
     PendingFixed,
+    PendingToken,
 }
 
 #[contractevent(topics = ["kyros_vault", "received"])]
@@ -482,6 +499,19 @@ pub struct FixedProposed {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FixedApplied {
     pub fixed: Vec<Fixed>,
+}
+
+#[contractevent(topics = ["kyros_vault", "token_proposed"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TokenProposed {
+    pub token: Address,
+    pub ready_at: u64,
+}
+
+#[contractevent(topics = ["kyros_vault", "token_added"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TokenAdded {
+    pub token: Address,
 }
 
 #[contractevent(topics = ["kyros_vault", "tax_paid"])]
@@ -678,6 +708,7 @@ pub struct ChangeCancelled {
     pub destination: bool,
     pub payout: bool,
     pub fixed: bool,
+    pub token: bool,
 }
 
 fn now(e: &Env) -> u64 {
@@ -715,6 +746,10 @@ fn pending_fixed(e: &Env) -> Option<PendingFixed> {
     e.storage().instance().get(&Key::PendingFixed)
 }
 
+fn pending_token(e: &Env) -> Option<PendingToken> {
+    e.storage().instance().get(&Key::PendingToken)
+}
+
 /// The config in force now: a pending change counts once its notice has passed,
 /// even before anyone calls `apply_pending`.
 fn active(e: &Env) -> Config {
@@ -737,6 +772,11 @@ fn active(e: &Env) -> Config {
     if let Some(p) = pending_fixed(e) {
         if now(e) >= p.ready_at {
             c.fixed = p.fixed;
+        }
+    }
+    if let Some(p) = pending_token(e) {
+        if now(e) >= p.ready_at && !c.tokens.contains(&p.token) {
+            c.tokens.push_back(p.token);
         }
     }
     c
@@ -1086,7 +1126,11 @@ impl ReserveVault {
     }
 
     pub fn accepts(e: Env, token: Address) -> bool {
-        stored_config(&e).tokens.contains(&token)
+        active(&e).tokens.contains(&token)
+    }
+
+    pub fn pending_token(e: Env) -> Option<PendingToken> {
+        pending_token(&e)
     }
 
     /// The split the current rule gives for `gross`.
@@ -1599,6 +1643,32 @@ impl ReserveVault {
         Ok(ready_at)
     }
 
+    /// Proposes a token for the vault to accept from now on (a central bank
+    /// digital currency, a government's digital dollar...); it applies after
+    /// `notice_secs`. A new proposal replaces a pending one.
+    pub fn propose_token(e: Env, token: Address) -> Result<u64, VaultError> {
+        let c = active(&e);
+        c.owner.require_auth();
+        if c.tokens.contains(&token) {
+            return Err(VaultError::AlreadyAccepted);
+        }
+        if c.tokens.len() >= MAX_TOKENS {
+            return Err(VaultError::TooMany);
+        }
+        Self::fold(&e);
+        let ready_at = now(&e) + c.notice_secs;
+        e.storage().instance().set(
+            &Key::PendingToken,
+            &PendingToken {
+                token: token.clone(),
+                ready_at,
+            },
+        );
+        bump_instance(&e);
+        TokenProposed { token, ready_at }.publish(&e);
+        Ok(ready_at)
+    }
+
     // ---- VAT that follows the law ----
 
     /// Starts reading the VAT rate from `registry` (`country`, `rate`), so
@@ -2108,11 +2178,13 @@ impl ReserveVault {
         let d = pending_destination(&e).filter(|p| t < p.ready_at).is_some();
         let o = pending_payout(&e).filter(|p| t < p.ready_at).is_some();
         let f = pending_fixed(&e).filter(|p| t < p.ready_at).is_some();
-        if !r && !d && !o && !f {
+        let k = pending_token(&e).filter(|p| t < p.ready_at).is_some();
+        if !r && !d && !o && !f && !k {
             return if pending_rule(&e).is_some()
                 || pending_destination(&e).is_some()
                 || pending_payout(&e).is_some()
                 || pending_fixed(&e).is_some()
+                || pending_token(&e).is_some()
             {
                 Err(VaultError::AlreadyInForce)
             } else {
@@ -2131,11 +2203,15 @@ impl ReserveVault {
         if f {
             e.storage().instance().remove(&Key::PendingFixed);
         }
+        if k {
+            e.storage().instance().remove(&Key::PendingToken);
+        }
         ChangeCancelled {
             rule: r,
             destination: d,
             payout: o,
             fixed: f,
+            token: k,
         }
         .publish(&e);
         Ok(())
@@ -2147,6 +2223,7 @@ impl ReserveVault {
             && pending_destination(&e).is_none()
             && pending_payout(&e).is_none()
             && pending_fixed(&e).is_none()
+            && pending_token(&e).is_none()
         {
             return Err(VaultError::NoPendingChange);
         }
@@ -2319,6 +2396,16 @@ impl ReserveVault {
                 c.fixed = p.fixed.clone();
                 e.storage().instance().remove(&Key::PendingFixed);
                 FixedApplied { fixed: p.fixed }.publish(e);
+                applied = true;
+            }
+        }
+        if let Some(p) = pending_token(e) {
+            if t >= p.ready_at {
+                if !c.tokens.contains(&p.token) {
+                    c.tokens.push_back(p.token.clone());
+                }
+                e.storage().instance().remove(&Key::PendingToken);
+                TokenAdded { token: p.token }.publish(e);
                 applied = true;
             }
         }

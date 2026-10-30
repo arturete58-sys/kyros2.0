@@ -20,7 +20,7 @@ export interface Ctx {
   setLang(l: Lang): void;
 }
 
-export type Screen = 'home' | 'request' | 'pay' | 'settings' | 'activity' | 'alerts' | 'assistant' | 'expenses' | 'move' | 'shop' | 'wallets' | 'clients' | 'fixed' | 'payout';
+export type Screen = 'home' | 'request' | 'pay' | 'settings' | 'activity' | 'alerts' | 'assistant' | 'expenses' | 'move' | 'shop' | 'wallets' | 'clients' | 'fixed' | 'payout' | 'public';
 
 /** What a screen opens with when another one sends the user there (the assistant's move button). */
 export const prefill: { move?: { country: string; date: string } } = {};

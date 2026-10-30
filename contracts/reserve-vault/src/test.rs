@@ -1447,3 +1447,49 @@ fn a_payout_change_can_be_cancelled_during_the_notice() {
         Err(Ok(VaultError::NoPendingChange))
     );
 }
+
+#[test]
+fn a_new_currency_is_accepted_after_the_notice() {
+    let w = world();
+    // A central bank's digital currency issued on Stellar, as a Stellar Asset Contract.
+    let cbdc =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
+    StellarAssetClient::new(&w.e, &cbdc).mint(&w.payer, &(1_000 * UNIT));
+    assert!(!w.v.accepts(&cbdc));
+    w.v.propose_token(&cbdc);
+    assert_eq!(
+        w.v.try_receive(&w.payer, &cbdc, &(121 * UNIT), &r(&w)),
+        Err(Ok(VaultError::TokenNotAccepted))
+    );
+    assert_eq!(w.v.try_apply_pending(), Err(Ok(VaultError::ChangeNotReady)));
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert!(w.v.accepts(&cbdc));
+    let s = w.v.receive(&w.payer, &cbdc, &(121 * UNIT), &r(&w));
+    assert_eq!((s.net, s.reserve), (80 * UNIT, 41 * UNIT));
+    assert_eq!(TokenClient::new(&w.e, &cbdc).balance(&w.owner), 80 * UNIT);
+    // The tax is paid in that currency, to the tax destination.
+    let q = w.v.current_period();
+    w.v.pay_tax(&q, &cbdc, &symbol_short!("vat"), &(21 * UNIT));
+    assert_eq!(TokenClient::new(&w.e, &cbdc).balance(&w.tax), 21 * UNIT);
+    w.v.apply_pending();
+    assert_eq!(w.v.config().tokens.len(), 2);
+    assert_eq!(
+        w.v.try_propose_token(&cbdc),
+        Err(Ok(VaultError::AlreadyAccepted))
+    );
+}
+
+#[test]
+fn a_new_currency_can_be_cancelled_during_the_notice() {
+    let w = world();
+    let cbdc =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
+    w.v.propose_token(&cbdc);
+    assert_eq!(w.v.pending_token().unwrap().token, cbdc);
+    w.v.cancel();
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert!(!w.v.accepts(&cbdc));
+    assert_eq!(w.v.pending_token(), None);
+}

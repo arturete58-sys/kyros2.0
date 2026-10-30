@@ -112,8 +112,8 @@ test('the Spain rule pack loads and gives valid vault terms', () => {
 
 test('every bundled rule pack is valid, and presets can override the calendar', () => {
   const ids = listRulePacks();
-  const expected = ['ad', 'ae', 'ar', 'au', 'bh', 'br', 'bs', 'ca', 'ch', 'co', 'cy', 'de', 'ee', 'es', 'fr', 'gb', 'ge', 'hk', 'id', 'ie', 'in', 'it', 'jp', 'ke', 'kr',
-    'ky', 'li', 'lu', 'mc', 'mt', 'mx', 'ng', 'nl', 'pa', 'ph', 'pk', 'pr', 'pt', 'sg', 'sv', 'th', 'tr', 'ua', 'us', 'vn', 'za'];
+  const expected = ['ad', 'ae', 'ar', 'au', 'bh', 'bm', 'br', 'bs', 'ca', 'ch', 'co', 'cy', 'de', 'ee', 'es', 'fr', 'gb', 'ge', 'hk', 'id', 'ie', 'in', 'it', 'jp', 'ke', 'kr',
+    'ky', 'li', 'lu', 'mc', 'mh', 'mt', 'mx', 'ng', 'nl', 'pa', 'ph', 'pk', 'pr', 'pt', 'sg', 'sv', 'th', 'tr', 'ua', 'us', 'vn', 'za'];
   assert.deepEqual(ids, expected);
   for (const id of ids) {
     const pack = loadRulePack(id);

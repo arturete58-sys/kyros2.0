@@ -178,6 +178,11 @@ A change is reviewed by a person before it reaches the registry; nothing changes
 
 ### Review log
 
+**30 October 2026.** Two packs added for public money on Stellar ([public-money.md](public-money.md)).
+
+- **Bermuda.** Payroll tax 2026-27: a self-employed person pays the standard rate on what they take out of the business (0.5% for a payroll under BMD 200,000), quarterly by the 15th after each quarter (Payroll Tax Act 1995, s. 3 and 14; gov.bm). No income tax or VAT.
+- **Marshall Islands.** Net Profit Tax Act 2025 and Consumption Tax Act 2025, for tax years from 1 October 2026: a small business (under USD 300,000, not registered for consumption tax) pays 3% of gross revenue above USD 10,000 (USD 80 below), quarterly; otherwise net profit tax 16% and consumption tax 12%, monthly.
+
 **21 October 2026.** All 46 packs checked against official sources and the law watch report.
 
 - **Spain.** RETA 2026 is now the official table of 15 bands of monthly net income (Orden PJC/297/2026): the fee of the user's band at its minimum base and 31.5% (28.3% common contingencies, 1.3% professional, 0.9% cessation, 0.1% training, 0.9% MEI), instead of a flat 31.4% with a floor and a cap. Packs gain `steps` for fixed amounts by band. Verifactu dates added (1 January 2027 for companies, 1 July 2027 for autónomos).
@@ -204,7 +209,7 @@ A change is reviewed by a person before it reaches the registry; nothing changes
 Each tax can be paid from the vault to the tax-payment destination at any time. The due date only decides when what is left of that tax goes back to the owner, so every bucket has its own: VAT on its return date for the period, the income-tax reserve on the annual payment date of its fiscal year (where the fiscal year is not the calendar year, as in India, Pakistan, Australia, South Africa or the UK, the date is counted from the fiscal year). A date falling on a weekend or holiday moves the country's way for the date shown, and forward for the lock, so the lock never opens before the real deadline. Where the final date depends on the tax office's assessment, the pack uses the latest likely date and the owner can set the real one from the notice.
 
 <!-- packs:start -->
-## Jurisdictions (46)
+## Jurisdictions (48)
 
 | Pack | Jurisdiction | Currency | Consumption tax in force | Calendar | Presets (precision of the reserve check) | Sources |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -213,6 +218,7 @@ Each tax can be paid from the vault to the tax-payment destination at any time. 
 | [AR](../rule-packs/ar.json) | Argentina | ARS | IVA 27% / 21% / 10.5% | Month; VAT: day 25 of month +0; income: 06-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `responsable-inscripto` (estimate), `exportacion-servicios` (estimate), `monotributo` (exact) | 3 official, 6 checked 2026-10-21 |
 | [AU](../rule-packs/au.json) | Australia | AUD | GST 10% | Quarter; VAT: day 28 of month +0; 28 of +1 for periods ending in month 12; income: 10-31 of FY+1 (FY from 07-01); weekend/holiday: next working day | `gst` (estimate), `not-gst-registered` (estimate) | 2 official, 2 checked 2026-10-17 |
 | [BH](../rule-packs/bh.json) | Bahrain | BHD | VAT 10% | Quarter; VAT: day 31 of month +0; income: day 31 of month +0; weekend/holiday: no move (shown: working day before) (not verified) | `vat-only` (exact), `not-vat-registered` (exact) | 1 official, 2 checked 2026-10-21 |
+| [BM](../rule-packs/bm.json) | Bermuda | BMD | none | Quarter; income: day 15 of month +0; weekend/holiday: no move (shown: working day before) (not verified) | `self-employed` (exact on profit) | 3 official, 3 checked 2026-10-30 |
 | [BR](../rule-packs/br.json) | Brazil | BRL | ISS / CBS / IBS: see notes | Month; income: 05-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `simples-anexo-iii` (exact), `simples-anexo-v` (exact), `pessoa-fisica` (estimate) | 1 official, 1 checked 2026-10-17 |
 | [BS](../rule-packs/bs.json) | The Bahamas | BSD | VAT 10% | Quarter; VAT: 21 days after the period; income: 21 days after the period; weekend/holiday: no move (shown: working day before) (not verified) | `vat-only` (exact) | 0 official, 0 checked 2026-10-17 |
 | [CA](../rule-packs/ca.json) | Canada | CAD | GST/HST 15% / 14.98% / 14% / 13% / 5% | Year; VAT: 04-30 of FY+1; income: 04-30 of FY+1; weekend/holiday: next working day | `gst` (estimate), `hst-13` (estimate), `hst-14` (estimate), `hst-15` (estimate), `gst-qst` (estimate), `small-supplier` (estimate) | 3 official, 3 checked 2026-10-17 |
@@ -237,6 +243,7 @@ Each tax can be paid from the vault to the tax-payment destination at any time. 
 | [LI](../rule-packs/li.json) | Liechtenstein | CHF | MWST 8.1% / 3.8% / 2.6%; changes 2028-01-01 (proposed) | Quarter; VAT: 60 days after the period; income: 12-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (estimate), `reduced-vat` (estimate), `accommodation-vat` (estimate), `not-vat-registered` (estimate) | 3 official, 5 checked 2026-10-21 |
 | [LU](../rule-packs/lu.json) | Luxembourg | EUR | TVA 17% / 14% / 8% / 3% | Year; VAT: day 31 of month +1; income: 12-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (estimate), `intermediate-vat` (estimate), `reduced-vat` (estimate), `franchise` (estimate) | 1 official, 3 checked 2026-10-21 |
 | [MC](../rule-packs/mc.json) | Monaco | EUR | TVA 20% / 10% / 5.5% / 2.1% | Quarter; VAT: day 24 of month +0; income: 03-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (exact), `reduced-vat` (exact), `isb` (exact on profit) | 1 official, 1 checked 2026-10-17 |
+| [MH](../rule-packs/mh.json) | Marshall Islands | USD | Consumption tax 12% | Quarter; income: day 31 of month +0; weekend/holiday: no move (shown: working day before) (not verified) | `gross-revenue` (exact), `consumption-tax` (exact on profit) | 3 official, 3 checked 2026-10-30 |
 | [MT](../rule-packs/mt.json) | Malta | EUR | VAT 18% / 7% / 5% | Quarter; VAT: day 15 of month +1; income: 06-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `standard` (estimate), `reduced-vat` (estimate), `article-11` (estimate) | 2 official, 1 checked 2026-10-17 |
 | [MX](../rule-packs/mx.json) | México | MXN | IVA 16% / 8% | Month; VAT: day 17 of month +0; income: 04-30 of FY+1; weekend/holiday: next working day | `resico` (exact), `resico-frontera` (exact), `resico-exportacion` (exact), `actividad-empresarial` (estimate) | 1 official, 1 checked 2026-10-17 |
 | [NG](../rule-packs/ng.json) | Nigeria | NGN | VAT 7.5% | Month; VAT: day 21 of month +0; income: 03-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `freelancer` (estimate), `vat-registered` (estimate) | 0 official, 1 checked 2026-10-17 |
@@ -245,7 +252,7 @@ Each tax can be paid from the vault to the tax-payment destination at any time. 
 | [PH](../rule-packs/ph.json) | Philippines | PHP | VAT 12% | Quarter; VAT: day 25 of month +0; income: 04-15 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `eight-percent` (exact), `graduated-non-vat` (estimate), `vat-registered` (estimate) | 1 official, 0 checked 2026-10-17 |
 | [PK](../rule-packs/pk.json) | Pakistan | PKR | Sales tax 18% | Month; VAT: day 18 of month +0; income: 09-30 of FY+1 (FY from 07-01); weekend/holiday: no move (shown: working day before) (not verified) | `it-export-pseb` (exact), `it-export` (exact), `local-services` (estimate) | 1 official, 0 checked 2026-10-17 |
 | [PR](../rule-packs/pr.json) | Puerto Rico | USD | IVU 11.5% / 4% | Month; VAT: day 20 of month +0; income: 04-15 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `act-60-export-services` (exact on profit), `ivu` (estimate), `b2b-services` (estimate) | 2 official, 1 checked 2026-10-17 |
-| [PT](../rule-packs/pt.json) | Portugal | EUR | IVA 23% / 13% / 6% | Quarter; VAT: day 25 of month +1; 25 of +2 for periods ending in month 6; income: 08-31 of FY+1; weekend/holiday: next working day | `standard` (presumptive), `intermediate-vat` (presumptive), `reduced-vat` (presumptive), `vat-exempt` (presumptive) | 2 official, 1 checked 2026-10-21 |
+| [PT](../rule-packs/pt.json) | Portugal | EUR | IVA 23% / 13% / 6% | Quarter; VAT: day 25 of month +1; 25 of +2 for periods ending in month 6; income: 08-31 of FY+1; weekend/holiday: next working day | `standard` (presumptive), `intermediate-vat` (presumptive), `reduced-vat` (presumptive), `vat-exempt` (presumptive) | 3 official, 1 checked 2026-10-22 |
 | [SG](../rule-packs/sg.json) | Singapore | SGD | GST 9% | Quarter; VAT: day 31 of month +0; income: 12-31 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `gst` (estimate), `not-gst-registered` (estimate) | 1 official, 0 checked 2026-10-17 |
 | [SV](../rule-packs/sv.json) | El Salvador | USD | IVA 13% | Month; VAT: day 15 of month +0; income: 04-30 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `iva` (estimate), `exportacion` (estimate) | 1 official, 0 checked 2026-10-17 |
 | [TH](../rule-packs/th.json) | Thailand | THB | VAT 7%; changes 2027-10-01 | Month; VAT: day 23 of month +0; income: 04-08 of FY+1; weekend/holiday: no move (shown: working day before) (not verified) | `vat-registered` (estimate), `not-vat-registered` (estimate) | 1 official, 2 checked 2026-10-17 |
@@ -261,7 +268,8 @@ Each tax can be paid from the vault to the tax-payment destination at any time. 
 - **Crypto hubs and friendly regimes:** UAE, Switzerland, Singapore, Hong Kong, Malta, Cyprus (8% on crypto gains from 2026), Estonia, Portugal, Georgia, Andorra, El Salvador, Panama (territorial), Puerto Rico (Act 60), the Bahamas (no income tax).
 - **Highest crypto adoption** (Chainalysis 2025 Global Crypto Adoption Index): India, the United States, Pakistan, Vietnam, Brazil, Nigeria, Indonesia, Ukraine, the Philippines, the United Kingdom, Japan, Argentina, South Korea, Thailand; plus Türkiye, Mexico, Colombia, Kenya and South Africa.
 - **Major economies:** Germany, France, Italy, Spain, the Netherlands, Ireland, Luxembourg, Canada, Australia.
+- **Public money on Stellar:** Bermuda (a digital dollar announced on Stellar; taxes accepted in USDC) and the Marshall Islands (USDM1, a digital sovereign bond on Stellar).
 
-Russia is not included: sanctions restrict the stablecoin and anchor services a vault depends on. Jurisdictions with no tax on income and no consumption tax (Cayman Islands, Bermuda) need no vault.
+Russia is not included: sanctions restrict the stablecoin and anchor services a vault depends on. Jurisdictions with no tax on income and no consumption tax need no vault beyond what US persons owe (the Cayman Islands pack covers that case).
 
 Rule packs are information, not tax advice. The user confirms the percentages; the vault enforces what the user chose.

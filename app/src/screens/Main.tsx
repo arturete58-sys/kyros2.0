@@ -8,6 +8,7 @@ import { activityText, clientText } from './Start';
 import { ExpensesCard } from './Expenses';
 import { ArchivedBanner, MoveCard, PreviousVaults } from './Move';
 import { WalletsCard } from './Wallets';
+import { PublicMoneyLink } from './PublicMoney';
 import { fmtDate as fmtDay, fmtDateTime, fmtTime, getLang, locale, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
@@ -760,6 +761,7 @@ export function Settings() {
             <span className="small muted">{t('payoutLink')}</span>
           </button>
         )}
+        <PublicMoneyLink />
         {!vault.archivedOf && (
           <button className="card link-card" data-testid="sell-online" onClick={() => go('shop')}>
             <div className="row spread">

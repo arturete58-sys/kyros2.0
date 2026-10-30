@@ -20,6 +20,7 @@ const Clients = lazy(() => import('./screens/Clients').then((m) => ({ default: m
 const Wallets = lazy(() => import('./screens/Wallets').then((m) => ({ default: m.Wallets })));
 const FixedFee = lazy(() => import('./screens/FixedPayout').then((m) => ({ default: m.FixedFee })));
 const Payout = lazy(() => import('./screens/FixedPayout').then((m) => ({ default: m.Payout })));
+const PublicMoney = lazy(() => import('./screens/PublicMoney').then((m) => ({ default: m.PublicMoney })));
 const Shop = lazy(() => import('./screens/Shop').then((m) => ({ default: m.Shop })));
 const Move = lazy(() => import('./screens/Move').then((m) => ({ default: m.Move })));
 const Assistant = lazy(() => import('./screens/Assistant').then((m) => ({ default: m.Assistant })));
@@ -228,6 +229,7 @@ export default function App() {
   else if (screen === 'clients') page = <Clients />;
   else if (screen === 'fixed') page = <FixedFee />;
   else if (screen === 'payout') page = <Payout />;
+  else if (screen === 'public') page = <PublicMoney />;
   else page = <Home />;
 
   return (
