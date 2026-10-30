@@ -53,13 +53,19 @@ async function fund(pub: string): Promise<void> {
 }
 
 async function classic(c: KyrosClient, source: Keypair, ops: xdr.Operation[]): Promise<string> {
-  const account = await c.server.getAccount(source.publicKey());
-  const b = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: PASS });
-  ops.forEach((o) => b.addOperation(o));
-  const tx = b.setTimeout(60).build();
-  tx.sign(source);
-  const sent = await c.server.sendTransaction(tx);
-  if (sent.status === 'ERROR') throw new Error(`classic tx failed: ${sent.errorResult?.toXDR('base64')}`);
+  // The RPC can still report the sequence from before the account's last transaction: retry on txBAD_SEQ.
+  let sent: Awaited<ReturnType<typeof c.server.sendTransaction>> | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const account = await c.server.getAccount(source.publicKey());
+    const b = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: PASS });
+    ops.forEach((o) => b.addOperation(o));
+    const tx = b.setTimeout(60).build();
+    tx.sign(source);
+    sent = await c.server.sendTransaction(tx);
+    if (sent.status !== 'ERROR' || sent.errorResult?.result().switch().name !== 'txBadSeq') break;
+    await new Promise((r) => setTimeout(r, 3_000));
+  }
+  if (!sent || sent.status === 'ERROR') throw new Error(`classic tx failed: ${sent?.errorResult?.toXDR('base64')}`);
   const done = await c.server.pollTransaction(sent.hash, { attempts: 30 });
   if (done.status !== 'SUCCESS') throw new Error(`classic tx ${sent.hash} ${done.status}`);
   return sent.hash;

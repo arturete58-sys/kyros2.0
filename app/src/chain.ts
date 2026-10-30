@@ -96,12 +96,20 @@ export class Chain {
   /** Classic operations (trustlines, payments) signed by a local keypair. */
   async classicAs(kp: Keypair, ops: xdr.Operation[]): Promise<string> {
     await this.ensureAccount(kp.publicKey());
-    const account = await this.server.getAccount(kp.publicKey());
-    const b = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: this.cfg.networkPassphrase });
-    ops.forEach((o) => b.addOperation(o));
-    const tx = b.setTimeout(60).build();
-    tx.sign(kp);
-    return this.submit(tx);
+    // The RPC can still report the sequence from before the account's last transaction: retry on txBadSeq.
+    for (let attempt = 0; ; attempt++) {
+      const account = await this.server.getAccount(kp.publicKey());
+      const b = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: this.cfg.networkPassphrase });
+      ops.forEach((o) => b.addOperation(o));
+      const tx = b.setTimeout(60).build();
+      tx.sign(kp);
+      try {
+        return await this.submit(tx);
+      } catch (e) {
+        if (attempt >= 4 || !String((e as Error).message).includes('txBadSeq')) throw e;
+        await new Promise((res) => setTimeout(res, 3000));
+      }
+    }
   }
 
   asset(which: 'usd' | 'eur' | 'usdc'): Asset {
