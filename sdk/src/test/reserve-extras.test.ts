@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { inputVatPlan, type Expense } from '../agents/expenses.js';
+import { ONDO_USDY, usdyApyBps, yieldPlan } from '../agents/ondo.js';
 import { mixedPayers, type AddressPayment } from '../clients.js';
 import { outsideDeposits, type WalletPayment } from '../wallets.js';
 import { fixedFeeSuggestion, fixedPerPeriod } from '../fixed.js';
@@ -184,4 +185,28 @@ test('public money on Stellar: what exists, and what the issuer can do with it i
   assert.deepEqual(holdersToAuthorize({ vault: 'CV', owner: 'GO', inboxes: ['CI', 'CV'] }), ['CV', 'CI', 'GO']);
   const kusd = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
   assert.match(assetContract('USDC', kusd, 'Test SDF Network ; September 2015'), /^C[A-Z2-7]{55}$/);
+});
+
+test('yield with Blend and Ondo together: USDY waits until it is active, and only for reserve that waits', () => {
+  const now = 1_800_000_000n;
+  const day = 86_400n;
+  const blend = { utilizationBps: 6_000, borrowAprBps: 900, supplyAprBps: 500, liquidity: 1_000_000n * U, supplied: 2_500_000n * U };
+  // Not active yet: everything Blend can take goes there, and the plan says why USDY is out.
+  const off = yieldPlan({ amount: 1_000n * U, dueAt: now + 120n * day, now, blend, usdyApyBps: 450 });
+  assert.deepEqual([off.blend, off.ondo, off.keep], [1_000n * U, 0n, 0n]);
+  assert.ok(off.reasons.includes('ondo-not-active'));
+  assert.equal(ONDO_USDY.active, false);
+  // Once active, reserve waiting four months is split between both.
+  const on = yieldPlan({ amount: 1_000n * U, dueAt: now + 120n * day, now, blend, usdyApyBps: 450, ondoActive: true });
+  assert.deepEqual([on.blend, on.ondo], [500n * U, 500n * U]);
+  assert.ok(on.untilDue > 0n);
+  // Due in three weeks: USDY's round trip does not pay; Blend only.
+  const soon = yieldPlan({ amount: 1_000n * U, dueAt: now + 21n * day, now, blend, usdyApyBps: 450, ondoActive: true });
+  assert.deepEqual([soon.blend, soon.ondo], [1_000n * U, 0n]);
+  assert.ok(soon.reasons.includes('too-soon-for-ondo'));
+  // A full Blend pool and an active USDY: all to USDY.
+  const full = yieldPlan({ amount: 1_000n * U, dueAt: now + 120n * day, now, blend: { ...blend, utilizationBps: 9_500 }, usdyApyBps: 450, ondoActive: true });
+  assert.deepEqual([full.blend, full.ondo], [0n, 1_000n * U]);
+  // USDY's yield from two prices a year apart: 1.10 to 1.1495 is 4.5%.
+  assert.equal(usdyApyBps({ price: 110_000n, at: now }, { price: 114_950n, at: now + 365n * day }), 450);
 });

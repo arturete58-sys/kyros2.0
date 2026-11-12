@@ -30,6 +30,9 @@ Income tax waits up to a year and VAT up to a quarter. Part of the reserve can b
 | `position(token)` | What the vault owes (`held`), holds (`liquid`), has lent (`invested`) and has earned (`surplus`). |
 | Payments out | `pay_tax`, `release` and `convert` withdraw from the strategy what they need. If the strategy cannot pay out at that moment, the payment fails with `Illiquid` and nothing moves. |
 | Strategy | [`contracts/yield-blend`](../contracts/yield-blend): a plain (non-collateral) supply position in a Blend v2 pool, held by an instance that only the vault can move. It never borrows, so it cannot be liquidated. |
+| Strategy (not active) | [`contracts/yield-ondo`](../contracts/yield-ondo): holds Ondo's USDY, a token backed by short-term US Treasuries whose price rises with the yield. It buys and sells through a swapper with a floor from a SEP-40 USDY/USD price (RedStone publishes one on Stellar) and refuses to trade on a price older than its limit. Built and tested, not deployed: USDY is offered only to eligible non-US persons under Ondo's terms, and a vault holding it has to be cleared first. |
+
+**Blend and Ondo together.** `yieldPlan` in the SDK (`sdk/src/agents/ondo.ts`) says how much of the reserve goes to each: Blend for reserve due soon (it pays out without a market), USDY for reserve that waits at least 30 days and whose yield beats the cost of buying and selling it, half each when both qualify. A vault runs one strategy at a time, so holding both at once needs a strategy that splits between them; until USDY is active the plan keeps it at zero and says why.
 
 The buckets never change: the vault owes the same amounts whatever the strategy does. The interest belongs to the owner, and so does a loss.
 

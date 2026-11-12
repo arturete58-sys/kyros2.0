@@ -13,4 +13,5 @@ export * from './expenses.js';
 export * from './watchdog.js';
 export * from './settlement.js';
 export * from './blend.js';
+export * from './ondo.js';
 export * from './catalog.js';

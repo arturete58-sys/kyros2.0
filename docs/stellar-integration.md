@@ -18,6 +18,7 @@
 | SEP-40 price oracles (Reflector) | Floor for converting the reserve into euros | `OracleApi` in `contracts/types`, `Conversion` in the vault |
 | Soroswap | Swapping the reserve from USDC to EURC | `contracts/swap-soroswap` |
 | Blend v2 | Lending part of the reserve | `contracts/yield-blend` |
+| Ondo USDY, RedStone SEP-40 | Holding part of the reserve in tokenized US Treasuries (built, not active) | `contracts/yield-ondo`, `sdk/src/agents/ondo.ts` |
 | EURC (Circle) | The reserve in euros | `sdk/src/assets.ts` |
 | SEP-55 build metadata | The testnet workflow builds with `source_repo` metadata | `.github/workflows/testnet-demo.yml` |
 
