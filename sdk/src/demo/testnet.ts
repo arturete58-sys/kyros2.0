@@ -762,7 +762,16 @@ async function main(): Promise<void> {
     try {
       await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: euro.vault, token, amount: parseAmount('1210'), reference: invoiceReference('INV-EUR-001') }));
       const pidE = await c.currentPeriod(euro.vault);
-      const conv = await c.send(k.keeper, c.convertOp(euro.vault, pidE));
+      // The swap goes through Soroswap's shared testnet router: a ledger that changes the pool between
+      // simulation and inclusion fails the transaction, so try once more with a fresh simulation.
+      let conv: Awaited<ReturnType<typeof c.send>>;
+      try {
+        conv = await c.send(k.keeper, c.convertOp(euro.vault, pidE));
+      } catch (first) {
+        log(`conversion retried after: ${(first as Error).message.slice(0, 120)}`);
+        await sleep(6_000);
+        conv = await c.send(k.keeper, c.convertOp(euro.vault, pidE));
+      }
       const eu = await c.period(euro.vault, pidE, eurToken);
       const us = await c.period(euro.vault, pidE, token);
       const fair = (parseAmount('410') * 10n ** 14n) / euro.eurUsd;
