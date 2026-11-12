@@ -66,7 +66,10 @@ async function classic(c: KyrosClient, source: Keypair, ops: xdr.Operation[]): P
     await new Promise((r) => setTimeout(r, 3_000));
   }
   if (!sent || sent.status === 'ERROR') throw new Error(`classic tx failed: ${sent?.errorResult?.toXDR('base64')}`);
-  const done = await c.server.pollTransaction(sent.hash, { attempts: 30 });
+  // A slow ledger can take longer than 30 polls: keep looking for up to two minutes.
+  const deadline = Date.now() + 120_000;
+  let done = await c.server.pollTransaction(sent.hash, { attempts: 30 });
+  while (done.status === 'NOT_FOUND' && Date.now() < deadline) done = await c.server.pollTransaction(sent.hash, { attempts: 30 });
   if (done.status !== 'SUCCESS') throw new Error(`classic tx ${sent.hash} ${done.status}`);
   return sent.hash;
 }
