@@ -53,4 +53,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/public/testnet.json
           git commit -q -m "App testnet deployment" || exit 0
-          git pull --rebase origin main && git push origin HEAD:main
+          # Another deployment may have committed meanwhile: this one is newer, so its testnet.json wins.
+          for attempt in 1 2 3; do
+            if ! git pull --rebase origin main; then
+              git checkout --theirs app/public/testnet.json
+              git add app/public/testnet.json
+              GIT_EDITOR=true git rebase --continue
+            fi
+            git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
