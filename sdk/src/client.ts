@@ -206,7 +206,23 @@ export class KyrosClient {
       await retrying(() => this.server.sendTransaction(tx));
       done = await retrying(() => this.server.pollTransaction(sent.hash, { attempts: 30 }));
     }
-    if (done.status !== 'SUCCESS') throw new KyrosError(`transaction ${sent.hash} ${done.status}`);
+    if (done.status !== 'SUCCESS') {
+      // Why it failed, when the result says (e.g. invokeHostFunctionResourceLimitExceeded, invokeHostFunctionTrapped).
+      let why = '';
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = (done as any).resultXdr?.result();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const op = r?.results?.()?.[0]?.tr?.();
+        why = op?.invokeHostFunctionResult?.().switch().name ?? r?.switch().name ?? '';
+      } catch {
+        why = '';
+      }
+      const e = new KyrosError(`transaction ${sent.hash} ${done.status}${why ? ` (${why})` : ''}`);
+      // Failed when applied: nothing changed, so a fresh simulation can try again.
+      if (done.status === 'FAILED') (e as KyrosError & { failedOnChain?: boolean }).failedOnChain = true;
+      throw e;
+    }
     this.seenLedger = Math.max(this.seenLedger, (done as rpc.Api.GetSuccessfulTransactionResponse).ledger ?? 0);
     return { hash: sent.hash, returnValue: (done as rpc.Api.GetSuccessfulTransactionResponse).returnValue };
   }
@@ -218,7 +234,11 @@ export class KyrosClient {
         return await this.submit(await this.prepare(signer.publicKey(), op), signer);
       } catch (e) {
         // A stale sequence number from a lagging RPC: build it again with a fresh one.
-        if (!(e as { badSeq?: boolean }).badSeq || attempt >= 3) throw e;
+        // A transaction that failed when applied (state moved after its simulation, or its
+        // resources were estimated too low) changed nothing: simulate and send once more.
+        const x = e as { badSeq?: boolean; failedOnChain?: boolean };
+        const again = (x.badSeq && attempt < 3) || (x.failedOnChain && attempt < 1);
+        if (!again) throw e;
         await new Promise((r) => setTimeout(r, 2_000 * (attempt + 1)));
       }
     }
