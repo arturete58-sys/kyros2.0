@@ -10,7 +10,7 @@
  * Totals use exact decimals (cents, bigint) and the usual rounding: each
  * line to the cent, then VAT per rate, then the withholding.
  */
-import { hash } from '@stellar/stellar-sdk';
+import { hash, StrKey } from '@stellar/stellar-sdk';
 import { BPS, type Bucket } from './split.js';
 
 export interface PaymentRequest {
@@ -102,4 +102,32 @@ export function requestTerms(r: PaymentRequest, buckets: Bucket[]): { vatBps: nu
 /** The payable amount in a 7-decimal Stellar token paid 1:1 in the request's currency (EUR in EURC). */
 export function payableUnits(r: PaymentRequest): bigint {
   return requestTotals(r).payable * 100_000n;
+}
+
+/** A payment link's contents: the vault to pay, the invoice reference (hex) and the amount in token units. */
+export interface PayLink {
+  vault: string;
+  refHex: string;
+  amount: bigint;
+}
+
+/** The fragment of a payment link (`#pagar?v=…&r=…&a=…`). */
+export function payLinkHash(l: PayLink): string {
+  return `#pagar?v=${l.vault}&r=${l.refHex}&a=${l.amount}`;
+}
+
+/**
+ * Reads a payment link's fragment; null unless it is well formed: a contract
+ * address, a 32-byte reference in hex and a positive whole amount. A link is
+ * typed or pasted by anyone, so nothing in it is trusted until checked.
+ */
+export function parsePayLink(fragment: string): PayLink | null {
+  const m = /^#pagar\?(.*)$/.exec(fragment);
+  if (!m) return null;
+  const q = new URLSearchParams(m[1]);
+  const vault = q.get('v') ?? '';
+  const refHex = (q.get('r') ?? '').toLowerCase();
+  const a = q.get('a') ?? '';
+  if (!StrKey.isValidContract(vault) || !/^[0-9a-f]{64}$/.test(refHex) || !/^[1-9][0-9]{0,30}$/.test(a)) return null;
+  return { vault, refHex, amount: BigInt(a) };
 }

@@ -84,6 +84,9 @@ export function kyrosShopify(o: KyrosShopifyOptions): Server {
   const widget = () => readFileSync(o.widgetFile ?? new URL('../../public/kyros-checkout.js', import.meta.url), 'utf8');
   const want = ['EURC', 'KEUR'].includes(o.config.asset.code.toUpperCase()) ? 'EUR' : 'USD';
   const paymentName = o.paymentName ?? /kyros|stellar|usdc|eurc/i;
+  // Hashes being checked right now: a transaction counts for one order only,
+  // even when it is posted to two at the same moment.
+  const checking = new Set<string>();
 
   async function onOrder(order: ShopifyOrder) {
     if (!(order.payment_gateway_names ?? []).some((g) => paymentName.test(g))) return 'not a Kyros order';
@@ -111,34 +114,51 @@ export function kyrosShopify(o: KyrosShopifyOptions): Server {
     const hash = (body.hash ?? '').toLowerCase();
     if (hash && !rec.complete) {
       if (!/^[0-9a-f]{64}$/.test(hash)) return [422, { error: 'not a transaction hash' }] as const;
-      if (store.used[hash]) return [409, { error: 'this transaction was already used' }] as const;
-      const notBefore = new Date(Date.parse(rec.createdAt) - 60_000).toISOString();
-      let matched = false;
-      for (const p of rec.payments) {
-        if (rec.paid[p.inbox]) continue;
-        // The RPC may take a few seconds to show it.
-        let v: CheckoutCheck = { ok: false, reason: 'not-found' };
-        for (let i = 0; i < 3 && !v.ok; i++) {
-          v = await o.verify({ hash, token: o.config.asset.contract, to: p.inbox, amount: BigInt(p.amount), notBefore });
-          if (v.ok || v.reason !== 'not-found') break;
-          await new Promise((r) => setTimeout(r, 2000));
-        }
-        if (v.ok) {
-          rec.paid[p.inbox] = hash;
-          store.used[hash] = id;
-          matched = true;
-          log(`order ${id}: ${p.amount} units at the VAT ${p.bps / 100}% address, ${hash}`);
-          break;
-        }
+      if (store.used[hash] || checking.has(hash)) return [409, { error: 'this transaction was already used' }] as const;
+      checking.add(hash);
+      try {
+        return await checkHash(id, rec, hash);
+      } finally {
+        checking.delete(hash);
       }
-      if (!matched) return [422, { error: 'the transaction does not pay this order' }] as const;
-      if (rec.payments.every((p) => rec.paid[p.inbox])) {
-        await markPaid(o.admin, rec.gid, Object.values(rec.paid));
-        rec.complete = true;
-        log(`order ${id}: paid`);
-      }
-      save();
     }
+    await finish(id, rec);
+    return [200, { paid: Object.keys(rec.paid), complete: rec.complete, redirect: rec.complete ? (rec.statusUrl ?? null) : null }] as const;
+  }
+
+  /** Marks the order paid in Shopify once every transfer is in (again, if an earlier call failed). */
+  async function finish(id: string, rec: OrderRecord) {
+    if (rec.complete || !rec.payments.every((p) => rec.paid[p.inbox])) return;
+    await markPaid(o.admin, rec.gid, Object.values(rec.paid));
+    rec.complete = true;
+    save();
+    log(`order ${id}: paid`);
+  }
+
+  async function checkHash(id: string, rec: OrderRecord, hash: string) {
+    const notBefore = new Date(Date.parse(rec.createdAt) - 60_000).toISOString();
+    let matched = false;
+    for (const p of rec.payments) {
+      if (rec.paid[p.inbox]) continue;
+      // The RPC may take a few seconds to show it.
+      let v: CheckoutCheck = { ok: false, reason: 'not-found' };
+      for (let i = 0; i < 3 && !v.ok; i++) {
+        v = await o.verify({ hash, token: o.config.asset.contract, to: p.inbox, amount: BigInt(p.amount), notBefore });
+        if (v.ok || v.reason !== 'not-found') break;
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      if (v.ok) {
+        rec.paid[p.inbox] = hash;
+        store.used[hash] = id;
+        matched = true;
+        log(`order ${id}: ${p.amount} units at the VAT ${p.bps / 100}% address, ${hash}`);
+        break;
+      }
+    }
+    if (!matched) return [422, { error: 'the transaction does not pay this order' }] as const;
+    // Kept before Shopify is told: if that call fails, the next status call retries it.
+    save();
+    await finish(id, rec);
     return [200, { paid: Object.keys(rec.paid), complete: rec.complete, redirect: rec.complete ? (rec.statusUrl ?? null) : null }] as const;
   }
 

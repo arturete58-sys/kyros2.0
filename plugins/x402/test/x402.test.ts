@@ -19,7 +19,7 @@ const facilitator: FacilitatorClient = {
   settle: async () => ({ success: false, errorReason: 'test', transaction: '', network: 'stellar:testnet' }),
 } as unknown as FacilitatorClient;
 
-async function serve() {
+async function serve(extra: { verifyVatId?: (id: string) => boolean } = {}) {
   const server = new x402ResourceServer(facilitator).register('stellar:testnet', new ExactStellarScheme());
   const seen: string[] = [];
   const app = express();
@@ -27,7 +27,7 @@ async function serve() {
     paymentMiddleware(
       {
         'GET /forecast': {
-          accepts: kyrosPaymentOption({ seller: 'es', inboxes, network: 'stellar:testnet', asset: USDC, net: '0.01', crossBorderB2cEur: 50_000, onVat: (v) => seen.push(v.treatment) }),
+          accepts: kyrosPaymentOption({ seller: 'es', inboxes, network: 'stellar:testnet', asset: USDC, net: '0.01', crossBorderB2cEur: 50_000, ...extra, onVat: (v) => seen.push(v.treatment) }),
           description: 'A forecast',
         },
       },
@@ -64,6 +64,25 @@ test('the 402 carries the buyer’s VAT and the Kyros address that splits it', a
     const us = await required(s.url, { 'x-buyer-country': 'US' });
     assert.deepEqual([us.accepts[0].payTo, us.accepts[0].amount], [inboxes[0], '100000']);
     assert.deepEqual(s.seen.filter((x, i, a) => a.indexOf(x) === i), ['domestic', 'oss-buyer-country', 'reverse-charge', 'outside-eu']);
+  } finally {
+    s.close();
+  }
+});
+
+test('a buyer cannot declare another country or a fake VAT number to pay less VAT', async () => {
+  const s = await serve({ verifyVatId: (id) => id === 'DE123456789' });
+  try {
+    // The CDN sees Spain; the buyer says the United States. Before: 0% VAT.
+    const lie = await required(s.url, { 'cf-ipcountry': 'ES', 'x-buyer-country': 'US' });
+    assert.deepEqual([lie.accepts[0].payTo, lie.accepts[0].amount], [inboxes[2100], '121000']);
+    // Both say Germany: German VAT, as before.
+    const de = await required(s.url, { 'cf-ipcountry': 'DE', 'x-buyer-country': 'DE' });
+    assert.equal(de.accepts[0].amount, '119000');
+    // A well-formed number that the check refuses is a consumer's purchase.
+    const fake = await required(s.url, { 'x-buyer-country': 'DE', 'x-buyer-vat-id': 'DE999999999' });
+    assert.deepEqual([fake.accepts[0].payTo, fake.accepts[0].amount], [inboxes[1900], '119000']);
+    const real = await required(s.url, { 'x-buyer-country': 'DE', 'x-buyer-vat-id': 'DE123456789' });
+    assert.equal(real.accepts[0].amount, '100000');
   } finally {
     s.close();
   }

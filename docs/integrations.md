@@ -42,6 +42,8 @@ An API that charges per request through x402 sets the user's **payment address**
 KEEPER_SECRET=S... npx kyros-keeper --network testnet --watch <inbox>:<usdc-token>
 ```
 
+The `@kyros/x402` plugin prices each request with the buyer's VAT. It reads the buyer's country from `X-Buyer-Country` and from the CDN (Cloudflare, Vercel, CloudFront); when the two disagree it takes neither and charges the seller's own rate, so a buyer cannot declare another country to pay less. A VAT number removes the VAT (reverse charge) only if it is well formed and, when the seller passes `verifyVatId` (for example a VIES lookup), only if that check accepts it.
+
 ## People paid by the Stellar ecosystem
 
 Bounty hunters, DAO contributors and grant recipients often get paid in USDC with nothing set aside for tax. They can give their Kyros payment address as the payout address, wherever the payer can send to a contract address (Soroban `C…` address). A payer whose system only sends to classic `G…` accounts cannot pay an Inbox directly yet; that is in the [backlog](backlog.md).

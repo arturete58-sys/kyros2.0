@@ -109,6 +109,11 @@ $again->set_date_created(strtotime($results['startedAt']));
 $again->save();
 WC_Gateway_Kyros::payments_for($again, $gateway->config());
 kyros_check('the same transaction cannot pay a second order', $call($again, $hash)->get_status(), 409);
+// Another request is checking a transaction right now: this one does not check it too.
+$inFlight = str_repeat('1', 64);
+kyros_checkout_claim_tx($inFlight, 999999);
+kyros_check('a transaction being checked for another order is refused at once', $call($again, $inFlight)->get_status(), 409);
+kyros_check('a transaction that paid nothing is free to try again', $call($again, str_repeat('0', 64))->get_status(), 422);
 $wrongKey = new WP_REST_Request('POST', '/kyros/v1/orders/' . $again->get_id());
 $wrongKey->set_body_params(['key' => 'wc_order_wrong', 'hash' => null]);
 kyros_check('the order key is required', rest_do_request($wrongKey)->get_status(), 404);

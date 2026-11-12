@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, type AssistantTextKey } from 'kyros-sdk';
+import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
 import { mixedOf, reclaimMixedVat, setAsideMissingVat, abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
@@ -497,7 +497,7 @@ export function Request() {
             </div>
             <div className="field">
               <label htmlFor="req-link">{t('payLinkLabel')}</label>
-              <input id="req-link" className="input mono" readOnly value={`${location.origin}${import.meta.env.BASE_URL}#pagar?v=${vault.vault}&r=${done.ref}&a=${done.payable}`} onFocus={(e) => e.currentTarget.select()} />
+              <input id="req-link" className="input mono" readOnly value={`${location.origin}${import.meta.env.BASE_URL}${payLinkHash({ vault: vault.vault, refHex: done.ref, amount: done.payable })}`} onFocus={(e) => e.currentTarget.select()} />
             </div>
           </>
         )}
@@ -531,7 +531,7 @@ export function Request() {
             >
               {t('simulateClientPays')}
             </Button>
-            <Button kind="secondary" onClick={() => navigator.clipboard?.writeText(`${location.origin}${import.meta.env.BASE_URL}#pagar?v=${vault.vault}&r=${done.ref}&a=${done.payable}`)}>
+            <Button kind="secondary" onClick={() => navigator.clipboard?.writeText(`${location.origin}${import.meta.env.BASE_URL}${payLinkHash({ vault: vault.vault, refHex: done.ref, amount: done.payable })}`)}>
               {t('copyLink')}
             </Button>
           </>

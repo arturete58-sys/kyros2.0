@@ -74,6 +74,8 @@ pub enum CctpPayError {
     UnknownToken = 6,
     /// The mint added nothing.
     NothingMinted = 7,
+    /// The vault's split moves more than the payment it was given.
+    BadSplit = 8,
 }
 
 #[contracttype]
@@ -233,6 +235,11 @@ impl CctpPay {
         // transfers its split will make, nothing else.
         let v = VaultClient::new(&e, &p.vault);
         let s = v.quote_in(&me, &token, &p.reference, &gross);
+        // Only this payment may leave: never anything else held here (a burn
+        // someone redeemed at Circle directly lands here unpaid).
+        if s.net < 0 || s.reserve < 0 || s.net + s.reserve > gross {
+            panic_with_error!(&e, CctpPayError::BadSplit);
+        }
         let owner = v.payout();
         let transfer = Symbol::new(&e, "transfer");
         let mut auths: Vec<InvokerContractAuthEntry> = Vec::new(&e);
@@ -258,6 +265,9 @@ impl CctpPay {
         }
         e.authorize_as_current_contract(auths);
         let done = v.receive(&me, &token, &gross, &p.reference);
+        if t.balance(&me) < before {
+            panic_with_error!(&e, CctpPayError::BadSplit);
+        }
         e.storage()
             .instance()
             .extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);

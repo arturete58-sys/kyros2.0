@@ -37,6 +37,8 @@ pub enum InboxError {
     NoPendingMove = 4,
     /// The move has already taken effect.
     AlreadyMoved = 5,
+    /// The vault will accept this token after its notice: wait and `sweep`.
+    TokenPending = 6,
 }
 
 /// A move to another vault, waiting for the notice period.
@@ -236,12 +238,18 @@ impl Inbox {
         Ok(done)
     }
 
-    /// Sends a token the vault does not accept to the vault's payout address, so
-    /// nothing sent by mistake is stuck here. Permissionless.
+    /// Sends a token the vault does not accept (and is not about to accept)
+    /// to the vault's payout address, so nothing sent by mistake is stuck
+    /// here. Permissionless.
     pub fn return_unaccepted(e: Env, token: Address) -> Result<i128, InboxError> {
         let v = VaultClient::new(&e, &vault(&e));
         if v.accepts(&token) {
             return Err(InboxError::TokenAccepted);
+        }
+        // A currency the vault is about to accept is swept, with its tax
+        // reserve, once the notice ends: returning it now would skip the split.
+        if v.pending_token().is_some_and(|p| p.token == token) {
+            return Err(InboxError::TokenPending);
         }
         let me = e.current_contract_address();
         let t = token::Client::new(&e, &token);

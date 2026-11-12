@@ -610,6 +610,59 @@ fn a_bad_swap_or_a_stale_price_converts_nothing() {
     assert_eq!(w.v.try_convert(&q), Err(Ok(VaultError::NoConversion)));
 }
 
+#[test]
+fn a_conversion_cannot_risk_the_reserve() {
+    let x = euro_world();
+    let w = &x.w;
+    // Anyone can run `convert`: a tolerance near 100% or a price days old
+    // would let a bad market or a stale feed take the reserve.
+    let mut c = usd_to_eur(&x);
+    c.max_slippage_bps = 10_000;
+    assert_eq!(
+        w.v.try_propose_conversion(&c),
+        Err(Ok(VaultError::InvalidConversion))
+    );
+    c.max_slippage_bps = 1_001;
+    assert_eq!(
+        w.v.try_propose_conversion(&c),
+        Err(Ok(VaultError::InvalidConversion))
+    );
+    let mut c = usd_to_eur(&x);
+    c.max_age_secs = 30 * 86_400;
+    assert_eq!(
+        w.v.try_propose_conversion(&c),
+        Err(Ok(VaultError::InvalidConversion))
+    );
+    c.max_age_secs = 0;
+    assert_eq!(
+        w.v.try_propose_conversion(&c),
+        Err(Ok(VaultError::InvalidConversion))
+    );
+    c.max_age_secs = 86_400;
+    c.max_slippage_bps = 1_000;
+    w.v.propose_conversion(&c);
+}
+
+#[test]
+fn a_full_withholding_with_no_vat_is_refused() {
+    let w = world();
+    // The client would pay nothing: splitting it divided by zero and every
+    // payment carrying this reference failed.
+    let terms = InvoiceTerms {
+        vat_bps: 0,
+        withholding_bps: 10_000,
+        buckets: vec![&w.e],
+    };
+    assert_eq!(
+        w.v.try_expect_invoice(&BytesN::from_array(&w.e, &[7; 32]), &terms),
+        Err(Ok(VaultError::InvalidTerms))
+    );
+    assert_eq!(
+        w.v.try_expect_payer(&w.payer, &terms),
+        Err(Ok(VaultError::InvalidTerms))
+    );
+}
+
 fn yield_for(x: &E2, owner: &Address, asset: &Address) -> mocks::YieldClient<'static> {
     let id = x.w.e.register(mocks::Yield, (owner.clone(), asset.clone()));
     mocks::YieldClient::new(&x.w.e, &id)

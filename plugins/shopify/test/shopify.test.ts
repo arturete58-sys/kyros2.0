@@ -128,3 +128,66 @@ test('live: a real testnet transfer into a Kyros address, checked on the Stellar
   assert.equal(ok.ok, true, JSON.stringify(ok));
   assert.deepEqual(await verify({ ...e, amount: u('999') }), { ok: false, reason: 'wrong-amount' });
 });
+
+test('one transaction posted to two orders at the same time pays only one', async () => {
+  const config: ShopConfig = { network: 'testnet', asset: { code: 'EURC', issuer: `G${'A'.repeat(55)}`, contract: C('B') }, inboxes, vault: C('V') };
+  const dir = mkdtempSync(join(tmpdir(), 'kyros-shopify-'));
+  const fakeShopify = (async () => new Response(JSON.stringify({ data: { orderMarkAsPaid: { order: { id: 'x' }, userErrors: [] }, metafieldsSet: { userErrors: [] }, tagsAdd: { userErrors: [] } } }), { status: 200 })) as unknown as typeof fetch;
+  // Two orders for the same 22 € book: the same transfer would pay either.
+  const book = (id: number, n: string): ShopifyOrder => ({ ...euOrder, id, admin_graphql_api_id: `gid://shopify/Order/${id}`, confirmation_number: n, total_price: '22.00', line_items: [{ price: '11.00', quantity: 2, tax_lines: [{ price: '2.00', rate: 0.1 }] }], shipping_lines: [] });
+  // The RPC answers slowly, as it does: both requests are checking at once.
+  const verify = async (e: { to: string; amount: bigint }): Promise<CheckoutCheck> => {
+    await new Promise((r) => setTimeout(r, 50));
+    return e.to === inboxes[1000] && e.amount === u('22') ? { ok: true, from: 'GBUYER', ledger: 1, closedAt: '2026-10-27T17:05:00Z' } : { ok: false, reason: 'no-transfer' };
+  };
+  const server = kyrosShopify({ config, admin: { shop: 'myshop.myshopify.com', token: 't', fetch: fakeShopify }, webhookSecret: 'secret', publicUrl: 'https://pay.example', storeFile: join(dir, 'store.json'), verify, widgetFile: join(dir, 'w.js'), log: () => {} });
+  server.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    for (const o of [book(1, 'ONE'), book(2, 'TWO')]) {
+      const body = JSON.stringify(o);
+      await fetch(`${base}/webhooks/orders-create`, { method: 'POST', headers: { 'x-shopify-hmac-sha256': createHmac('sha256', 'secret').update(body).digest('base64') }, body });
+    }
+    const hash = 'd'.repeat(64);
+    const post = (id: number, key: string) => fetch(`${base}/orders/${id}/status`, { method: 'POST', body: JSON.stringify({ key, hash }) });
+    const [a, b] = await Promise.all([post(1, 'ONE'), post(2, 'TWO')]);
+    assert.deepEqual([a.status, b.status].sort(), [200, 409]);
+    const saved = JSON.parse(readFileSync(join(dir, 'store.json'), 'utf8'));
+    assert.equal([saved.orders['1'].complete, saved.orders['2'].complete].filter(Boolean).length, 1);
+  } finally {
+    server.close();
+  }
+});
+
+test('if Shopify fails when marking the order paid, the next check marks it', async () => {
+  const config: ShopConfig = { network: 'testnet', asset: { code: 'EURC', issuer: `G${'A'.repeat(55)}`, contract: C('B') }, inboxes, vault: C('V') };
+  const dir = mkdtempSync(join(tmpdir(), 'kyros-shopify-'));
+  let down = true;
+  const marked: string[] = [];
+  const fakeShopify = (async (_u: string, init: RequestInit) => {
+    if (down) return new Response('unavailable', { status: 503 });
+    const q = JSON.parse(String(init.body)).query as string;
+    if (q.includes('orderMarkAsPaid')) marked.push('paid');
+    return new Response(JSON.stringify({ data: { orderMarkAsPaid: { order: { id: 'x' }, userErrors: [] }, metafieldsSet: { userErrors: [] }, tagsAdd: { userErrors: [] } } }), { status: 200 });
+  }) as unknown as typeof fetch;
+  const verify = async (e: { to: string; amount: bigint }): Promise<CheckoutCheck> =>
+    e.to === inboxes[1000] && e.amount === u('22') ? { ok: true, from: 'GBUYER', ledger: 1, closedAt: '2026-10-27T17:05:00Z' } : { ok: false, reason: 'no-transfer' };
+  const server = kyrosShopify({ config, admin: { shop: 'myshop.myshopify.com', token: 't', fetch: fakeShopify }, webhookSecret: 'secret', publicUrl: 'https://pay.example', storeFile: join(dir, 'store.json'), verify, widgetFile: join(dir, 'w.js'), log: () => {} });
+  server.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const o: ShopifyOrder = { ...euOrder, id: 3, admin_graphql_api_id: 'gid://shopify/Order/3', confirmation_number: 'THREE', total_price: '22.00', line_items: [{ price: '11.00', quantity: 2, tax_lines: [{ price: '2.00', rate: 0.1 }] }], shipping_lines: [] };
+    const body = JSON.stringify(o);
+    await fetch(`${base}/webhooks/orders-create`, { method: 'POST', headers: { 'x-shopify-hmac-sha256': createHmac('sha256', 'secret').update(body).digest('base64') }, body });
+    const post = (hash: string | null) => fetch(`${base}/orders/3/status`, { method: 'POST', body: JSON.stringify({ key: 'THREE', hash }) });
+    // Before: the transfer was taken as used, nothing was saved, and the order stayed unpaid for ever.
+    assert.equal((await post('e'.repeat(64))).status, 500);
+    down = false;
+    assert.deepEqual(await (await post(null)).json(), { paid: [inboxes[1000]], complete: true, redirect: euOrder.order_status_url });
+    assert.deepEqual(marked, ['paid']);
+  } finally {
+    server.close();
+  }
+});

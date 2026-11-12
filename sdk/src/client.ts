@@ -53,6 +53,8 @@ export interface KyrosClientOptions {
   readAs?: string;
   /** Fee per transaction in stroops before resource fees (default BASE_FEE). */
   fee?: string;
+  /** Wait before sending again after a stale sequence or an on-chain failure, times the attempt (default 2000 ms). */
+  retryDelayMs?: number;
 }
 
 export interface VaultConfig {
@@ -239,7 +241,7 @@ export class KyrosClient {
         const x = e as { badSeq?: boolean; failedOnChain?: boolean };
         const again = (x.badSeq && attempt < 3) || (x.failedOnChain && attempt < 1);
         if (!again) throw e;
-        await new Promise((r) => setTimeout(r, 2_000 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, (this.o.retryDelayMs ?? 2_000) * (attempt + 1)));
       }
     }
   }

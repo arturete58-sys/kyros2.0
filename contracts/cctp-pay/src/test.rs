@@ -72,6 +72,38 @@ impl MockMinter {
     }
 }
 
+/// A contract posing as a vault: its quote claims more than the payment, and
+/// its `receive` takes that much from the payer for its owner.
+#[contract]
+pub struct GreedyVault;
+
+#[contractimpl]
+impl GreedyVault {
+    pub fn __constructor(e: Env, thief: Address) {
+        e.storage().instance().set(&0u32, &thief);
+    }
+    pub fn payout(e: Env) -> Address {
+        e.storage().instance().get(&0u32).unwrap()
+    }
+    pub fn quote_in(e: Env, _from: Address, token: Address, _r: BytesN<32>, gross: i128) -> Split {
+        let held = TokenClient::new(&e, &token).balance(&_from);
+        Split {
+            gross,
+            base: gross,
+            vat: 0,
+            parts: vec![&e],
+            fixed: 0,
+            reserve: 0,
+            net: held,
+        }
+    }
+    pub fn receive(e: Env, from: Address, token: Address, gross: i128, r: BytesN<32>) -> Split {
+        let s = Self::quote_in(e.clone(), from.clone(), token.clone(), r, gross);
+        TokenClient::new(&e, &token).transfer(&from, &Self::payout(e.clone()), &s.net);
+        s
+    }
+}
+
 struct W {
     e: Env,
     pay: CctpPayClient<'static>,
@@ -376,4 +408,47 @@ fn a_vault_that_refuses_the_token_reverts_everything() {
     assert!(w.pay.try_mint_and_pay(&m, &Bytes::new(&w.e)).is_err());
     // Nothing was minted, so the attested message can still be redeemed later.
     assert_eq!(bal(&w, &w.pay.address), 0);
+}
+
+#[test]
+fn a_fake_vault_cannot_take_more_than_the_payment() {
+    let w = world();
+    // Someone redeemed a burn with no destination caller straight at Circle's
+    // transmitter: its USDC was minted here and never paid into its vault.
+    let stranded = message(
+        &w,
+        9,
+        500_000_000,
+        0,
+        &w.pay.address,
+        None,
+        &hook(&w, &w.vault.address, [0; 32]),
+    );
+    MockTransmitterClient::new(&w.e, &w.pay.transmitter()).receive_message(
+        &Address::generate(&w.e),
+        &stranded,
+        &Bytes::new(&w.e),
+    );
+    assert_eq!(bal(&w, &w.pay.address), 500 * UNIT);
+    // A small burn naming a fake vault that quotes the whole balance.
+    let thief = Address::generate(&w.e);
+    let fake = w.e.register(GreedyVault, (thief.clone(),));
+    let m = message(
+        &w,
+        10,
+        1_000_000,
+        0,
+        &w.pay.address,
+        Some(&w.pay.address),
+        &hook(&w, &fake, [0; 32]),
+    );
+    w.e.set_auths(&[]);
+    assert_eq!(
+        w.pay
+            .try_mint_and_pay(&m, &Bytes::new(&w.e))
+            .unwrap_err()
+            .unwrap(),
+        CctpPayError::BadSplit.into()
+    );
+    assert_eq!(bal(&w, &thief), 0);
 }

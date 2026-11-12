@@ -209,13 +209,15 @@ pub fn split_withheld(e: &Env, rule: &Rule, withholding_bps: u32, gross: i128) -
     }
 }
 
-/// A withholding is valid when it and the rule's buckets take at most the whole base.
+/// A withholding is valid when it and the rule's buckets take at most the
+/// whole base, and the client still pays something (a 100% withholding with
+/// no VAT would leave nothing to split).
 pub fn validate_withholding(rule: &Rule, withholding_bps: u32) -> bool {
     let mut total = withholding_bps as i128;
     for b in rule.buckets.iter() {
         total += b.bps as i128;
     }
-    total <= BPS
+    total <= BPS && (withholding_bps as i128) < BPS + rule.vat_bps as i128
 }
 
 fn split_plain(e: &Env, rule: &Rule, gross: i128) -> Split {
@@ -400,6 +402,14 @@ pub struct InvoiceTerms {
     pub buckets: Vec<Bucket>,
 }
 
+/// A token proposed for a vault to accept, waiting for its notice period.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingToken {
+    pub token: Address,
+    pub ready_at: u64,
+}
+
 /// The part of the Reserve Vault that the Router, the Inbox and the CCTP receiver call.
 #[contractclient(name = "VaultClient")]
 pub trait VaultApi {
@@ -418,6 +428,8 @@ pub trait VaultApi {
         -> Split;
     /// Whether the vault accepts `token`.
     fn accepts(e: Env, token: Address) -> bool;
+    /// A token the vault will accept once its notice has passed, if any.
+    fn pending_token(e: Env) -> Option<PendingToken>;
     /// Pulls `gross` of `token` from `from`: the net amount to the payout address, the
     /// reserve to the vault, booked to the current period.
     fn receive(e: Env, from: Address, token: Address, gross: i128, reference: BytesN<32>) -> Split;

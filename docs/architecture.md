@@ -50,7 +50,7 @@ sequenceDiagram
   V-->>I: net 80 to the payout address, reserve 41 in the vault
 ```
 
-If no keeper runs, the money waits in the inbox, can only ever go to the owner's payout address and the vault, and anyone can sweep it. A token the vault does not accept goes to the payout address through `return_unaccepted`.
+If no keeper runs, the money waits in the inbox, can only ever go to the owner's payout address and the vault, and anyone can sweep it. A token the vault does not accept goes to the payout address through `return_unaccepted`; a token the vault is about to accept (its `propose_token` notice is running) waits for the notice and is swept with its tax reserve.
 
 ## One fiscal period in the vault
 

@@ -160,8 +160,11 @@ impl OndoYield {
         let me = e.current_contract_address();
         let held = token::Client::new(&e, &s.usdy).balance(&me);
         // USDY to sell for `amount` dollars, rounded up, never more than held.
+        // Asking for at least what `balance` reports sells everything: the
+        // vault's "stop" asks for that, and nothing may be left behind.
         let mut sell = (amount * scale + p - 1) / p;
-        if sell > held {
+        let worth_all = held * p / scale * (BPS - s.max_slippage_bps as i128) / BPS;
+        if sell > held || amount >= worth_all {
             sell = held;
         }
         if sell <= 0 {

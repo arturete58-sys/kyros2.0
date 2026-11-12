@@ -30,16 +30,7 @@ const PayLink = lazy(() => import('./screens/PayLink').then((m) => ({ default: m
 import type { Wallet } from './wallet/types';
 import { getLang, setLang as applyLang, t, type Lang } from './i18n';
 import { Logo } from './brand';
-
-function payLinkFromHash(): { vault: string; refHex: string; amount: bigint } | null {
-  const m = /^#pagar\?(.*)$/.exec(location.hash);
-  if (!m) return null;
-  const q = new URLSearchParams(m[1]);
-  const v = q.get('v');
-  const r = q.get('r');
-  const a = q.get('a');
-  return v && r && a ? { vault: v, refHex: r, amount: BigInt(a) } : null;
-}
+import { parsePayLink } from 'kyros-sdk';
 
 export default function App() {
   const [cfg, setCfg] = useState<AppConfig | null>(null);
@@ -52,7 +43,7 @@ export default function App() {
   const [busy, setBusy] = useState<{ title: string; step: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; error?: boolean; detail?: string } | null>(null);
   const [lang, setLangState] = useState<Lang>(getLang());
-  const payLink = payLinkFromHash();
+  const payLink = parsePayLink(location.hash);
 
   useEffect(() => {
     loadConfig()

@@ -11,7 +11,7 @@ A client pays 1,210 USDC; the vault keeps 410 for VAT and income tax. The tax is
 | `propose_conversion(Conversion)` | Owner. From and to token (both accepted by the vault), the swapper, the SEP-40 price oracle, how the oracle names each token and the tolerance. Applies after the notice. |
 | `convert(period)` | Anyone (the keeper calls it after each payment). Swaps everything the period holds in the from-token. Each bucket keeps its share of what comes out. |
 | `stop_conversion()` | Owner, at once. |
-| Floor | The swap must return at least the oracle price minus `max_slippage_bps`, with a price no older than `max_age_secs`. Otherwise nothing moves (`SwapBelowFloor`, `PriceUnavailable`). |
+| Floor | The swap must return at least the oracle price minus `max_slippage_bps`, with a price no older than `max_age_secs`. Otherwise nothing moves (`SwapBelowFloor`, `PriceUnavailable`). Anyone can run `convert`, so the vault refuses a tolerance above 10% (`MAX_SLIPPAGE_BPS`) or a price age of zero or above a day (`MAX_PRICE_AGE_SECS`). |
 | Swapper | [`contracts/swap-soroswap`](../contracts/swap-soroswap): swaps through the Soroswap router, holds nothing between calls, no admin. |
 | Oracle | Reflector's fiat oracle (prices in USD, 14 decimals): `Other(USD)` is the base, `Other(EUR)` the euro. Addresses in [`sdk/src/assets.ts`](../sdk/src/assets.ts). |
 

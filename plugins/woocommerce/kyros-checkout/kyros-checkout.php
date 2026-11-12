@@ -185,6 +185,22 @@ add_action('rest_api_init', function () {
 	]);
 });
 
+/**
+ * Claims transaction `$hash` for an order, atomically: the options table's
+ * unique name makes a second claim of the same hash fail, whichever request
+ * gets there second.
+ */
+function kyros_checkout_claim_tx(string $hash, int $order_id): bool {
+	global $wpdb;
+	return (int) $wpdb->query($wpdb->prepare("INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')", 'kyros_tx_' . $hash, (string) $order_id)) === 1;
+}
+
+/** Frees a claim whose transaction did not pay the order. */
+function kyros_checkout_release_tx(string $hash): void {
+	global $wpdb;
+	$wpdb->delete($wpdb->options, ['option_name' => 'kyros_tx_' . $hash]);
+}
+
 function kyros_checkout_order_status(WP_REST_Request $req) {
 	$order = wc_get_order((int) $req['id']);
 	$key = (string) $req->get_param('key');
@@ -200,7 +216,9 @@ function kyros_checkout_order_status(WP_REST_Request $req) {
 	if ($hash !== '' && $gateway && !$order->is_paid()) {
 		// A transaction pays one order, once.
 		$used = wc_get_orders(['limit' => 1, 'return' => 'ids', 'meta_query' => [['key' => '_kyros_tx_' . $hash, 'compare' => 'EXISTS']]]);
-		if ($used) {
+		// Claimed before the (slow) check on chain: the same transaction posted
+		// to two orders at the same moment can only pay one of them.
+		if ($used || !kyros_checkout_claim_tx($hash, $order->get_id())) {
 			return new WP_REST_Response(['error' => 'this transaction was already used'], 409);
 		}
 		$c = $gateway->config();
@@ -231,6 +249,7 @@ function kyros_checkout_order_status(WP_REST_Request $req) {
 			}
 		}
 		if (!$matched) {
+			kyros_checkout_release_tx($hash);
 			return new WP_REST_Response(['error' => 'the transaction does not pay this order'], 422);
 		}
 		$order->update_meta_data('_kyros_paid', wp_json_encode($paid));

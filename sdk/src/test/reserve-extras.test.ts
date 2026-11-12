@@ -227,3 +227,19 @@ test('the keeper calls invest only when it would move something', async () => {
   assert.deepEqual(sent, ['a', 'c']);
   assert.deepEqual(out.map((r) => [r.vault, r.moved, r.hash]), [['a', -410n, 'h-a'], ['c', 205n, 'h-c']]);
 });
+
+test('a payment link is read only when every part is well formed', async () => {
+  const { parsePayLink, payLinkHash } = await import('../payment-request.js');
+  const { StrKey } = await import('@stellar/stellar-sdk');
+  const vault = StrKey.encodeContract(Buffer.alloc(32, 7));
+  const ref = 'ab'.repeat(32);
+  const ok = { vault, refHex: ref, amount: 1_210_0000000n };
+  assert.deepEqual(parsePayLink(payLinkHash(ok)), ok);
+  // Before: `BigInt('abc')` threw while rendering and the whole app went blank.
+  assert.equal(parsePayLink(`#pagar?v=${vault}&r=${ref}&a=abc`), null);
+  assert.equal(parsePayLink(`#pagar?v=${vault}&r=${ref}&a=-5`), null);
+  assert.equal(parsePayLink(`#pagar?v=${vault}&r=${ref}&a=0`), null);
+  assert.equal(parsePayLink(`#pagar?v=GABC&r=${ref}&a=10`), null);
+  assert.equal(parsePayLink(`#pagar?v=${vault}&r=xyz&a=10`), null);
+  assert.equal(parsePayLink('#settings'), null);
+});

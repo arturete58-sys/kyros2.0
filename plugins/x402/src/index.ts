@@ -37,6 +37,12 @@ export interface KyrosX402Options {
   crossBorderB2cEur?: number;
   /** The seller opted into charging the buyer's country's VAT below the threshold. */
   ossOptIn?: boolean;
+  /**
+   * Checks a VAT number before it removes the VAT (e.g. against the EU's VIES
+   * service). Without it, any well-formed number is taken as a business, and
+   * the seller answers for it.
+   */
+  verifyVatId?: (vatId: string, country: string) => boolean | Promise<boolean>;
   /** Called with the VAT used for each request, to keep the evidence of where the buyer is. */
   onVat?: (vat: X402Vat, buyer: X402Buyer, ctx: HTTPRequestContext) => void;
   maxTimeoutSeconds?: number;
@@ -51,15 +57,22 @@ const header = (ctx: HTTPRequestContext, name: string) => ctx.adapter.getHeader(
  * do not contradict each other; keep them with `onVat`.
  */
 export function buyerFromHeaders(ctx: HTTPRequestContext): X402Buyer {
-  const country = header(ctx, 'x-buyer-country') ?? header(ctx, 'cf-ipcountry') ?? header(ctx, 'x-vercel-ip-country') ?? header(ctx, 'cloudfront-viewer-country');
+  const iso = (c?: string) => (c && /^[A-Za-z]{2}$/.test(c) ? c.toUpperCase() : undefined);
+  const declared = iso(header(ctx, 'x-buyer-country'));
+  const located = iso(header(ctx, 'cf-ipcountry') ?? header(ctx, 'x-vercel-ip-country') ?? header(ctx, 'cloudfront-viewer-country'));
   const vatId = header(ctx, 'x-buyer-vat-id');
-  return { country: country && /^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : undefined, vatId };
+  // The buyer's word against where the network sees them: contradicting
+  // evidence is no evidence, so the seller's own rate applies (unknown buyer).
+  // Otherwise a consumer could declare another country to pay less VAT.
+  if (declared && located && declared !== located) return { country: undefined, vatId };
+  return { country: declared ?? located, vatId };
 }
 
 /** The VAT, price (token units) and address for one request. */
 export async function kyrosQuote(o: KyrosX402Options, ctx: HTTPRequestContext): Promise<{ vat: X402Vat; buyer: X402Buyer; amount: bigint; payTo: string }> {
   const pack = typeof o.seller === 'string' ? loadRulePack(o.seller) : o.seller;
   const buyer = await (o.buyer ?? buyerFromHeaders)(ctx);
+  if (buyer.vatId && o.verifyVatId && !(await o.verifyVatId(buyer.vatId, buyer.country ?? ''))) buyer.vatId = undefined;
   const vat = x402Vat(pack, buyer, { crossBorderB2cEur: o.crossBorderB2cEur, ossOptIn: o.ossOptIn });
   const payTo = o.inboxes[vat.vatBps];
   if (!payTo) throw new Error(`Kyros: no payment address for VAT ${vat.vatBps / 100}% (${vat.evidence}); add one in the Kyros app`);

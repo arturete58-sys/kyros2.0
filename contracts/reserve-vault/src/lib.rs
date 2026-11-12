@@ -179,6 +179,11 @@ pub struct Correction {
 
 /// Most periods `set_due` changes at once, and most items in one scheduled payment.
 pub const MAX_BATCH: u32 = 24;
+/// The most a conversion may lose against the oracle (10%): anyone can run
+/// `convert`, so a tolerance near 100% would let a bad market take the reserve.
+pub const MAX_SLIPPAGE_BPS: u32 = 1_000;
+/// The oldest oracle price a conversion may trade at (one day).
+pub const MAX_PRICE_AGE_SECS: u64 = 86_400;
 /// Most scheduled payments open at once.
 pub const MAX_SCHEDULED: u32 = 40;
 
@@ -332,13 +337,7 @@ pub struct PendingFixed {
     pub ready_at: u64,
 }
 
-/// A token proposed for the vault to accept, waiting for its notice period.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PendingToken {
-    pub token: Address,
-    pub ready_at: u64,
-}
+pub use kyros_types::PendingToken;
 
 /// What one period holds for one token.
 #[contracttype]
@@ -2025,7 +2024,9 @@ impl ReserveVault {
         if !c.tokens.contains(&conversion.from_token)
             || !c.tokens.contains(&conversion.to_token)
             || conversion.from_token == conversion.to_token
-            || conversion.max_slippage_bps as i128 > BPS
+            || conversion.max_slippage_bps > MAX_SLIPPAGE_BPS
+            || conversion.max_age_secs == 0
+            || conversion.max_age_secs > MAX_PRICE_AGE_SECS
         {
             return Err(VaultError::InvalidConversion);
         }

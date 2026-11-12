@@ -438,6 +438,11 @@ fn an_inbox_sweeps_a_currency_the_vault_added_after_the_notice() {
     // Not accepted yet: the inbox keeps it (it can only ever go to the owner or the vault).
     assert!(w.inbox.try_sweep(&cbdc).is_err());
     w.vault.propose_token(&cbdc);
+    // While the vault's notice runs, nobody can send it on without its tax reserve.
+    assert_eq!(
+        w.inbox.try_return_unaccepted(&cbdc),
+        Err(Ok(InboxError::TokenPending))
+    );
     w.e.ledger().set_timestamp(1_802_260_800 + 86_400);
     w.e.set_auths(&[]);
     let s = w.inbox.sweep(&cbdc);

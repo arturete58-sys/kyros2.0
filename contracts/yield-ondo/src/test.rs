@@ -187,3 +187,17 @@ fn only_positive_amounts() {
     assert_eq!(w.y.owner(), w.vault);
     assert_eq!(w.y.asset(), w.usdc);
 }
+
+#[test]
+fn withdrawing_what_balance_reports_leaves_no_usdy_behind() {
+    let w = world();
+    TokenClient::new(&w.e, &w.usdc).transfer(&w.vault, &w.y.address, &(1_100 * UNIT));
+    w.y.deposit(&(1_100 * UNIT));
+    // The vault's stop asks for exactly `balance()`, which is net of the
+    // slippage allowed: everything is sold, nothing is stranded here.
+    let all = w.y.balance();
+    let before = bal(&w, &w.usdc, &w.vault);
+    w.y.withdraw(&all);
+    assert_eq!(bal(&w, &w.usdy, &w.y.address), 0);
+    assert_eq!(bal(&w, &w.usdc, &w.vault) - before, 1_100 * UNIT);
+}
