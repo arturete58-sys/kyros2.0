@@ -156,6 +156,12 @@ pub enum VaultError {
 
 /// Most tokens a vault accepts.
 pub const MAX_TOKENS: u32 = 8;
+/// Reserve due within this long stays in the vault, never in a strategy:
+/// `invest` keeps it liquid and brings it back if it is out, so a pool that is
+/// fully lent on the due date cannot hold up the tax.
+pub const INVEST_HORIZON_SECS: u64 = 14 * 86_400;
+/// Periods with reserve tracked per token for `invest`.
+pub const MAX_OPEN: u32 = 36;
 
 /// Most corrections waiting at once.
 pub const MAX_CORRECTIONS: u32 = 20;
@@ -443,6 +449,11 @@ enum Key {
     PendingPayout,
     PendingFixed,
     PendingToken,
+    /// The periods with reserve still in a bucket, per token (for `invest`).
+    Open(Address),
+    /// Set once a token had more than `MAX_OPEN` such periods: `invest` then
+    /// treats all its reserve as due soon.
+    OpenFull(Address),
 }
 
 #[contractevent(topics = ["kyros_vault", "received"])]
@@ -636,6 +647,15 @@ pub struct StrategyStopped {
 #[contractevent(topics = ["kyros_vault", "invested"])]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Invested {
+    #[topic]
+    pub token: Address,
+    pub amount: i128,
+}
+
+/// Reserve brought back from the strategy because it is due soon.
+#[contractevent(topics = ["kyros_vault", "divested"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Divested {
     #[topic]
     pub token: Address,
     pub amount: i128,
@@ -917,6 +937,63 @@ fn save_period(e: &Env, id: u32, token: &Address, s: &PeriodState) {
     e.storage()
         .persistent()
         .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+    track_open(e, id, token, s.buckets.values().iter().any(|v| v > 0));
+}
+
+/// Keeps `Key::Open(token)`, the periods whose buckets still hold reserve.
+fn track_open(e: &Env, id: u32, token: &Address, open: bool) {
+    let store = e.storage().persistent();
+    let k = Key::Open(token.clone());
+    let mut ids: Vec<u32> = store.get(&k).unwrap_or(Vec::new(e));
+    let at = ids.first_index_of(id);
+    match (open, at) {
+        (true, None) => {
+            if ids.len() >= MAX_OPEN {
+                store.set(&Key::OpenFull(token.clone()), &true);
+                store.extend_ttl(&Key::OpenFull(token.clone()), PERIOD_TTL / 2, PERIOD_TTL);
+                return;
+            }
+            ids.push_back(id);
+        }
+        (false, Some(i)) => {
+            ids.remove(i);
+        }
+        _ => {
+            if store.has(&k) {
+                store.extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+            }
+            return;
+        }
+    }
+    store.set(&k, &ids);
+    store.extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+}
+
+/// The reserve in `token` whose bucket is due within `INVEST_HORIZON_SECS`
+/// (or already past due). It uses the due date before any holiday moves it,
+/// which is never later than the real one.
+fn due_soon(e: &Env, c: &Config, token: &Address) -> i128 {
+    let total = held(e, token);
+    let store = e.storage().persistent();
+    if store.get(&Key::OpenFull(token.clone())).unwrap_or(false) {
+        return total;
+    }
+    let ids: Vec<u32> = store.get(&Key::Open(token.clone())).unwrap_or(Vec::new(e));
+    let limit = now(e) + INVEST_HORIZON_SECS;
+    let mut sum = 0;
+    for id in ids.iter() {
+        for (bucket, amount) in load_period(e, id, token).buckets.iter() {
+            if amount <= 0 {
+                continue;
+            }
+            let set: Option<u64> = store.get(&Key::DueSet(id, bucket.clone()));
+            let due = set.unwrap_or_else(|| due_at(&c.period, id, &bucket_due(&c.dues, &bucket)));
+            if due <= limit {
+                sum += amount;
+            }
+        }
+    }
+    sum.min(total)
 }
 
 /// The terms for a payment (an invoice's own terms first, then the terms
@@ -2128,20 +2205,42 @@ impl ReserveVault {
         Ok(withdrawn)
     }
 
-    /// Moves liquid reserve into the strategy up to its share. Anyone can
-    /// call it (a keeper does). Returns the amount deposited.
+    /// Keeps the strategy at its share of the reserve that is not due soon.
+    /// Reserve due within `INVEST_HORIZON_SECS` (or past due) stays liquid:
+    /// if the vault holds less than that, it is brought back from the
+    /// strategy (as much as the strategy can pay out now); otherwise liquid
+    /// reserve beyond it goes in, up to `max_bps` of what is not due soon.
+    /// Anyone can call it (a keeper does, daily). Returns the amount moved:
+    /// positive into the strategy, negative back to the vault.
     pub fn invest(e: Env) -> Result<i128, VaultError> {
         let s = active_strategy(&e).ok_or(VaultError::NoStrategy)?;
         Self::fold_extras(&e);
+        let c = active(&e);
         let me = e.current_contract_address();
+        let t = token::Client::new(&e, &s.token);
         let y = YieldClient::new(&e, &s.adapter);
-        let target = held(&e, &s.token) * s.max_bps as i128 / BPS;
-        let liquid = token::Client::new(&e, &s.token).balance(&me);
-        let amount = (target - y.balance()).min(liquid);
+        let soon = due_soon(&e, &c, &s.token);
+        let liquid = t.balance(&me);
+        if liquid < soon {
+            // A strategy that cannot pay out now is asked again on the next call.
+            let _ = y.try_withdraw(&(soon - liquid));
+            let back = t.balance(&me) - liquid;
+            bump_instance(&e);
+            if back > 0 {
+                Divested {
+                    token: s.token,
+                    amount: back,
+                }
+                .publish(&e);
+            }
+            return Ok(-back);
+        }
+        let target = (held(&e, &s.token) - soon) * s.max_bps as i128 / BPS;
+        let amount = (target - y.balance()).min(liquid - soon);
         if amount <= 0 {
             return Ok(0);
         }
-        token::Client::new(&e, &s.token).transfer(&me, &s.adapter, &amount);
+        t.transfer(&me, &s.adapter, &amount);
         y.deposit(&amount);
         bump_instance(&e);
         Invested {
@@ -2150,6 +2249,12 @@ impl ReserveVault {
         }
         .publish(&e);
         Ok(amount)
+    }
+
+    /// The reserve in `token` due within `INVEST_HORIZON_SECS` (or past due),
+    /// which `invest` keeps in the vault.
+    pub fn due_soon(e: Env, token: Address) -> i128 {
+        due_soon(&e, &active(&e), &token)
     }
 
     /// Sends the owner what the reserve in `token` has earned (liquid plus

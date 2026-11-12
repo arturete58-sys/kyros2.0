@@ -92,6 +92,7 @@ const keeper = new Keeper(client, key, watched, (r) =>
   console.log(new Date().toISOString(), r.error ? `error ${r.inbox}: ${r.error}` : `swept ${r.gross} from ${r.inbox} tx ${r.hash}`),
   vaults,
   (r) => console.log(new Date().toISOString(), r.error ? `error ${r.vault} #${r.id}: ${r.error}` : `paid scheduled #${r.id} of ${r.vault} tx ${r.hash}`),
+  (r) => console.log(new Date().toISOString(), r.error ? `error investing ${r.vault}: ${r.error}` : `${r.moved > 0n ? 'invested' : 'brought back'} ${r.moved > 0n ? r.moved : -r.moved} in ${r.vault} tx ${r.hash}`),
 );
 if (guards.length) void guardLoop();
 process.on('SIGINT', () => keeper.stop());

@@ -437,9 +437,16 @@ mod mocks {
         pub fn deposit(e: Env, _amount: i128) {
             Self::owner(e).require_auth();
         }
+        /// A pool that is fully lent: withdrawals fail until it is unlocked.
+        pub fn set_lent_out(e: Env, lent_out: bool) {
+            e.storage().instance().set(&1u32, &lent_out);
+        }
         pub fn withdraw(e: Env, amount: i128) -> i128 {
             let owner = Self::owner(e.clone());
             owner.require_auth();
+            if e.storage().instance().get(&1u32).unwrap_or(false) {
+                panic!("fully lent");
+            }
             let t = token::Client::new(&e, &Self::asset(e.clone()));
             let out = amount.min(t.balance(&e.current_contract_address()));
             t.transfer(&e.current_contract_address(), &owner, &out);
@@ -672,6 +679,89 @@ fn release_and_stop_bring_invested_reserve_back() {
     StellarAssetClient::new(&w.e, &w.token).mint(&y.address, &(2 * UNIT));
     assert_eq!(w.v.stop_strategy(), 2 * UNIT);
     assert_eq!(w.v.harvest(&w.token), 2 * UNIT);
+}
+
+#[test]
+fn reserve_due_soon_comes_back_from_the_strategy_before_the_due_date() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &10_000);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    // Months before the due date (1 May), all of it can go to work.
+    assert_eq!(w.v.due_soon(&w.token), 0);
+    assert_eq!(w.v.invest(), 410 * UNIT);
+    assert_eq!(bal(w, &w.v.address), 0);
+    // Two weeks before, the next call brings it back to the vault.
+    let due = APR_1_2027 + DUE_OFFSET;
+    w.e.ledger().set_timestamp(due - INVEST_HORIZON_SECS - 1);
+    assert_eq!(w.v.invest(), 0);
+    w.e.ledger().set_timestamp(due - INVEST_HORIZON_SECS);
+    assert_eq!(w.v.due_soon(&w.token), 410 * UNIT);
+    assert_eq!(w.v.invest(), -410 * UNIT);
+    assert_eq!(bal(w, &w.v.address), 410 * UNIT);
+    // It is not put back while it is due soon, even with the pool fully lent.
+    assert_eq!(w.v.invest(), 0);
+    y.set_lent_out(&true);
+    w.e.ledger().set_timestamp(due);
+    w.v.pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+    w.v.pay_tax(&q, &w.token, &symbol_short!("irpf"), &(200 * UNIT));
+    assert_eq!(bal(w, &w.tax), 410 * UNIT);
+    assert_eq!(w.v.due_soon(&w.token), 0);
+}
+
+#[test]
+fn a_fully_lent_pool_is_asked_again_on_the_next_call() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &10_000);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    w.v.invest();
+    let due = APR_1_2027 + DUE_OFFSET;
+    y.set_lent_out(&true);
+    w.e.ledger().set_timestamp(due - INVEST_HORIZON_SECS);
+    // The pool cannot pay out today: nothing moves and nothing fails.
+    assert_eq!(w.v.invest(), 0);
+    assert_eq!(
+        w.v.try_pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT)),
+        Err(Ok(VaultError::Illiquid))
+    );
+    // A day later it can: two weeks were left for that.
+    y.set_lent_out(&false);
+    w.e.ledger()
+        .set_timestamp(due - INVEST_HORIZON_SECS + 86_400);
+    assert_eq!(w.v.invest(), -410 * UNIT);
+    y.set_lent_out(&true);
+    w.v.pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+}
+
+#[test]
+fn only_the_reserve_not_due_soon_is_invested() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q1 = w.v.current_period();
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &5_000);
+    // In the next quarter, the first quarter's reserve is due on 1 May.
+    w.e.ledger().set_timestamp(APR_1_2027 + 20 * 86_400);
+    w.v.receive(&w.payer, &w.token, &(2_420 * UNIT), &r(w));
+    assert_ne!(w.v.current_period(), q1);
+    assert_eq!(w.v.position(&w.token).held, 1_230 * UNIT);
+    assert_eq!(w.v.due_soon(&w.token), 410 * UNIT);
+    // Half of the 820 due in August goes to work; the 410 due in May stays.
+    assert_eq!(w.v.invest(), 410 * UNIT);
+    assert_eq!(bal(w, &w.v.address), 820 * UNIT);
+    assert_eq!(w.v.invest(), 0);
+    // Once the first quarter is paid, its period no longer counts.
+    w.v.pay_tax(&q1, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+    w.v.pay_tax(&q1, &w.token, &symbol_short!("irpf"), &(200 * UNIT));
+    assert_eq!(w.v.due_soon(&w.token), 0);
 }
 
 /// Puts a classic account on the test ledger, so it can hold a trustline.

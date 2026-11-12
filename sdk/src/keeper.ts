@@ -3,6 +3,8 @@
  * and runs the vaults' scheduled tax payments when their date comes
  * (`run_scheduled`, which only pays the vault's tax destination) and their
  * corrections once the notice has passed (`apply_correction`, which only pays the owner).
+ * For vaults with a yield strategy it calls `invest` whenever it would move
+ * something, so reserve due within two weeks is back in the vault in time.
  * It holds no user funds and no user keys; its key only pays network fees.
  * `sweep` is permissionless, so anyone can run a keeper, and if every keeper
  * stops the money waits safely in the inbox.
@@ -19,7 +21,7 @@ export interface Watched {
   vault?: string;
   /** After a sweep, swap the period's reserve into the reserve currency (`convert`). */
   convert?: boolean;
-  /** After a sweep, move reserve into the yield strategy up to its share (`invest`). */
+  /** After a sweep, move reserve into the yield strategy up to its share (`invest`); it never takes reserve due soon. */
   invest?: boolean;
 }
 
@@ -42,6 +44,14 @@ export interface ScheduledResult {
   error?: string;
 }
 
+export interface RebalanceResult {
+  vault: string;
+  /** Positive: into the strategy; negative: back to the vault. */
+  moved: bigint;
+  hash?: string;
+  error?: string;
+}
+
 export class Keeper {
   private stopped = false;
   constructor(
@@ -52,6 +62,7 @@ export class Keeper {
     /** Vaults whose scheduled payments this keeper runs. */
     readonly vaults: string[] = [],
     readonly onScheduled: (r: ScheduledResult) => void = () => {},
+    readonly onRebalance: (r: RebalanceResult) => void = () => {},
   ) {}
 
   /** Runs every scheduled payment of the watched vaults whose date has come. */
@@ -88,6 +99,29 @@ export class Keeper {
         }
         this.onScheduled(out[out.length - 1]);
       }
+    }
+    return out;
+  }
+
+  /**
+   * Calls `invest` on the watched vaults whose strategy would move something:
+   * reserve coming due goes back to the vault, new reserve not due soon goes
+   * to work. A vault without a strategy, or with nothing to move, costs no
+   * transaction. A pool that cannot pay out today is asked again next time.
+   */
+  async rebalance(): Promise<RebalanceResult[]> {
+    const out: RebalanceResult[] = [];
+    for (const vault of this.vaults) {
+      let moved = 0n;
+      try {
+        if (!(await this.client.strategy(vault))) continue;
+        moved = await this.client.investPreview(vault);
+        if (moved === 0n) continue;
+        out.push({ vault, moved, hash: (await this.client.send(this.key, this.client.investOp(vault))).hash });
+      } catch (e) {
+        out.push({ vault, moved, error: (e as Error).message });
+      }
+      this.onRebalance(out[out.length - 1]);
     }
     return out;
   }
@@ -140,7 +174,11 @@ export class Keeper {
     while (!this.stopped) {
       await this.tick();
       // Scheduled payments are checked about once a minute.
-      if (this.vaults.length && n++ % Math.max(1, Math.round(60_000 / intervalMs)) === 0) await this.runDue();
+      const perMinute = Math.max(1, Math.round(60_000 / intervalMs));
+      if (this.vaults.length && n % perMinute === 0) await this.runDue();
+      // Strategies are checked about once an hour: the vault keeps two weeks of margin.
+      if (this.vaults.length && n % (perMinute * 60) === 0) await this.rebalance();
+      n++;
       await new Promise((r) => setTimeout(r, intervalMs));
     }
   }

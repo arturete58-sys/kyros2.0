@@ -687,6 +687,16 @@ export class KyrosClient {
     return n ? { adapter: String(n.adapter), token: String(n.token), maxBps: Number(n.max_bps) } : null;
   }
 
+  /** The reserve in `token` due within two weeks (or past due), which `invest` keeps in the vault. */
+  async dueSoon(vault: string, token: string): Promise<bigint> {
+    return BigInt(scValToNative(await this.read(vault, 'due_soon', addr(token))) as bigint);
+  }
+
+  /** What `invest` would move now: positive into the strategy, negative back to the vault. */
+  async investPreview(vault: string): Promise<bigint> {
+    return BigInt(scValToNative(await this.read(vault, 'invest')) as bigint);
+  }
+
   /** Where the reserve in `token` is and what it has earned. */
   async position(vault: string, token: string): Promise<Position> {
     const n = scValToNative(await this.read(vault, 'position', addr(token))) as Record<string, bigint>;

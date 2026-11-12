@@ -5,7 +5,7 @@
  * a withdrawal can wait if the pool is fully lent. Ondo's USDY is a token
  * backed by short-term US Treasuries whose price rises with the yield; the
  * vault buys it through a swapper and sells it back, so each round trip pays
- * the market's spread. Blend suits reserve due soon; USDY suits reserve that
+ * the market's spread. Blend suits reserve due within weeks (the vault brings it back two weeks before the due date); USDY suits reserve that
  * waits months (the income-tax reserve), and holding both spreads the risk.
  *
  * The USDY strategy (`contracts/yield-ondo`) is built and tested but **not

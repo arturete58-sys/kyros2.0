@@ -32,7 +32,7 @@ All of them are plain TypeScript in the SDK (`sdk/src/agents/`), with no languag
 | Residence | Active | Freelancers who move: days, tests, and the change of country signed from the app. |
 | Payouts | Active | Platforms and DAOs paying many freelancers. |
 | Treasury: euros | Active | Users paid in dollars who owe euros. |
-| Treasury: yield | Ready | Blend for reserve due soon and Ondo's USDY for reserve that waits months, half each when both qualify (`yieldPlan`). Needs a Blend v2 pool for the reserve's asset and the owner's strategy; the USDY strategy is built and tested but not active until a vault can hold USDY under Ondo's terms. |
+| Treasury: yield | Ready | Blend for reserve due within weeks (the vault keeps the last two weeks liquid) and Ondo's USDY for reserve that waits months, half each when both qualify (`yieldPlan`). Needs a Blend v2 pool for the reserve's asset and the owner's strategy; the USDY strategy is built and tested but not active until a vault can hold USDY under Ondo's terms. |
 | x402 billing | Active | The `@kyros/x402` plugin runs it in the seller's server; the app's Sell online screen makes one payment address per VAT rate (the same addresses serve the WooCommerce plugin, see `plugins/`). |
 | Settlement | Ready | Needs a regulated anchor paying out euros (mainnet); on testnet the destination is a test account. |
 

@@ -37,7 +37,7 @@ export const AGENTS: AgentInfo[] = [
   { id: 'residence', status: 'active', runs: 'device', why: 'Freelancers who move between countries: days against each country’s test, and the switch signed from the app for the right date, with the same payment address.' },
   { id: 'payouts', status: 'active', runs: 'device', why: 'Platforms and DAOs paying many freelancers at once: a checked CSV into one signature per run.' },
   { id: 'treasury-fx', status: 'active', runs: 'device', why: 'Users paid in dollars who owe tax in euros: when to convert, against the oracle and the due date.' },
-  { id: 'treasury-yield', status: 'ready', runs: 'device', why: 'Blend for reserve due soon, Ondo’s USDY for reserve that waits months, half each when both qualify. Needs a Blend v2 pool for the reserve’s asset on the network and the owner’s strategy; the USDY strategy is built and tested but not active until a vault can hold USDY under Ondo’s terms.' },
+  { id: 'treasury-yield', status: 'ready', runs: 'device', why: 'Blend for reserve due within weeks (the vault keeps the last two weeks liquid), Ondo’s USDY for reserve that waits months, half each when both qualify. Needs a Blend v2 pool for the reserve’s asset on the network and the owner’s strategy; the USDY strategy is built and tested but not active until a vault can hold USDY under Ondo’s terms.' },
   { id: 'x402', status: 'active', runs: 'seller-server', why: 'Runs in the API seller’s server through the @kyros/x402 plugin; the app’s Sell online screen makes one payment address per VAT rate. The same addresses serve the WooCommerce plugin.' },
   { id: 'settlement', status: 'ready', runs: 'device', why: 'Needs a regulated anchor paying out euros (mainnet); on testnet the tax destination is a plain account.' },
 ];

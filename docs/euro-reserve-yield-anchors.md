@@ -24,15 +24,17 @@ Income tax waits up to a year and VAT up to a quarter. Part of the reserve can b
 | Piece | What it is |
 | --- | --- |
 | `propose_strategy(adapter, max_bps)` | Owner. A strategy instance whose owner is this vault, holding a token the vault accepts, may hold up to `max_bps` of the reserve in that token. Applies after the notice; one strategy at a time. |
-| `invest()` | Anyone (the keeper). Moves liquid reserve into the strategy up to its share. |
+| `invest()` | Anyone (the keeper, hourly). Reserve due within two weeks, or past due, stays in the vault (`due_soon(token)`): if the vault holds less than that, `invest` brings the difference back from the strategy; otherwise it moves liquid reserve beyond it into the strategy, up to `max_bps` of what is not due soon. Returns what it moved, negative when it brought reserve back. |
 | `harvest(token)` | Owner. Sends what the reserve has earned: liquid + invested − what the buckets hold. |
 | `stop_strategy()` | Owner, at once. Brings everything back. |
 | `position(token)` | What the vault owes (`held`), holds (`liquid`), has lent (`invested`) and has earned (`surplus`). |
-| Payments out | `pay_tax`, `release` and `convert` withdraw from the strategy what they need. If the strategy cannot pay out at that moment, the payment fails with `Illiquid` and nothing moves. |
+| Payments out | `pay_tax`, `release` and `convert` withdraw from the strategy what they need. If the strategy cannot pay out at that moment, the payment fails with `Illiquid` and nothing moves. With the keeper running, reserve due is already back in the vault: it started asking two weeks before the due date, so a pool that is fully lent for a few days does not hold up the tax. |
 | Strategy | [`contracts/yield-blend`](../contracts/yield-blend): a plain (non-collateral) supply position in a Blend v2 pool, held by an instance that only the vault can move. It never borrows, so it cannot be liquidated. |
 | Strategy (not active) | [`contracts/yield-ondo`](../contracts/yield-ondo): holds Ondo's USDY, a token backed by short-term US Treasuries whose price rises with the yield. It buys and sells through a swapper with a floor from a SEP-40 USDY/USD price (RedStone publishes one on Stellar) and refuses to trade on a price older than its limit. Built and tested, not deployed: USDY is offered only to eligible non-US persons under Ondo's terms, and a vault holding it has to be cleared first. |
 
-**Blend and Ondo together.** `yieldPlan` in the SDK (`sdk/src/agents/ondo.ts`) says how much of the reserve goes to each: Blend for reserve due soon (it pays out without a market), USDY for reserve that waits at least 30 days and whose yield beats the cost of buying and selling it, half each when both qualify. A vault runs one strategy at a time, so holding both at once needs a strategy that splits between them; until USDY is active the plan keeps it at zero and says why.
+**Blend and Ondo together.** `yieldPlan` in the SDK (`sdk/src/agents/ondo.ts`) says how much of the reserve goes to each: Blend for reserve due within weeks (it pays out without a market), USDY for reserve that waits at least 30 days and whose yield beats the cost of buying and selling it, half each when both qualify. A vault runs one strategy at a time, so holding both at once needs a strategy that splits between them; until USDY is active the plan keeps it at zero and says why.
+
+Due dates for `invest` are the rule pack's dates (or the one the owner set from the tax office's notice) before a weekend or holiday moves them, never later than the real date. The vault tracks up to 36 periods with reserve per token; past that it keeps all of that token's reserve liquid.
 
 The buckets never change: the vault owes the same amounts whatever the strategy does. The interest belongs to the owner, and so does a loss.
 
