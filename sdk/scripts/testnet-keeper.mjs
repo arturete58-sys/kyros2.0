@@ -35,10 +35,11 @@ const results = await keeper.runDue();
 // The shared wasm and contracts: extended before they are archived (each vault
 // and inbox extends its own instance when it is used).
 const dep = JSON.parse(readFileSync(new URL('../../app/public/testnet.json', import.meta.url), 'utf8'));
-const shared = [dep.router, dep.registry, dep.cctp?.receiver, dep.conversion?.swapper].filter(Boolean);
+// The test tokens' contracts and the passkey wallets' wasm (every user's smart wallet runs it) too.
+const shared = [dep.router, dep.registry, dep.cctp?.receiver, dep.conversion?.swapper, ...Object.values(dep.tokens ?? {}).map((t) => t.contract), dep.publicMoney?.contract].filter(Boolean);
 let alive;
 try {
-  alive = await keepAlive(client, key, shared, { wasmHashes: Object.values(dep.wasm ?? {}) });
+  alive = await keepAlive(client, key, shared, { wasmHashes: [...Object.values(dep.wasm ?? {}), dep.passkeyWalletWasmHash].filter(Boolean) });
 } catch (e) {
   alive = { error: e.message };
 }
