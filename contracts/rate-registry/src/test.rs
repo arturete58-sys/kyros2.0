@@ -115,6 +115,11 @@ fn holidays_are_set_before_their_year_and_only_added_after() {
         c.try_set_holidays(&es, &2027, &vec![&e, XMAS_2026]),
         Err(Ok(RegistryError::InvalidHolidays))
     );
+    // A year before 1970 is refused: its day numbers would wrap around.
+    assert_eq!(
+        c.try_set_holidays(&es, &1969, &vec![&e]),
+        Err(Ok(RegistryError::InvalidHolidays))
+    );
     // A holiday declared during the year can be added, never a past one.
     let today = (T0 / 86_400) as u32;
     c.add_holiday(&es, &(today + 3));

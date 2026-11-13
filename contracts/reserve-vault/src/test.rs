@@ -1726,3 +1726,143 @@ fn fixed_length_periods_still_take_a_delay_after_they_end() {
     let w = world();
     vault_on(&w, PeriodKind::Seconds(3_600), dues_after(&w.e, 600));
 }
+
+/// The heaviest vault the contract allows: monthly periods, eight buckets,
+/// every bucket's date set by hand, and `MAX_OPEN` periods still holding
+/// reserve. Each call it makes must fit Stellar mainnet's per-transaction
+/// limits (the test environment enforces them on every invocation).
+#[test]
+fn the_heaviest_vault_stays_within_the_network_limits() {
+    let x = euro_world();
+    let w = &x.w;
+    let e = &w.e;
+    let names = ["irpf", "ss", "b3", "b4", "b5", "b6", "b7"];
+    let mut buckets = vec![e];
+    for n in names {
+        buckets.push_back(Bucket {
+            name: Symbol::new(e, n),
+            bps: 1_000,
+        });
+    }
+    let rule = Rule {
+        vat_bps: 2100,
+        buckets,
+    };
+    // Holidays from the registry: every due date asks it for its year's list.
+    let reg = registry_with(w, "ES", 2026, vec![e]);
+    let regc = kyros_rate_registry::RateRegistryClient::new(e, &reg);
+    for year in 2027..=2032u32 {
+        let first = kyros_types::days_from_civil(year as i64, 1, 1) as u32;
+        let mut days = vec![e];
+        for k in 0..15 {
+            days.push_back(first + 1 + k * 24);
+        }
+        regc.set_holidays(&Symbol::new(e, "ES"), &year, &days);
+    }
+    let mut dues = spanish_dues(e);
+    dues.holidays = Holidays::Registry(HolidaySource {
+        registry: reg,
+        country: Symbol::new(e, "ES"),
+    });
+    let id = e.register(
+        ReserveVault,
+        (
+            w.owner.clone(),
+            rule,
+            w.tax.clone(),
+            NOTICE,
+            PeriodKind::Month,
+            dues,
+            vec![e, w.token.clone()],
+        ),
+    );
+    let v = ReserveVaultClient::new(e, &id);
+    StellarAssetClient::new(e, &w.token).mint(&w.payer, &(1_000_000 * UNIT));
+    let y = yield_for(&x, &id, &w.token);
+    v.propose_strategy(&y.address, &10_000);
+    let mut worst = (std::string::String::new(), 0u32);
+    let mut note = |what: &str, e: &Env| {
+        let r = e.cost_estimate().resources();
+        let entries = r.disk_read_entries + r.memory_read_entries + r.write_entries;
+        if entries > worst.1 {
+            worst = (what.into(), entries);
+        }
+        std::println!("{what}: {entries} entries ({} written), {} write bytes, {} event bytes, {} instructions", r.write_entries, r.write_bytes, r.contract_events_size_bytes, r.instructions);
+    };
+    let first = v.current_period();
+    for m in 0..MAX_OPEN {
+        e.ledger()
+            .set_timestamp(FEB_10_2027 + m as u64 * 31 * 86_400);
+        v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    }
+    note("receive with 36 open periods", e);
+    let last = v.current_period();
+    // Every bucket of every period with a date set by hand (batches of 24).
+    for n in ["vat", "irpf", "ss", "b3", "b4", "b5", "b6", "b7"] {
+        let mut p = first;
+        while p <= last {
+            let to = (p + MAX_BATCH - 1).min(last);
+            v.set_due(&Symbol::new(e, n), &p, &to, &days_for_test(2031, 6, 30));
+            p = to + 1;
+        }
+    }
+    note("set_due, 24 periods (later dates)", e);
+    // An earlier date checks every period's current lock: the heaviest set_due.
+    e.ledger().set_timestamp(e.ledger().timestamp() + 1);
+    let _ = v.try_set_due(
+        &symbol_short!("vat"),
+        &first,
+        &(first + MAX_BATCH - 1),
+        &days_for_test(2030, 1, 10),
+    );
+    note("set_due, 24 periods (earlier dates, checked)", e);
+    v.invest();
+    note("invest", e);
+    v.position(&w.token);
+    note("position", e);
+    // Months past their VAT date count as due; postponed dates never make reserve "later".
+    assert!(v.due_soon(&w.token) > 0);
+    note("due_soon over 36 periods x 8 buckets", e);
+    v.pay_tax(&first, &w.token, &symbol_short!("vat"), &(10 * UNIT));
+    note("pay_tax", e);
+    assert!(v.try_release(&first, &w.token).is_err());
+    note("release (refused: not due)", e);
+    std::println!("heaviest: {} ({} entries)", worst.0, worst.1);
+    // Mainnet allows 400 entries per transaction; keep a wide margin.
+    assert!(worst.1 <= 120, "{} reads {} entries", worst.0, worst.1);
+}
+
+fn days_for_test(y: i64, m: u32, d: u32) -> u32 {
+    kyros_types::days_from_civil(y, m, d) as u32
+}
+
+#[test]
+fn an_address_that_cannot_receive_the_tokens_is_refused() {
+    let x = euro_world();
+    let w = &x.w;
+    // A Stellar account with no trustline: before, the change applied after
+    // the notice and every payment to it failed (a client's payment through
+    // the router, or a sweep that left the money waiting in the inbox).
+    let bare = MuxedAddress::generate(&w.e).address();
+    create_account(&w.e, &bare);
+    assert_eq!(
+        w.v.try_propose_payout(&bare),
+        Err(Ok(VaultError::CannotHold))
+    );
+    assert_eq!(
+        w.v.try_propose_destination(&bare),
+        Err(Ok(VaultError::CannotHold))
+    );
+    // A payout address must take every currency (the net goes out in each);
+    // a tax destination one is enough (a euro anchor, after a conversion).
+    StellarAssetClient::new(&w.e, &x.eurc).trust(&bare);
+    assert_eq!(
+        w.v.try_propose_payout(&bare),
+        Err(Ok(VaultError::CannotHold))
+    );
+    w.v.propose_destination(&bare);
+    StellarAssetClient::new(&w.e, &w.token).trust(&bare);
+    w.v.propose_payout(&bare);
+    // A contract (a smart wallet) can always hold.
+    w.v.propose_payout(&Address::generate(&w.e));
+}

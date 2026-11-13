@@ -152,6 +152,10 @@ pub enum VaultError {
     FuturePeriod = 37,
     /// The vault already accepts that token.
     AlreadyAccepted = 38,
+    /// A payout address that cannot hold one of the vault's tokens, or a tax
+    /// destination that can hold none (a Stellar account without the
+    /// trustline): every payment to it would fail.
+    CannotHold = 39,
 }
 
 /// Most tokens a vault accepts.
@@ -460,6 +464,10 @@ enum Key {
     /// Set once a token had more than `MAX_OPEN` such periods: `invest` then
     /// treats all its reserve as due soon.
     OpenFull(Address),
+    /// The earliest date set by hand (`set_due`) for any bucket of a period:
+    /// one read per period lets `invest` stay well inside the network's
+    /// per-transaction entry limit.
+    EarliestSet(u32),
     /// The owner stopped the strategy while it could not pay everything out:
     /// `invest` brings the rest back and then removes it.
     Stopping,
@@ -757,6 +765,17 @@ fn now(e: &Env) -> u64 {
 /// Extends this vault's instance only. The wasm code is shared by every vault
 /// and its rent is paid once for all (anyone can extend it), not by each
 /// vault on every write.
+/// Whether `who` can receive every token the vault takes. A Stellar account
+/// needs a trustline for each classic asset, or the token's `balance` (and
+/// every transfer to it) fails; a contract can always hold.
+fn can_hold(e: &Env, c: &Config, who: &Address) -> bool {
+    c.tokens.iter().all(|t| holds(e, &t, who))
+}
+
+fn holds(e: &Env, t: &Address, who: &Address) -> bool {
+    token::Client::new(e, t).try_balance(who).is_ok()
+}
+
 fn bump_instance(e: &Env) {
     e.deployer().extend_ttl_for_contract_instance(
         e.current_contract_address(),
@@ -989,8 +1008,9 @@ fn track_open(e: &Env, id: u32, token: &Address, open: bool) {
 }
 
 /// The reserve in `token` whose bucket is due within `INVEST_HORIZON_SECS`
-/// (or already past due). It uses the due date before any holiday moves it,
-/// which is never later than the real one.
+/// (or already past due). For each bucket it takes the earlier of the rule's
+/// date (before any holiday moves it) and the earliest date set by hand for
+/// that period: never later than the real one.
 fn due_soon(e: &Env, c: &Config, token: &Address) -> i128 {
     let total = held(e, token);
     let store = e.storage().persistent();
@@ -1001,12 +1021,16 @@ fn due_soon(e: &Env, c: &Config, token: &Address) -> i128 {
     let limit = now(e) + INVEST_HORIZON_SECS;
     let mut sum = 0;
     for id in ids.iter() {
+        // Two reads per period (its buckets and the earliest date set by
+        // hand), not one per bucket: 36 periods of 8 buckets stay far from
+        // the network's limit of entries per transaction.
+        let set: Option<u64> = store.get(&Key::EarliestSet(id));
         for (bucket, amount) in load_period(e, id, token).buckets.iter() {
             if amount <= 0 {
                 continue;
             }
-            let set: Option<u64> = store.get(&Key::DueSet(id, bucket.clone()));
-            let due = set.unwrap_or_else(|| due_at(&c.period, id, &bucket_due(&c.dues, &bucket)));
+            let rule = due_at(&c.period, id, &bucket_due(&c.dues, &bucket));
+            let due = set.map_or(rule, |x| x.min(rule));
             if due <= limit {
                 sum += amount;
             }
@@ -1521,13 +1545,23 @@ impl ReserveVault {
         }
         let new_lock = open_day(&e, &c.dues, end);
         for p in from_period..=to_period {
-            if new_lock < lock_at(&e, &c, p, &bucket) && new_lock < now(&e) + c.notice_secs {
+            // The cheap check first: the lock (which may ask the registry for
+            // holidays) is only read for a date inside the notice period.
+            if new_lock < now(&e) + c.notice_secs && new_lock < lock_at(&e, &c, p, &bucket) {
                 return Err(VaultError::DueTooSoon);
             }
         }
         for p in from_period..=to_period {
             let k = Key::DueSet(p, bucket.clone());
             e.storage().persistent().set(&k, &end);
+            e.storage()
+                .persistent()
+                .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
+            let k = Key::EarliestSet(p);
+            let earliest: Option<u64> = e.storage().persistent().get(&k);
+            if earliest.is_none_or(|x| end < x) {
+                e.storage().persistent().set(&k, &end);
+            }
             e.storage()
                 .persistent()
                 .extend_ttl(&k, PERIOD_TTL / 2, PERIOD_TTL);
@@ -1682,6 +1716,11 @@ impl ReserveVault {
     pub fn propose_destination(e: Env, destination: Address) -> Result<u64, VaultError> {
         let c = active(&e);
         c.owner.require_auth();
+        // The tax may be paid in one currency only (a euro anchor takes
+        // EURC; the dollars are converted first): it must take at least one.
+        if !c.tokens.iter().any(|t| holds(&e, &t, &destination)) {
+            return Err(VaultError::CannotHold);
+        }
         Self::fold(&e);
         let ready_at = now(&e) + c.notice_secs;
         e.storage().instance().set(
@@ -1705,6 +1744,9 @@ impl ReserveVault {
     pub fn propose_payout(e: Env, payout: Address) -> Result<u64, VaultError> {
         let c = active(&e);
         c.owner.require_auth();
+        if !can_hold(&e, &c, &payout) {
+            return Err(VaultError::CannotHold);
+        }
         Self::fold(&e);
         let ready_at = now(&e) + c.notice_secs;
         e.storage().instance().set(

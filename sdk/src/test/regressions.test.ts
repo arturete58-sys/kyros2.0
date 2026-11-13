@@ -178,3 +178,34 @@ test('a due date is shown on its own day in Spain, not the next one', async () =
   assert.equal(new Date(Number(due - 1n) * 1000).toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }), '2027-04-21');
   assert.equal(dayString(due), '2027-04-20');
 });
+
+test('the shared wasm and contracts are extended before they are archived', async () => {
+  const { contractTtls, instanceKey, codeKey, LEDGERS_PER_DAY } = await import('../ttl.js');
+  const { StrKey, Address: A } = await import('@stellar/stellar-sdk');
+  const hash = Buffer.alloc(32, 3);
+  const vaultA = StrKey.encodeContract(Buffer.alloc(32, 1));
+  const vaultB = StrKey.encodeContract(Buffer.alloc(32, 2));
+  const instance = (id: string) =>
+    xdr.LedgerEntryData.contractData(
+      new xdr.ContractDataEntry({
+        ext: new xdr.ExtensionPoint(0),
+        contract: new A(id).toScAddress(),
+        key: xdr.ScVal.scvLedgerKeyContractInstance(),
+        durability: xdr.ContractDataDurability.persistent(),
+        val: xdr.ScVal.scvContractInstance(new xdr.ScContractInstance({ executable: xdr.ContractExecutable.contractExecutableWasm(hash), storage: null })),
+      }),
+    );
+  const live: Record<string, number> = { [instanceKey(vaultA).toXDR('base64')]: 1_000 + 100 * LEDGERS_PER_DAY, [instanceKey(vaultB).toXDR('base64')]: 1_000 + 5 * LEDGERS_PER_DAY, [codeKey(hash).toXDR('base64')]: 1_000 + 3 * LEDGERS_PER_DAY };
+  const server = {
+    getLatestLedger: async () => ({ sequence: 1_000 }),
+    getLedgerEntries: async (...keys: xdr.LedgerKey[]) => ({
+      entries: keys.map((k) => ({ key: k, val: k.switch().name === 'contractCode' ? xdr.LedgerEntryData.contractCode(undefined as never) : instance(Address_of(k)), liveUntilLedgerSeq: live[k.toXDR('base64')] })),
+    }),
+  };
+  function Address_of(k: xdr.LedgerKey) {
+    return A.fromScAddress(k.contractData().contract()).toString();
+  }
+  // Two vaults on one wasm: the wasm is read once, and its 3 days left show.
+  const t = await contractTtls(server as never, [vaultA, vaultB]);
+  assert.deepEqual(t.map((x) => [x.name, Math.round(x.left / LEDGERS_PER_DAY)]), [[vaultA, 100], [vaultB, 5], [`wasm:${hash.toString('hex')}`, 3]]);
+});

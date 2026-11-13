@@ -7,7 +7,7 @@
 //   node scripts/testnet-keeper.mjs [--state keeper-state.json] [--out keeper.md]
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { Keypair, Networks, rpc } from '@stellar/stellar-sdk';
-import { Keeper, KyrosClient, vaultsWithScheduledPayments } from '../dist/index.js';
+import { Keeper, KyrosClient, keepAlive, LEDGERS_PER_DAY, vaultsWithScheduledPayments } from '../dist/index.js';
 
 const args = process.argv.slice(2);
 const opt = (n, d) => (args.includes(n) ? args[args.indexOf(n) + 1] : d);
@@ -32,6 +32,17 @@ const lines = [];
 const keeper = new Keeper(client, key, [], () => {}, vaults, (r) => lines.push(r.error ? `| ${r.vault.slice(0, 8)}… | #${r.id} | failed: ${r.error.slice(0, 120).replace(/\|/g, '/')} |` : `| ${r.vault.slice(0, 8)}… | #${r.id} | [paid](https://stellar.expert/explorer/testnet/tx/${r.hash}) |`));
 const results = await keeper.runDue();
 
+// The shared wasm and contracts: extended before they are archived (each vault
+// and inbox extends its own instance when it is used).
+const dep = JSON.parse(readFileSync(new URL('../../app/public/testnet.json', import.meta.url), 'utf8'));
+const shared = [dep.router, dep.registry, dep.cctp?.receiver, dep.conversion?.swapper].filter(Boolean);
+let alive;
+try {
+  alive = await keepAlive(client, key, shared, { wasmHashes: Object.values(dep.wasm ?? {}) });
+} catch (e) {
+  alive = { error: e.message };
+}
+
 // Keep the vaults that still have payments waiting.
 const still = [];
 for (const v of vaults) {
@@ -49,7 +60,11 @@ const report = [
   `Watched ${vaults.length} vault(s) with scheduled payments (${seen.length} from recent events); ran ${results.filter((r) => r.hash).length} due payment(s); ${still.length} vault(s) still have payments waiting.`,
   '',
   ...(lines.length ? ['| Vault | Payment | Result |', '| --- | --- | --- |', ...lines] : ['No payment was due.']),
+  '',
+  alive.error
+    ? `Keeping the shared contracts alive failed: ${alive.error}`
+    : `Shared contracts and wasm: ${alive.checked.map((t) => `${t.name.slice(0, 12)}… ${Math.floor(t.left / LEDGERS_PER_DAY)} d`).join(', ')}${alive.extended.length ? `; extended ${alive.extended.length} ([tx](https://stellar.expert/explorer/testnet/tx/${alive.hash}))` : '; none needed extending'}.`,
 ].join('\n');
 console.log(report);
 if (out) writeFileSync(out, report + '\n');
-if (results.some((r) => r.error && r.id)) process.exitCode = 1;
+if (results.some((r) => r.error && r.id) || alive.error) process.exitCode = 1;

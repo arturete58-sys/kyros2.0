@@ -2,7 +2,7 @@
 import { t, type Key } from './i18n';
 
 /** Reserve Vault error codes with a message of their own (the rest get the generic one). */
-const VAULT = new Set([2, 3, 4, 5, 6, 8, 15, 18, 19, 20, 24, 25, 26, 30, 31, 32, 33]);
+const VAULT = new Set([2, 3, 4, 5, 6, 8, 15, 18, 19, 20, 24, 25, 26, 30, 31, 32, 33, 39]);
 
 export function friendlyError(e: unknown): string {
   const m = e instanceof Error ? `${e.name} ${e.message}` : String(e);

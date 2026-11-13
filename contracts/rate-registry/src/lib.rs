@@ -330,6 +330,10 @@ impl RateRegistry {
         days: Vec<u32>,
     ) -> Result<(), RegistryError> {
         admin(&e).require_auth();
+        // Before 1970 the day numbers would wrap around (they are unsigned).
+        if !(1970..=9999).contains(&year) {
+            return Err(RegistryError::InvalidHolidays);
+        }
         let (first, last) = year_days(year);
         if days.len() > MAX_HOLIDAYS || days.iter().any(|d| d < first || d > last) {
             return Err(RegistryError::InvalidHolidays);

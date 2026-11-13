@@ -272,10 +272,14 @@ pub fn civil_from_days(z: i64) -> (i64, u32, u32) {
 
 /// Whether a period kind is usable: `Months(n)` needs n to divide 12, and
 /// `Seconds` a non-zero length.
+/// The longest fixed-length period (ten years).
+pub const MAX_PERIOD_SECS: u64 = 10 * 366 * 86_400;
+
 pub fn valid_period(kind: &PeriodKind) -> bool {
     match kind {
         PeriodKind::Months(n) => *n > 0 && 12 % *n == 0,
-        PeriodKind::Seconds(len) => *len > 0,
+        // From a minute to ten years: longer ones overflow the clock.
+        PeriodKind::Seconds(len) => (60..=MAX_PERIOD_SECS).contains(len),
         _ => true,
     }
 }

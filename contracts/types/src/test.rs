@@ -406,3 +406,13 @@ fn a_due_rule_that_would_overflow_the_clock_is_invalid() {
     assert!(!valid_due(&Due::After(MAX_DUE_AFTER_SECS + 1)));
     assert!(valid_due(&Due::After(MAX_DUE_AFTER_SECS)));
 }
+
+#[test]
+fn a_fixed_length_period_that_would_overflow_the_clock_is_invalid() {
+    // Before: any length above zero; `Seconds(u64::MAX)` overflowed the period's end.
+    assert!(!valid_period(&PeriodKind::Seconds(u64::MAX)));
+    assert!(!valid_period(&PeriodKind::Seconds(MAX_PERIOD_SECS + 1)));
+    assert!(!valid_period(&PeriodKind::Seconds(1)));
+    assert!(valid_period(&PeriodKind::Seconds(60)));
+    assert!(valid_period(&PeriodKind::Seconds(MAX_PERIOD_SECS)));
+}

@@ -449,3 +449,108 @@ fn an_inbox_sweeps_a_currency_the_vault_added_after_the_notice() {
     assert_eq!((s.net, s.reserve), (80 * UNIT, 41 * UNIT));
     assert_eq!(TokenClient::new(&w.e, &cbdc).balance(&w.owner), 80 * UNIT);
 }
+
+/// Resources of a `pay_many` run of `n` payouts to vaults with `extra` buckets besides VAT.
+/// (event bytes, entries, written entries, write bytes, instructions)
+fn run_cost(n: u32, extra: usize) -> (u32, u32, u32, u32, i64) {
+    let w = world();
+    w.e.cost_estimate().disable_resource_limits();
+    StellarAssetClient::new(&w.e, &w.token).mint(&w.payer, &(1_000_000 * UNIT));
+    let mut buckets = vec![&w.e];
+    for n in ["irpf", "ss", "b3", "b4", "b5", "b6", "b7"]
+        .iter()
+        .take(extra)
+    {
+        buckets.push_back(Bucket {
+            name: Symbol::new(&w.e, n),
+            bps: 1_000,
+        });
+    }
+    let rule = Rule {
+        vat_bps: 2100,
+        buckets,
+    };
+    let mut payouts = vec![&w.e];
+    for _ in 0..n {
+        let v = w.e.register(
+            ReserveVault,
+            (
+                Address::generate(&w.e),
+                rule.clone(),
+                Address::generate(&w.e),
+                86_400u64,
+                PeriodKind::Month,
+                kyros_reserve_vault::dues_after(&w.e, 0u64),
+                vec![&w.e, w.token.clone()],
+            ),
+        );
+        payouts.push_back(Payout {
+            vault: v,
+            gross: 1_210 * UNIT,
+            reference: BytesN::from_array(&w.e, &[1; 32]),
+        });
+    }
+    w.e.cost_estimate().budget().reset_unlimited();
+    w.router.pay_many(&w.payer, &w.token, &payouts);
+    let r = w.e.cost_estimate().resources();
+    (
+        r.contract_events_size_bytes,
+        r.disk_read_entries + r.memory_read_entries + r.write_entries,
+        r.write_entries,
+        r.write_bytes,
+        r.instructions,
+    )
+}
+
+/// A run of `PAYOUTS_PER_RUN` (8, the SDK's batch size) payments to vaults
+/// with eight buckets each must fit Stellar mainnet's per-transaction limits,
+/// which the test environment enforces. Each payment emits about 1.4 KB of
+/// events (the vault's, the router's and two token transfers) against a
+/// 16 KB limit: a run of 20, the SDK's former size, did not fit.
+#[test]
+fn a_full_payout_run_fits_in_one_transaction() {
+    let (events, ..) = run_cost(20, 7);
+    assert!(events > 16_384, "20 payouts: {events} B of events");
+    let w = world();
+    StellarAssetClient::new(&w.e, &w.token).mint(&w.payer, &(1_000_000 * UNIT));
+    let mut buckets = vec![&w.e];
+    for n in ["irpf", "ss", "b3", "b4", "b5", "b6", "b7"] {
+        buckets.push_back(Bucket {
+            name: Symbol::new(&w.e, n),
+            bps: 1_000,
+        });
+    }
+    let rule = Rule {
+        vat_bps: 2100,
+        buckets,
+    };
+    let mut payouts = vec![&w.e];
+    for _ in 0..8 {
+        let v = w.e.register(
+            ReserveVault,
+            (
+                Address::generate(&w.e),
+                rule.clone(),
+                Address::generate(&w.e),
+                86_400u64,
+                PeriodKind::Month,
+                kyros_reserve_vault::dues_after(&w.e, 0u64),
+                vec![&w.e, w.token.clone()],
+            ),
+        );
+        payouts.push_back(Payout {
+            vault: v,
+            gross: 1_210 * UNIT,
+            reference: BytesN::from_array(&w.e, &[1; 32]),
+        });
+    }
+    w.e.cost_estimate().budget().reset_unlimited();
+    // Mainnet limits are enforced here: this panics if the run would not fit.
+    w.router.pay_many(&w.payer, &w.token, &payouts);
+    let r = w.e.cost_estimate().resources();
+    assert!(
+        r.contract_events_size_bytes <= 13_000,
+        "{} B",
+        r.contract_events_size_bytes
+    );
+}

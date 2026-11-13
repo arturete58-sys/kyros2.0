@@ -41,6 +41,28 @@ A review of the contracts, the SDK and keeper, the app and the checkout plugins.
 | A transaction dropped by a busy network (`NOT_FOUND`) | `… is sent again until it lands` |
 | One cent lost reclaiming input VAT at an exchange rate | `reserve-extras.test.ts` |
 
+## Soroban, Stellar and Rust
+
+A pass focused on what is particular to Soroban: the network's per-transaction limits, rent and archival, Stellar Asset Contract behaviour, and Rust arithmetic. The tests run with Stellar mainnet's limits enforced (soroban-sdk 28 does so by default: 400 ledger entries, 200 written, 132 KB written, 16 KB of events, 400 M instructions per transaction).
+
+| Where | Problem | What could happen | Fix | Test |
+| --- | --- | --- | --- | --- |
+| `reserve-vault` `invest` / `due_soon` | It read the date set by hand for every bucket of every open period: up to 36 × 8 entries | On a monthly vault with many buckets it read 336 ledger entries (the limit is 400) and ran out of the test budget: `invest` could fail, and with it bringing reserve back before a due date | One read per period (`EarliestSet`, the earliest date set by hand for any of its buckets); a hand-set date never makes reserve count as later | `the_heaviest_vault_stays_within_the_network_limits` (now 84 entries) |
+| SDK `PAYOUTS_PER_RUN` | `pay_many` runs of 20 payments | Each payment emits about 1.4 KB of events; 20 need 29 KB against a 16 KB limit: every full payroll run would fail on mainnet | Runs of 8 | `a_full_payout_run_fits_in_one_transaction` |
+| Shared wasm and contracts | Nothing extended the rent of the wasm shared by all vaults and inboxes, or of the Router, the Registry, the CCTP receiver and the swapper (each vault and inbox extends only its own instance) | Once archived, the next transaction to need one would first restore it and pay for the whole wasm | `keepAlive` (SDK) extends them before they run low; the hourly testnet keeper does it, and `kyros-keeper --keep-alive` does it on mainnet | `the shared wasm and contracts are extended before they are archived`; keeper run |
+| `reserve-vault` `propose_payout` / `propose_destination` | Any address was accepted | A Stellar account without the trustline cannot receive a classic asset: after the notice every client payment through the Router failed, and sweeps left the money in the inbox | A payout address must be able to hold every currency of the vault, a tax destination at least one (`CannotHold`) | `an_address_that_cannot_receive_the_tokens_is_refused` |
+| `reserve-vault` `set_due` | It read every period's current lock (which may ask the registry for holidays) before the cheap check | Up to 24 registry calls for a date that needs no check | The cheap check first | `the_heaviest_vault_stays_within_the_network_limits` |
+| `types` `valid_period` | `Seconds(len)` took any length above zero | A huge length overflowed the period's end and stopped the vault | From a minute to ten years | `a_fixed_length_period_that_would_overflow_the_clock_is_invalid` |
+| `rate-registry` `set_holidays` | Years before 1970 accepted | Day numbers are unsigned and would wrap around | Years 1970 to 9999 | `holidays` test |
+
+Checked and fine as they are:
+
+- **Storage.** No temporary storage. Persistent entries extend their TTL when they are written; extensions above the network's maximum are clamped by the host. Instance storage holds only bounded data (at most 8 tokens, 8 buckets, 40 scheduled payments and 20 corrections).
+- **Archival.** Since Protocol 23 an archived entry is restored automatically by the transaction that needs it; reads by simulation still work.
+- **Authorization.** Every function that moves money or changes a setting requires the owner, or is permissionless and can only pay the owner, the vault or the tax destination. The inbox and the CCTP receiver authorize exactly the token transfers of the split they were given.
+- **Stellar Asset Contract.** Muxed tax destinations (anchor memos), issuer flags (authorization, freeze, clawback) and trustlines are handled as described in [public-money.md](public-money.md) and above.
+- **Rust.** Release builds keep overflow checks on (an overflow aborts the transaction instead of wrapping); the remaining `unwrap`s read the contract's own configuration, written by its constructor.
+
 ## Randomized checks
 
 `every_split_adds_up_and_nothing_is_negative` runs 20,000 random rules, withholdings and amounts up to 10^18 units through the split: the parts always add up to the payment and nothing is negative. `every_timestamp_falls_in_its_period_and_is_due_after_it` runs 20,000 dates from 1970 to 2100 through every period kind and due rule.

@@ -47,8 +47,12 @@ export interface PayoutCheck {
   runs: PayoutLine[][];
 }
 
-/** Payments per `pay_many` call: each one splits in its vault, and a transaction has resource limits. */
-export const PAYOUTS_PER_RUN = 20;
+/**
+ * Payments per `pay_many` call. Each payment emits about 1.4 KB of events (the
+ * vault's, the router's and two token transfers), and a transaction may emit
+ * 16 KB with its return value: 8 leaves room; 20 did not fit on mainnet.
+ */
+export const PAYOUTS_PER_RUN = 8;
 
 const COLUMN: Record<keyof Omit<PayoutLine, 'line' | 'amount'>, RegExp> = {
   vault: /^(vault|b[óo]veda|address|direcci[óo]n|wallet|cuenta|account|recipient|destinatario|stellar|to|para|adresse|indirizzo|endere[cç]o|empf[äa]nger)/i,

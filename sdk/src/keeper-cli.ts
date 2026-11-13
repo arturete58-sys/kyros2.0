@@ -25,6 +25,12 @@
  *   TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... kyros-keeper --network testnet \
  *     --guard <vault>[:<inbox>] [--notify-webhook <url>] [--app <url>] [--interval 60000]
  *
+ * Keep shared contracts and wasm from being archived (checked daily; extended
+ * when less than 30 days are left):
+ *
+ *   KEEPER_SECRET=S... kyros-keeper --network public --rpc <url> \
+ *     --keep-alive <router> --keep-alive <registry> --keep-alive-wasm <hash> ...
+ *
  * The secret only pays network fees; it never controls user funds.
  */
 import { Keypair, Networks } from '@stellar/stellar-sdk';
@@ -33,6 +39,7 @@ import { Keeper } from './keeper.js';
 import { parseAmount } from './split.js';
 import { fetchAttestation, mintAndPayOp } from './cctp.js';
 import { GUARD_EVENT_KINDS, inboxMoves, vaultEvents } from './events.js';
+import { keepAlive } from './ttl.js';
 import { guardAlerts, guardMessage, notifyTelegram, notifyWebhook } from './agents/watchdog.js';
 
 const args = process.argv.slice(2);
@@ -82,8 +89,10 @@ const watched = all('watch').map((w) => {
   return min ? { inbox, token, min: parseAmount(min) } : { inbox, token };
 });
 const vaults = all('vault');
-if (watched.length === 0 && vaults.length === 0) {
-  console.error('nothing to watch: add --watch <inbox>:<token> or --vault <vault>');
+const alive = all('keep-alive');
+const aliveWasm = all('keep-alive-wasm');
+if (watched.length === 0 && vaults.length === 0 && alive.length === 0 && aliveWasm.length === 0) {
+  console.error('nothing to watch: add --watch <inbox>:<token>, --vault <vault> or --keep-alive <contract>');
   process.exit(2);
 }
 const key = Keypair.fromSecret(secret!);
@@ -95,6 +104,14 @@ const keeper = new Keeper(client, key, watched, (r) =>
   (r) => console.log(new Date().toISOString(), r.error ? `error investing ${r.vault}: ${r.error}` : `${r.moved > 0n ? 'invested' : 'brought back'} ${r.moved > 0n ? r.moved : -r.moved} in ${r.vault} tx ${r.hash}`),
 );
 if (guards.length) void guardLoop();
+if (alive.length || aliveWasm.length) {
+  const check = () =>
+    keepAlive(client, key, alive, { wasmHashes: aliveWasm })
+      .then((r) => console.log(new Date().toISOString(), r.extended.length ? `extended ${r.extended.join(', ')} tx ${r.hash}` : 'shared entries have time left'))
+      .catch((e: Error) => console.log(new Date().toISOString(), `keep-alive failed: ${e.message}`));
+  void check();
+  setInterval(() => void check(), 86_400_000);
+}
 process.on('SIGINT', () => keeper.stop());
 process.on('SIGTERM', () => keeper.stop());
 console.log(`kyros-keeper watching ${watched.length} inbox(es) and ${vaults.length} vault(s) on ${network}`);
