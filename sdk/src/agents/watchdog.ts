@@ -66,8 +66,12 @@ export function guardAlerts(
       if (r.readyAt !== undefined && r.readyAt <= o.now) continue;
       // A later cancellation or stop clears it.
       const stops: Partial<Record<GuardKind, VaultEventRow['kind']>> = { destination: 'change_cancelled', rule: 'change_cancelled', payout: 'change_cancelled', fixed: 'change_cancelled', token: 'change_cancelled', strategy: 'strategy_stopped', conversion: 'conversion_stopped' };
-      // A later cancellation, a stop, or a newer proposal of the same kind clears it.
-      const cleared = sorted.some((x) => x.ledger > r.ledger && (x.kind === stops[kind] || x.kind === r.kind));
+      // A later cancellation, a stop, or a newer proposal of the same kind clears it. Corrections
+      // are independent of each other: only that correction's own cancellation clears one.
+      const cleared =
+        kind === 'correction'
+          ? sorted.some((x) => x.ledger > r.ledger && x.kind === 'correction_cancelled' && x.id === r.id)
+          : sorted.some((x) => x.ledger > r.ledger && (x.kind === stops[kind] || x.kind === r.kind));
       if (cleared) continue;
       if (kind === 'correction' && o.openCorrections && !o.openCorrections.has(r.id ?? -1)) continue;
       const isMine = mine.has(r.txHash);

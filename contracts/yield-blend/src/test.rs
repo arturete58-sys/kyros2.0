@@ -1,6 +1,9 @@
 //! Runs the strategy against the Blend v2 contracts (pool, factory,
 //! backstop, emitter, Comet), set up the way Blend's own test fixture does,
 //! with a borrower paying interest so the supply earns.
+// Blend writes its 7-decimal fixed-point numbers as 0_7500000 (0.75): kept
+// as in Blend's own tests, so they read the same.
+#![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]
 extern crate std;
 use super::*;
 use kyros_reserve_vault::{ReserveVault, ReserveVaultClient};
@@ -12,15 +15,19 @@ use soroban_sdk::{
     BytesN, String, Vec,
 };
 
+#[allow(clippy::too_many_arguments)]
 mod backstop {
     soroban_sdk::contractimport!(file = "../vendor/blend/backstop.wasm");
 }
+#[allow(clippy::too_many_arguments)]
 mod emitter {
     soroban_sdk::contractimport!(file = "../vendor/blend/emitter.wasm");
 }
+#[allow(clippy::too_many_arguments)]
 mod pool_factory {
     soroban_sdk::contractimport!(file = "../vendor/blend/pool_factory.wasm");
 }
+#[allow(clippy::too_many_arguments)]
 mod comet {
     soroban_sdk::contractimport!(file = "../vendor/blend/comet.wasm");
 }
@@ -217,7 +224,7 @@ fn supplies_to_blend_and_earns() {
     y.deposit(&(1_000 * UNIT));
     assert_eq!(TokenClient::new(&b.e, &b.usdc).balance(&y.address), 0);
     let start = y.balance();
-    assert!(start >= 999 * UNIT && start <= 1_000 * UNIT, "{start}");
+    assert!((999 * UNIT..=1_000 * UNIT).contains(&start), "{start}");
     borrow(&b, 75_000 * UNIT);
     b.e.ledger().set_timestamp(FEB_10_2027 + YEAR);
     b.e.ledger().set_sequence_number(100 + 6_307_200);
@@ -266,7 +273,7 @@ fn a_vault_lends_half_its_reserve_through_blend_and_keeps_paying_tax() {
                 tax.clone(),
                 notice,
                 PeriodKind::Year,
-                kyros_reserve_vault::dues_after(&e, 30 * 86_400u64),
+                kyros_reserve_vault::dues_after(e, 30 * 86_400u64),
                 soroban_sdk::vec![e, b.usdc.clone()],
             ),
         ),
@@ -363,7 +370,7 @@ fn a_vault_payment_waits_with_a_clear_error_when_the_pool_has_no_cash() {
                 Address::generate(e),
                 notice,
                 PeriodKind::Year,
-                kyros_reserve_vault::dues_after(&e, 30 * 86_400u64),
+                kyros_reserve_vault::dues_after(e, 30 * 86_400u64),
                 soroban_sdk::vec![e, b.usdc.clone()],
             ),
         ),

@@ -12,6 +12,15 @@
 use kyros_types::{Split, VaultClient};
 use soroban_sdk::{contract, contractevent, contractimpl, contracttype, Address, BytesN, Env, Vec};
 
+soroban_sdk::contractmeta!(
+    key = "Description",
+    val = "Kyros Router: splits a payment in the payer's own transaction; stateless."
+);
+soroban_sdk::contractmeta!(
+    key = "Source",
+    val = "https://github.com/arturete58-sys/kyros2.0"
+);
+
 #[contractevent(topics = ["kyros_router", "paid"])]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Paid {
@@ -38,6 +47,7 @@ pub struct Payout {
 #[contract]
 pub struct Router;
 
+/// Pays one payment through its vault and publishes `Paid`.
 fn pay_one(e: &Env, from: &Address, token: &Address, p: Payout) -> Split {
     let s = VaultClient::new(e, &p.vault).receive(from, token, &p.gross, &p.reference);
     Paid {
@@ -55,9 +65,11 @@ fn pay_one(e: &Env, from: &Address, token: &Address, p: Payout) -> Split {
 
 #[contractimpl]
 impl Router {
-    /// Pays `gross` of `token` from `from` to the owner of `vault`, split by the
-    /// vault's rule. `reference` is the invoice reference (e.g. a hash of the
-    /// invoice number), echoed in the events for reconciliation.
+    /// Pays `gross` of `token` from `from` through `vault`: the net amount to
+    /// the vault's payout address, the reserve to the vault, split by the
+    /// vault's terms for this payer and reference. `reference` is the invoice
+    /// reference (sha256 of the invoice number), echoed in the events for
+    /// reconciliation.
     pub fn pay(
         e: Env,
         from: Address,
@@ -81,7 +93,9 @@ impl Router {
 
     /// A platform pays many people at once (a payroll run, bounty payouts,
     /// grant tranches): one signature, one transaction, and every payment is
-    /// split by its own vault. If any vault refuses, nothing is paid.
+    /// split by its own vault. If any vault refuses, nothing is paid. The
+    /// network's limit on event bytes per transaction fits about eight
+    /// payments: larger runs go in several transactions (the SDK splits them).
     pub fn pay_many(e: Env, from: Address, token: Address, payouts: Vec<Payout>) -> Vec<Split> {
         from.require_auth();
         let mut out = Vec::new(&e);
@@ -91,6 +105,8 @@ impl Router {
         out
     }
 
+    /// The split `vault`'s rule gives for `gross` (the vault's own `quote_in`
+    /// adds a payer's or an invoice's terms and the period's fixed amounts).
     pub fn quote(e: Env, vault: Address, gross: i128) -> Split {
         VaultClient::new(&e, &vault).quote(&gross)
     }

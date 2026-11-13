@@ -1,9 +1,10 @@
 extern crate std;
 use super::*;
 use kyros_types::Bucket;
+use soroban_sdk::Event as _;
 use soroban_sdk::{
     symbol_short,
-    testutils::{Address as _, Ledger},
+    testutils::{Address as _, Events as _, Ledger},
     token::{StellarAssetClient, TokenClient},
     vec, Env,
 };
@@ -69,6 +70,12 @@ fn world() -> W {
         payer,
         tax,
     }
+}
+
+/// The last event the vault published in the last call.
+fn last_event(w: &W) -> soroban_sdk::xdr::ContractEvent {
+    let evs = w.e.events().all().filter_by_contract(&w.v.address);
+    evs.events().last().unwrap().clone()
 }
 
 fn bal(w: &W, a: &Address) -> i128 {
@@ -454,6 +461,11 @@ mod mocks {
         }
         pub fn balance(e: Env) -> i128 {
             token::Client::new(&e, &Self::asset(e.clone())).balance(&e.current_contract_address())
+        }
+        /// A loss: `amount` of what the strategy holds is gone.
+        pub fn lose(e: Env, amount: i128) {
+            let t = token::Client::new(&e, &Self::asset(e.clone()));
+            t.burn(&e.current_contract_address(), &amount);
         }
     }
 }
@@ -869,6 +881,66 @@ fn only_the_reserve_not_due_soon_is_invested() {
     assert_eq!(w.v.due_soon(&w.token), 0);
 }
 
+#[test]
+fn paying_from_the_vault_never_leaves_the_strategy_above_its_share() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &5_000);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert_eq!(w.v.invest(), 205 * UNIT);
+    // The VAT is paid early: 205 from the vault, 5 from the strategy. The
+    // 200 left are all in the strategy, double the owner's 50%.
+    w.v.pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+    let p = w.v.position(&w.token);
+    assert_eq!((p.held, p.liquid, p.invested), (200 * UNIT, 0, 200 * UNIT));
+    assert_eq!(w.v.invest(), -100 * UNIT);
+    let p = w.v.position(&w.token);
+    assert_eq!(
+        (p.held, p.liquid, p.invested),
+        (200 * UNIT, 100 * UNIT, 100 * UNIT)
+    );
+    assert_eq!(w.v.invest(), 0);
+    // What the strategy earns is the owner's: it neither counts against the
+    // share nor makes room for more reserve.
+    StellarAssetClient::new(&w.e, &w.token).mint(&y.address, &(3 * UNIT));
+    assert_eq!(w.v.invest(), 0);
+    assert_eq!(w.v.harvest(&w.token), 3 * UNIT);
+    let p = w.v.position(&w.token);
+    assert_eq!((p.liquid, p.invested), (100 * UNIT, 100 * UNIT));
+    // A loss still counts: the reserve the vault no longer holds stays at risk,
+    // and nothing more goes in to make up for it.
+    y.lose(&(40 * UNIT));
+    assert_eq!(w.v.invest(), 0);
+    assert_eq!(w.v.position(&w.token).invested, 60 * UNIT);
+}
+
+#[test]
+fn harvesting_takes_the_earnings_from_the_strategy_never_the_reserve() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &5_000);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert_eq!(w.v.invest(), 205 * UNIT);
+    StellarAssetClient::new(&w.e, &w.token).mint(&y.address, &(5 * UNIT));
+    // Ten days before the 1 May deadline the pool is fully lent: the 5 earned
+    // stay there, and the 205 in the vault are tax due soon, not earnings.
+    y.set_lent_out(&true);
+    w.e.ledger().set_timestamp(APR_1_2027 + 20 * 86_400);
+    assert_eq!(w.v.due_soon(&w.token), 410 * UNIT);
+    assert_eq!(w.v.harvest(&w.token), 0);
+    assert_eq!(bal(w, &w.v.address), 205 * UNIT);
+    // Once the pool pays out, the earnings come from it.
+    y.set_lent_out(&false);
+    assert_eq!(w.v.harvest(&w.token), 5 * UNIT);
+    assert_eq!(bal(w, &w.v.address), 205 * UNIT);
+    assert_eq!(w.v.position(&w.token).invested, 205 * UNIT);
+}
+
 /// Puts a classic account on the test ledger, so it can hold a trustline.
 fn create_account(e: &Env, address: &Address) {
     use soroban_sdk::xdr;
@@ -997,6 +1069,13 @@ fn an_invoice_with_irpf_withheld_splits_exactly() {
         Err(Ok(VaultError::InvalidTerms))
     );
     w.v.forget_invoice(&abroad);
+    assert_eq!(
+        last_event(&w),
+        InvoiceForgotten {
+            reference: abroad.clone()
+        }
+        .to_xdr(&w.e, &w.v.address)
+    );
     assert_eq!(
         w.v.try_forget_invoice(&abroad),
         Err(Ok(VaultError::UnknownInvoice))
@@ -1293,10 +1372,10 @@ fn a_scheduled_payment_goes_out_on_its_date_and_only_to_the_destination() {
     ];
     // Only to the tax destination.
     assert_eq!(
-        v.try_schedule(&at, &items, &MuxedAddress::from(&w.owner)),
+        v.try_schedule(&at, &items, MuxedAddress::from(&w.owner)),
         Err(Ok(VaultError::WrongDestination))
     );
-    let id = v.schedule(&at, &items, &MuxedAddress::from(&w.tax));
+    let id = v.schedule(&at, &items, MuxedAddress::from(&w.tax));
     assert_eq!(v.scheduled_ids(), vec![&w.e, id]);
     assert_eq!(v.try_run_scheduled(&id), Err(Ok(VaultError::NotYet)));
     // Anyone can run it once the date comes (here, no owner signature is mocked for it).
@@ -1317,7 +1396,7 @@ fn a_scheduled_payment_goes_out_on_its_date_and_only_to_the_destination() {
     );
     // A payment can be cancelled by the owner before it runs.
     w.e.mock_all_auths();
-    let id2 = v.schedule(&(at + 86_400), &items, &MuxedAddress::from(&w.tax));
+    let id2 = v.schedule(&(at + 86_400), &items, MuxedAddress::from(&w.tax));
     v.cancel_scheduled(&id2);
     assert!(v.scheduled(&id2).is_none());
 }
@@ -1411,12 +1490,23 @@ fn a_client_abroad_splits_by_its_own_terms_and_tax_not_owed_comes_back_after_not
     let id2 =
         w.v.propose_correction(&q, &w.token, &symbol_short!("irpf"), &UNIT);
     w.v.cancel_correction(&id2);
+    assert_eq!(
+        last_event(&w),
+        CorrectionCancelled { id: id2 }.to_xdr(&w.e, &w.v.address)
+    );
     assert_eq!(w.v.correction_ids().len(), 0);
     assert_eq!(
         w.v.try_cancel_correction(&id2),
         Err(Ok(VaultError::UnknownCorrection))
     );
     w.v.forget_payer(&client);
+    assert_eq!(
+        last_event(&w),
+        PayerForgotten {
+            payer: client.clone()
+        }
+        .to_xdr(&w.e, &w.v.address)
+    );
     assert_eq!(w.v.payer(&client), None);
     assert_eq!(
         w.v.try_forget_payer(&client),
@@ -1451,14 +1541,14 @@ fn terms_in_use_are_never_archived_while_payments_keep_coming() {
                 .get_ttl(&Key::Payer(client.clone()))
         })
     };
-    // The network caps how far ahead an entry can live (about a year).
+    // Entries live about six months each time they are used (the network's maximum today).
     let full = ttl(&w);
-    assert!(full > 300 * DAY_IN_LEDGERS);
-    // Most of a year later, a payment from that client extends its terms again.
-    let later = 300 * DAY_IN_LEDGERS;
+    assert_eq!(full, kyros_types::TTL_EXTEND_TO);
+    // Four months later, a payment from that client extends its terms again.
+    let later = 120 * kyros_types::DAY_IN_LEDGERS;
     w.e.ledger().with_mut(|l| {
         l.sequence_number += later;
-        l.timestamp += 300 * 86_400;
+        l.timestamp += 120 * 86_400;
     });
     assert_eq!(ttl(&w), full - later);
     let s = w.v.receive(&client, &w.token, &(1_000 * UNIT), &r(&w));
@@ -1865,4 +1955,68 @@ fn an_address_that_cannot_receive_the_tokens_is_refused() {
     w.v.propose_payout(&bare);
     // A contract (a smart wallet) can always hold.
     w.v.propose_payout(&Address::generate(&w.e));
+}
+
+#[test]
+fn more_open_periods_than_tracked_keep_everything_liquid_until_paid() {
+    let x = euro_world();
+    let w = &x.w;
+    let e = &w.e;
+    let id = e.register(
+        ReserveVault,
+        (
+            w.owner.clone(),
+            spain(e),
+            w.tax.clone(),
+            NOTICE,
+            PeriodKind::Month,
+            spanish_dues(e),
+            vec![e, w.token.clone()],
+        ),
+    );
+    let v = ReserveVaultClient::new(e, &id);
+    StellarAssetClient::new(e, &w.token).mint(&w.payer, &(100_000 * UNIT));
+    let y = yield_for(&x, &id, &w.token);
+    v.propose_strategy(&y.address, &10_000);
+    // One payment a month for MAX_OPEN + 1 months, none paid or released.
+    for m in 0..=MAX_OPEN {
+        e.ledger()
+            .set_timestamp(FEB_10_2027 + m as u64 * 31 * 86_400);
+        v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    }
+    // The last period could not be tracked: all the reserve stays liquid.
+    let held = v.position(&w.token).held;
+    assert_eq!(v.due_soon(&w.token), held);
+    assert_eq!(v.invest(), 0);
+    // Before: that stayed so for ever. Once the untracked period is paid,
+    // the tracked ones account for all the reserve and investing resumes.
+    let last = v.current_period();
+    v.pay_tax(&last, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+    v.pay_tax(&last, &w.token, &symbol_short!("irpf"), &(200 * UNIT));
+    assert!(v.invest() > 0);
+    assert!(v.due_soon(&w.token) < v.position(&w.token).held);
+}
+
+#[test]
+fn a_currency_the_payout_address_cannot_hold_is_refused() {
+    let x = euro_world();
+    let w = &x.w;
+    let other =
+        w.e.register_stellar_asset_contract_v2(Address::generate(&w.e))
+            .address();
+    // The owner is a Stellar account here: it needs a trustline for the new currency.
+    let owner_g = MuxedAddress::generate(&w.e).address();
+    create_account(&w.e, &owner_g);
+    StellarAssetClient::new(&w.e, &w.token).trust(&owner_g);
+    StellarAssetClient::new(&w.e, &x.eurc).trust(&owner_g);
+    w.v.propose_payout(&owner_g);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    assert_eq!(
+        w.v.try_propose_token(&other),
+        Err(Ok(VaultError::CannotHold))
+    );
+    // Nor an address that is not a token at all.
+    assert!(w.v.try_propose_token(&Address::generate(&w.e)).is_err());
+    StellarAssetClient::new(&w.e, &other).trust(&owner_g);
+    w.v.propose_token(&other);
 }

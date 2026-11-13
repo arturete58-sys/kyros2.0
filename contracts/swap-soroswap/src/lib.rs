@@ -13,6 +13,15 @@ use soroban_sdk::{
     IntoVal, Symbol, Vec,
 };
 
+soroban_sdk::contractmeta!(
+    key = "Description",
+    val = "Kyros swapper over Soroswap, for a vault's reserve in the tax's currency."
+);
+soroban_sdk::contractmeta!(
+    key = "Source",
+    val = "https://github.com/arturete58-sys/kyros2.0"
+);
+
 /// The part of the Soroswap router this contract calls.
 #[contractclient(name = "RouterClient")]
 pub trait SoroswapRouter {
@@ -31,6 +40,7 @@ pub trait SoroswapRouter {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum SwapError {
+    /// `amount_in` must be positive and `min_out` not negative.
     InvalidAmount = 1,
 }
 
@@ -45,10 +55,12 @@ pub struct SoroswapSwapper;
 
 #[contractimpl]
 impl SoroswapSwapper {
+    /// `router` is the Soroswap router on this network.
     pub fn __constructor(e: Env, router: Address) {
         e.storage().instance().set(&Key::Router, &router);
     }
 
+    /// The Soroswap router every swap goes through.
     pub fn router(e: Env) -> Address {
         e.storage().instance().get(&Key::Router).unwrap()
     }
@@ -81,6 +93,9 @@ impl SoroswapSwapper {
                 sub_invocations: vec![&e],
             }),
         ]);
+        // Soroswap's router requires `to` to sign the swap, so the output
+        // comes here (this contract's own call needs no signature) and is
+        // forwarded. The router refuses less than `min_out`.
         let amounts = router.swap_exact_tokens_for_tokens(
             &amount_in,
             &min_out,

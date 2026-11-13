@@ -1,15 +1,17 @@
 # Architecture
 
-Four Soroban contracts hold every rule that touches money or rates, and two adapters connect the vault to other Stellar protocols. Everything off-chain (rule packs, keeper, indexer, web app) only suggests rules and shows balances; none of it holds funds or keys.
+Five Soroban contracts hold every rule that touches money or rates, and three adapters connect the vault to other Stellar protocols. Everything off-chain (rule packs, keeper, indexer, web app) only suggests rules and shows balances; none of it holds funds or keys. The code layout, the guarantees and the Soroban choices are summed up for reviewers in [contracts/README.md](../contracts/README.md).
 
-| Contract | Instances | Admin | Functions |
+| Contract | Instances | Admin | Main functions |
 | --- | --- | --- | --- |
-| Reserve Vault | one per user | none; the user is owner | `receive`, `quote`, `pay_tax`, `pay_tax_to`, `release`, `propose_rule`, `propose_rule_at`, `propose_destination`, `propose_payout`, `propose_fixed`, `propose_token`, `deposit`, `cancel`, `apply_pending`, `follow`, `unfollow`, `expect_invoice`, `forget_invoice`, `propose_conversion`, `stop_conversion`, `convert`, `propose_strategy`, `stop_strategy`, `invest`, `harvest`, reads |
-| Router | one, shared | none, no storage | `pay`, `quote` |
+| Reserve Vault | one per user | none; the user is owner | money: `receive`, `deposit`, `pay_tax`, `pay_tax_to`, `release`, `schedule`, `run_scheduled`; changes with notice: `propose_rule`, `propose_rule_at`, `propose_destination`, `propose_payout`, `propose_fixed`, `propose_token`, `propose_correction`, `set_due`, `cancel`, `apply_pending`; terms: `expect_invoice`, `expect_payer`; VAT: `follow`, `unfollow`; opt-in: `propose_conversion`, `convert`, `propose_strategy`, `invest`, `harvest`, `stop_strategy`; reads |
+| Router | one, shared | none, no storage | `pay`, `pay_many`, `quote` |
 | Inbox | one per user | none; moved only by the vault owner, with notice | `sweep`, `return_unaccepted`, `propose_vault`, `cancel_move` |
-| Rate Registry | one per network | publisher (a multisig of rule-pack maintainers); holds no money | `seed`, `publish`, `withdraw`, `set_admin`, `rate`, `rate_at`, `schedule`, `min_notice` |
+| CCTP receiver | one, shared | none; holds nothing between calls | `mint_and_pay` |
+| Rate Registry | one per network | publisher (a multisig of rule-pack maintainers); holds no money | `seed`, `publish`, `withdraw`, `set_holidays`, `add_holiday`, `set_admin`, `rate`, `rate_at`, `schedule`, `holidays`, `min_notice` |
 | Soroswap swapper | one, shared | none; holds nothing between calls | `swap` (the vault's `SwapApi`) |
 | Blend yield strategy | one per vault that lends | none; only its vault moves funds | `deposit`, `withdraw`, `balance` (the vault's `YieldApi`) |
+| Ondo USDY strategy | not deployed | none; only its vault moves funds | `deposit`, `withdraw`, `balance` (the vault's `YieldApi`) |
 
 ## Paying through the Router
 
@@ -171,14 +173,14 @@ Ten agents in the SDK read, check and prepare without holding funds or keys: law
 ## Storage
 
 - Instance: config (owner, payout address, rule, fixed amounts, tax destination, notice, period kind, due rules per bucket, accepted tokens) and pending changes. Extended on every write.
-- Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination (in total and per bucket), released, converted, income booked, income tax withheld by clients, what the fixed amounts have set aside and what was deposited. Extended on every write, to about 13 months.
+- Persistent, one entry per period and token: reserve per bucket, total reserved, paid to the tax destination (in total and per bucket), released, converted, income booked, income tax withheld by clients, what the fixed amounts have set aside and what was deposited. Extended on every write, to about six months (the network's maximum); an archived entry is restored by the transaction that needs it.
 - Persistent: due dates set from a notice, per period and bucket, and scheduled payments; instance: the list of open scheduled payments (at most 40).
 - Instance: the conversion and the strategy, and their pending proposals.
 - Persistent: what the buckets hold per token across periods (for yield), the terms of each registered invoice and payer, and open corrections; instance: the list of open corrections (at most 20).
 
 ## Errors
 
-`InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice`, `InvalidPeriod`, `InvalidDue`, `DueTooSoon`, `UnknownPayment`, `NotYet`, `TooMany`, `UnknownPayer`, `UnknownCorrection`, `InvalidFixed`, `FuturePeriod`, `AlreadyAccepted` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries`, `InvalidHolidays`, `YearStarted` (registry).
+Each contract's errors are a `#[contracterror]` enum with fixed codes (new ones are appended, never renumbered), documented in the code: `InvalidRule`, `InvalidAmount`, `TokenNotAccepted`, `NotDue`, `NothingToRelease`, `ExceedsReserve`, `NoPendingChange`, `ChangeNotReady`, `UnknownBucket`, `NoTokens`, `AlreadyInForce`, `NotFollowing`, `RegistryNoticeTooShort`, `UnknownRate`, `RateMismatch`, `NoConversion`, `InvalidConversion`, `PriceUnavailable`, `SwapBelowFloor`, `NothingToConvert`, `NoStrategy`, `InvalidStrategy`, `StrategyInUse`, `Illiquid`, `WrongDestination`, `InvalidTerms`, `UnknownInvoice`, `InvalidPeriod`, `InvalidDue`, `DueTooSoon`, `UnknownPayment`, `NotYet`, `TooMany`, `UnknownPayer`, `UnknownCorrection`, `InvalidFixed`, `FuturePeriod`, `AlreadyAccepted`, `CannotHold` (vault); `NothingToSweep`, `TokenAccepted`, `NotSameOwner`, `NoPendingMove`, `AlreadyMoved`, `TokenPending` (inbox); `TooSoon`, `InvalidRate`, `AlreadyInForce`, `NotFound`, `AlreadySeeded`, `TooManyEntries`, `InvalidHolidays`, `YearStarted` (registry); `BadMessage`, `WrongRecipient`, `WrongMintRecipient`, `WrongCaller`, `BadHookData`, `UnknownToken`, `NothingMinted`, `BadSplit` (CCTP receiver); `InvalidAmount` (swapper); `InvalidAmount`, `NoPrice`, `StalePrice`, `InvalidSetup` (yield adapters).
 
 ## Security notes
 
@@ -190,6 +192,6 @@ Ten agents in the SDK read, check and prepare without holding funds or keys: law
 - Integer arithmetic in 128 bits; every bucket rounds down and the remainder goes to the net amount, so the parts always add up to the gross. Shared test vectors check the same results in Rust and TypeScript.
 - Each vault accepts an allow-list of tokens (USDC and EURC Stellar Asset Contracts).
 - The swapper, the oracle and the yield strategy can each decide where reserve goes, so each one takes the vault's notice to set; stopping them applies at once. A conversion is refused below the oracle price minus the owner's tolerance or with a stale price; a strategy must name the vault as its only owner.
-- Lending part of the reserve adds the lending protocol's risks (bad debt, waiting for liquidity); the owner chooses the share, and the buckets never change.
+- Lending part of the reserve adds the lending protocol's risks (bad debt, waiting for liquidity); the owner chooses the share, and the buckets never change. Reserve due within 14 days stays in the vault; when payments shrink the reserve, `invest` brings back whatever puts the strategy above the owner's share; `harvest` pays the earnings out of the strategy, never out of the reserve the vault holds.
 - The inbox authorizes only the two transfers the vault needs for a given sweep, with exact amounts and recipients.
 - Not audited yet.

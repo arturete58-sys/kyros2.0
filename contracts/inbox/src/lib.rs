@@ -15,25 +15,30 @@
 //!
 //! No admin.
 #![no_std]
-use kyros_types::{Split, VaultClient};
+use kyros_types::{Split, VaultClient, TTL_EXTEND_TO, TTL_THRESHOLD};
 use soroban_sdk::{
     auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
     contract, contracterror, contractevent, contractimpl, contracttype, token, vec, Address,
     BytesN, Env, IntoVal, Symbol, Vec,
 };
 
-const DAY_IN_LEDGERS: u32 = 17_280;
-const INSTANCE_TTL: u32 = 180 * DAY_IN_LEDGERS;
+soroban_sdk::contractmeta!(key = "Description", val = "Kyros Inbox: a payment address that needs no integration; anyone sweeps it into its vault.");
+soroban_sdk::contractmeta!(
+    key = "Source",
+    val = "https://github.com/arturete58-sys/kyros2.0"
+);
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum InboxError {
+    /// The inbox holds none of this token.
     NothingToSweep = 1,
     /// The vault accepts this token: use `sweep`.
     TokenAccepted = 2,
     /// The new vault must belong to the same owner.
     NotSameOwner = 3,
+    /// There is no move to cancel.
     NoPendingMove = 4,
     /// The move has already taken effect.
     AlreadyMoved = 5,
@@ -76,6 +81,19 @@ pub struct Returned {
     pub amount: i128,
 }
 
+#[contractevent(topics = ["kyros_inbox", "move_proposed"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MoveProposed {
+    pub vault: Address,
+    pub ready_at: u64,
+}
+
+#[contractevent(topics = ["kyros_inbox", "move_cancelled"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MoveCancelled {
+    pub vault: Address,
+}
+
 fn pending(e: &Env) -> Option<PendingVault> {
     e.storage().instance().get(&Key::PendingVault)
 }
@@ -90,17 +108,14 @@ fn vault(e: &Env) -> Address {
     e.storage().instance().get(&Key::Vault).unwrap()
 }
 
-#[contractevent(topics = ["kyros_inbox", "move_proposed"])]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MoveProposed {
-    pub vault: Address,
-    pub ready_at: u64,
-}
-
-#[contractevent(topics = ["kyros_inbox", "move_cancelled"])]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MoveCancelled {
-    pub vault: Address,
+/// Extends this inbox's instance only: the shared wasm's rent is paid once
+/// for all inboxes (anyone can extend it), not by each one on every call.
+fn bump(e: &Env) {
+    e.deployer().extend_ttl_for_contract_instance(
+        e.current_contract_address(),
+        TTL_THRESHOLD,
+        TTL_EXTEND_TO,
+    );
 }
 
 #[contract]
@@ -108,20 +123,20 @@ pub struct Inbox;
 
 #[contractimpl]
 impl Inbox {
+    /// Creates the inbox for `vault`: its payments are split by that vault.
     pub fn __constructor(e: Env, vault: Address) {
         e.storage().instance().set(&Key::Vault, &vault);
-        // The instance only: the shared wasm's rent is paid once for all, not per inbox.
-        e.deployer().extend_ttl_for_contract_instance(
-            e.current_contract_address(),
-            INSTANCE_TTL / 2,
-            INSTANCE_TTL,
-        );
+        bump(&e);
     }
 
+    /// The vault that splits this inbox's payments now (a move counts once
+    /// its notice has passed, with no further call).
     pub fn vault(e: Env) -> Address {
         vault(&e)
     }
 
+    /// The last move proposed and when it takes effect (it stays listed after
+    /// that, until the next move).
     pub fn pending_vault(e: Env) -> Option<PendingVault> {
         pending(&e)
     }
@@ -147,12 +162,7 @@ impl Inbox {
                 ready_at,
             },
         );
-        // The instance only: the shared wasm's rent is paid once for all, not per inbox.
-        e.deployer().extend_ttl_for_contract_instance(
-            e.current_contract_address(),
-            INSTANCE_TTL / 2,
-            INSTANCE_TTL,
-        );
+        bump(&e);
         MoveProposed {
             vault: new_vault,
             ready_at,
@@ -221,12 +231,7 @@ impl Inbox {
         let done = v.receive(&me, &token, &gross, &reference);
         let n: u32 = e.storage().instance().get(&Key::Swept).unwrap_or(0) + 1;
         e.storage().instance().set(&Key::Swept, &n);
-        // The instance only: the shared wasm's rent is paid once for all, not per inbox.
-        e.deployer().extend_ttl_for_contract_instance(
-            e.current_contract_address(),
-            INSTANCE_TTL / 2,
-            INSTANCE_TTL,
-        );
+        bump(&e);
         Swept {
             token,
             gross,
@@ -257,7 +262,7 @@ impl Inbox {
         if amount <= 0 {
             return Err(InboxError::NothingToSweep);
         }
-        t.transfer(&me, &v.payout(), &amount);
+        t.transfer(&me, v.payout(), &amount);
         Returned { token, amount }.publish(&e);
         Ok(amount)
     }

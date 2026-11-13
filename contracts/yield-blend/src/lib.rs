@@ -10,12 +10,23 @@
 //! Risks the owner takes: the pool's bad debt (covered first by its
 //! backstop), and a pool so fully lent out that a withdrawal has to wait.
 #![no_std]
+use kyros_types::{TTL_EXTEND_TO, TTL_THRESHOLD};
 use soroban_sdk::{
     auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
     contract, contracterror, contractimpl, contracttype, token, vec, Address, Env, IntoVal, Symbol,
 };
 
+soroban_sdk::contractmeta!(
+    key = "Description",
+    val = "Kyros yield strategy over a Blend v2 pool, one per vault."
+);
+soroban_sdk::contractmeta!(
+    key = "Source",
+    val = "https://github.com/arturete58-sys/kyros2.0"
+);
+
 /// Types and client of the Blend v2 pool, from its published interface.
+#[allow(clippy::too_many_arguments)]
 pub mod pool {
     soroban_sdk::contractimport!(file = "../vendor/blend/pool.wasm");
 }
@@ -30,6 +41,7 @@ const SCALAR_12: i128 = 1_000_000_000_000;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum YieldError {
+    /// The amount must be positive.
     InvalidAmount = 1,
 }
 
@@ -51,25 +63,40 @@ fn setup(e: &Env) -> Setup {
     e.storage().instance().get(&Key::Setup).unwrap()
 }
 
+/// Extends this instance only: the shared wasm's rent is paid once for all
+/// instances (anyone can extend it), not by each vault's strategy.
+fn bump(e: &Env) {
+    e.deployer().extend_ttl_for_contract_instance(
+        e.current_contract_address(),
+        TTL_THRESHOLD,
+        TTL_EXTEND_TO,
+    );
+}
+
 #[contract]
 pub struct BlendYield;
 
 #[contractimpl]
 impl BlendYield {
+    /// `owner` is the vault this instance works for; `pool` the Blend v2
+    /// pool and `asset` the token it lends there.
     pub fn __constructor(e: Env, owner: Address, pool: Address, asset: Address) {
         e.storage()
             .instance()
             .set(&Key::Setup, &Setup { owner, pool, asset });
     }
 
+    /// The vault this instance works for: the only one that can move funds.
     pub fn owner(e: Env) -> Address {
         setup(&e).owner
     }
 
+    /// The token this instance lends.
     pub fn asset(e: Env) -> Address {
         setup(&e).asset
     }
 
+    /// The Blend v2 pool it lends to.
     pub fn pool(e: Env) -> Address {
         setup(&e).pool
     }
@@ -107,16 +134,12 @@ impl BlendYield {
                 },
             ],
         );
-        // The instance only: the shared wasm's rent is paid once for all, not per vault.
-        e.deployer().extend_ttl_for_contract_instance(
-            e.current_contract_address(),
-            17_280 * 90,
-            17_280 * 180,
-        );
+        bump(&e);
         Ok(())
     }
 
-    /// Withdraws up to `amount` straight to the owner; returns what arrived.
+    /// Withdraws up to `amount` straight to the owner (the pool pays out at
+    /// most the whole position); returns what arrived.
     pub fn withdraw(e: Env, amount: i128) -> Result<i128, YieldError> {
         let s = setup(&e);
         s.owner.require_auth();
@@ -139,6 +162,7 @@ impl BlendYield {
                 },
             ],
         );
+        bump(&e);
         Ok(t.balance(&s.owner) - before)
     }
 

@@ -63,6 +63,32 @@ Checked and fine as they are:
 - **Stellar Asset Contract.** Muxed tax destinations (anchor memos), issuer flags (authorization, freeze, clawback) and trustlines are handled as described in [public-money.md](public-money.md) and above.
 - **Rust.** Release builds keep overflow checks on (an overflow aborts the transaction instead of wrapping); the remaining `unwrap`s read the contract's own configuration, written by its constructor.
 
+## Third pass: line by line, and the code's shape
+
+A reading of every contract line by line, looking for the smallest faults as well as the large ones, and for how the code reads to someone reviewing it for the first time.
+
+| Where | Problem | What could happen | Fix | Test |
+| --- | --- | --- | --- | --- |
+| `reserve-vault` `invest` | It only compared the strategy with its share when putting more in | Paying tax from the vault's own liquid reserve left the strategy holding far more than the owner's `max_bps` (in the test, 100% instead of 50%) and nothing brought it back | The reserve the vault does not hold itself is kept at `max_bps` of what is not due soon; `invest` brings the excess back | `paying_from_the_vault_never_leaves_the_strategy_above_its_share` |
+| `reserve-vault` `harvest` | Earnings were paid from the vault's liquid balance first | With the pool fully lent, `harvest` paid the owner out of tax due within days, leaving the vault short when the tax was due | Earnings come out of the strategy; the reserve the vault held stays in it | `harvesting_takes_the_earnings_from_the_strategy_never_the_reserve` |
+| `reserve-vault` `invest` / `due_soon` | Once a token had more than 36 open periods, `OpenFull` kept all its reserve "due soon" for ever | Yield stopped for good after one busy stretch | `OpenFull` clears itself once the tracked periods hold all the reserve again | `more_open_periods_than_tracked_keep_everything_liquid_until_paid` |
+| `reserve-vault` `propose_token` | The payout address was not checked | A new classic asset without a trustline on the payout address would make every payment in it fail after the notice | `CannotHold` | `a_currency_the_payout_address_cannot_hold_is_refused` |
+| `reserve-vault` `forget_invoice`, `forget_payer`, `cancel_correction` | No event | An indexer or the app's guardian could not see terms removed or a correction withdrawn | `InvoiceForgotten`, `PayerForgotten`, `CorrectionCancelled` | the terms and corrections tests check each event |
+| `reserve-vault` conversion floor | The oracle quotient was rounded before scaling up to the output token's decimals | The floor could be up to 10^(difference in decimals) units lower than the tolerance allows | One division at the end | conversion tests |
+| `reserve-vault` `due_date` | Read the stored config, not the one in force | Buckets from fixed amounts whose notice had passed but not been applied yet were left out of the view | Reads the config in force | — |
+| `yield-ondo` constructor | Prices compare the two tokens unit for unit, with no check that they have the same decimals | A token with other decimals would be valued wrongly | Refused (`InvalidSetup`) | `tokens_with_different_decimals_are_refused` |
+| `rate-registry` `add_holiday` | No year bound, unlike `set_holidays` | A typo could create a list for a year no other call accepts | Years up to 9999 | `holidays` test |
+| `yield-blend`, `yield-ondo` `withdraw` | Only `deposit` extended the instance's TTL | A strategy being emptied for months could be archived in between (restored automatically, but paid for) | Both extend it | — |
+
+The code's shape:
+
+- **The vault in modules.** The 2,600-line `lib.rs` is split into fifteen modules by concern (storage, terms, calendar, money in and out, scheduled payments, corrections, changes with notice, conversion, yield, reads, internal steps), each adding its own `#[contractimpl]` block. The layout is in [contracts/README.md](../contracts/README.md) and in the crate docs. Withdrawing and applying changes moved from the yield module to the changes module; removing a strategy is no longer a method on the contract type.
+- **One source for the TTL policy.** `DAY_IN_LEDGERS`, `TTL_EXTEND_TO` and `TTL_THRESHOLD` live in `types`; every contract uses them, and the inbox and the yield adapters extend their instance through one helper each.
+- **Events grouped by area,** and every public function, error and field documented. These docs end up in the contract spec, so explorers and generated bindings show them.
+- **Contract metadata.** Every wasm carries `Description` and `Source` (`contractmeta!`).
+- **CI gates.** Formatting, clippy with warnings as errors, rustdoc with warnings as errors, the tests with mainnet limits, the build, and each wasm's size against the network's 128 KiB limit.
+- **Checked and kept:** the swapper receives the output of the swap itself and forwards it, because Soroswap's router requires the recipient to sign; a direct payout to the vault fails authorization (tried and reverted, with a comment in the code).
+
 ## Randomized checks
 
 `every_split_adds_up_and_nothing_is_negative` runs 20,000 random rules, withholdings and amounts up to 10^18 units through the split: the parts always add up to the payment and nothing is negative. `every_timestamp_falls_in_its_period_and_is_due_after_it` runs 20,000 dates from 1970 to 2100 through every period kind and due rule.

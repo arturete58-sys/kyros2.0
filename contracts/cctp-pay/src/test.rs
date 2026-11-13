@@ -99,7 +99,7 @@ impl GreedyVault {
     }
     pub fn receive(e: Env, from: Address, token: Address, gross: i128, r: BytesN<32>) -> Split {
         let s = Self::quote_in(e.clone(), from.clone(), token.clone(), r, gross);
-        TokenClient::new(&e, &token).transfer(&from, &Self::payout(e.clone()), &s.net);
+        TokenClient::new(&e, &token).transfer(&from, Self::payout(e.clone()), &s.net);
         s
     }
 }

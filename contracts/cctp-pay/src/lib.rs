@@ -27,7 +27,7 @@
 //!
 //! No admin, no stored funds.
 #![no_std]
-use kyros_types::{Split, VaultClient};
+use kyros_types::{Split, VaultClient, TTL_EXTEND_TO, TTL_THRESHOLD};
 use soroban_sdk::{
     address_payload::AddressPayload,
     auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
@@ -35,10 +35,15 @@ use soroban_sdk::{
     panic_with_error, token, vec, Address, Bytes, BytesN, Env, IntoVal, Symbol, Vec,
 };
 
+soroban_sdk::contractmeta!(key = "Description", val = "Kyros CCTP receiver: mints USDC from another chain with Circle CCTP and pays it into a vault in one transaction.");
+soroban_sdk::contractmeta!(
+    key = "Source",
+    val = "https://github.com/arturete58-sys/kyros2.0"
+);
+
 /// CCTP message V2 layout (Circle's `MessageV2`).
 const MSG_VERSION: u32 = 0;
 const MSG_SOURCE_DOMAIN: u32 = 4;
-const MSG_SENDER: u32 = 44;
 const MSG_RECIPIENT: u32 = 76;
 const MSG_DESTINATION_CALLER: u32 = 108;
 const MSG_BODY: u32 = 148;
@@ -52,9 +57,6 @@ const CCTP_VERSION: u32 = 1;
 /// Kyros hook data.
 pub const HOOK_VERSION: u32 = 1;
 const HOOK_LEN: u32 = 64;
-
-const DAY_IN_LEDGERS: u32 = 17_280;
-const INSTANCE_TTL: u32 = 180 * DAY_IN_LEDGERS;
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -124,6 +126,7 @@ pub struct Payment {
     pub reference: BytesN<32>,
 }
 
+/// The big-endian u32 at `at`; a message too short is `BadMessage`.
 fn read_u32(e: &Env, b: &Bytes, at: u32) -> u32 {
     if b.len() < at + 4 {
         panic_with_error!(e, CctpPayError::BadMessage);
@@ -133,6 +136,7 @@ fn read_u32(e: &Env, b: &Bytes, at: u32) -> u32 {
     u32::from_be_bytes(x)
 }
 
+/// The 32 bytes at `at`; a message too short is `BadMessage`.
 fn read_32(e: &Env, b: &Bytes, at: u32) -> BytesN<32> {
     if b.len() < at + 32 {
         panic_with_error!(e, CctpPayError::BadMessage);
@@ -142,6 +146,7 @@ fn read_32(e: &Env, b: &Bytes, at: u32) -> BytesN<32> {
     BytesN::from_array(e, &x)
 }
 
+/// The 32-byte id of a contract address (CCTP names Stellar contracts by it).
 fn contract_id(e: &Env, a: &Address) -> BytesN<32> {
     match a.to_payload() {
         Some(AddressPayload::ContractIdHash(h)) => h,
@@ -177,10 +182,10 @@ pub fn parse(e: &Env, me: &Address, minter: &Address, message: &Bytes) -> Paymen
         panic_with_error!(e, CctpPayError::BadHookData);
     }
     let vault = Address::from_payload(e, AddressPayload::ContractIdHash(read_32(e, &hook, 32)));
-    // The source chain's sender is the TokenMessenger; the person who burned is in the burn message.
-    let _ = read_32(e, message, MSG_SENDER);
     Payment {
         source_domain: read_u32(e, message, MSG_SOURCE_DOMAIN),
+        // The message's sender is the source chain's TokenMessenger; the
+        // person who burned is the burn message's sender.
         payer: read_32(e, &body, BURN_MESSAGE_SENDER),
         burn_token: read_32(e, &body, BURN_TOKEN),
         vault,
@@ -200,10 +205,12 @@ impl CctpPay {
         e.storage().instance().set(&Key::Minter, &minter);
     }
 
+    /// Circle's MessageTransmitter, which checks attestations and mints.
     pub fn transmitter(e: Env) -> Address {
         e.storage().instance().get(&Key::Transmitter).unwrap()
     }
 
+    /// Circle's TokenMessengerMinter, which maps a burned token to the local one.
     pub fn minter(e: Env) -> Address {
         e.storage().instance().get(&Key::Minter).unwrap()
     }
@@ -270,7 +277,7 @@ impl CctpPay {
         }
         e.storage()
             .instance()
-            .extend_ttl(INSTANCE_TTL / 2, INSTANCE_TTL);
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
         Paid {
             vault: p.vault,
             reference: p.reference,

@@ -128,5 +128,10 @@ fn holidays_are_set_before_their_year_and_only_added_after() {
         c.try_add_holiday(&es, &today),
         Err(Ok(RegistryError::AlreadyInForce))
     );
+    // Nor one after the year 9999, which no list could hold.
+    assert_eq!(
+        c.try_add_holiday(&es, &3_000_000),
+        Err(Ok(RegistryError::InvalidHolidays))
+    );
     assert!(c.holidays(&symbol_short!("PT"), &2026).is_empty());
 }

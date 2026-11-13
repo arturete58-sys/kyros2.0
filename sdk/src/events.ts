@@ -23,6 +23,7 @@ export interface VaultEventRow {
     | 'invested'
     | 'harvested'
     | 'correction_applied'
+    | 'correction_cancelled'
     | 'strategy_proposed'
     | 'conversion_proposed'
     | 'correction_proposed'
@@ -63,7 +64,7 @@ export interface VaultEventRow {
   rule?: { vatBps: number; reserveBps: number };
   /** A proposed yield adapter or swapper. */
   adapter?: string;
-  /** A proposed correction's id. */
+  /** A correction's id (proposed, applied or cancelled). */
   id?: number;
 }
 
@@ -80,6 +81,7 @@ const KINDS = new Set([
   'invested',
   'harvested',
   'correction_applied',
+  'correction_cancelled',
   'strategy_proposed',
   'conversion_proposed',
   'correction_proposed',
@@ -105,6 +107,7 @@ export const GUARD_EVENT_KINDS: VaultEventRow['kind'][] = [
   'strategy_proposed',
   'conversion_proposed',
   'correction_proposed',
+  'correction_cancelled',
   'payout_proposed',
   'fixed_proposed',
   'token_proposed',
@@ -114,7 +117,7 @@ export const GUARD_EVENT_KINDS: VaultEventRow['kind'][] = [
 ];
 
 /** Topics of the vault's events that carry more than their name (`correction_proposed` has its id). */
-const EXTRA_TOPICS: Partial<Record<VaultEventRow['kind'], number>> = { correction_proposed: 1, correction_applied: 1, received: 2, deposited: 2, tax_paid: 2, released: 2, converted: 1 };
+const EXTRA_TOPICS: Partial<Record<VaultEventRow['kind'], number>> = { correction_proposed: 1, correction_applied: 1, correction_cancelled: 1, received: 2, deposited: 2, tax_paid: 2, released: 2, converted: 1 };
 
 /**
  * Kyros events of `vault` from `startLedger` on (RPC keeps a limited window of
@@ -146,8 +149,8 @@ export async function vaultEvents(server: rpc.Server, vault: string, startLedger
       const v = scValToNative(ev.value) as Record<string, unknown>;
       const big = (x: unknown) => (x === undefined ? undefined : BigInt(x as bigint));
       const kind = topics[1] as VaultEventRow['kind'];
-      if (kind === 'correction_applied') {
-        rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, amount: big(v.amount) });
+      if (kind === 'correction_applied' || kind === 'correction_cancelled') {
+        rows.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind, id: Number(topics[2]), amount: big(v.amount) });
         continue;
       }
       if (kind === 'payout_applied' || kind === 'fixed_applied' || kind === 'token_added') {

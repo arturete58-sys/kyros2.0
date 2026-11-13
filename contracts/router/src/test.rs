@@ -94,7 +94,7 @@ fn the_router_splits_inside_the_payers_transaction() {
     let list = evs.events();
     assert_eq!(list.len(), 1);
     let soroban_sdk::xdr::ContractEventBody::V0(body) = &list[0].body;
-    let want: soroban_sdk::xdr::ScVal = (&reference).try_into().unwrap();
+    let want: soroban_sdk::xdr::ScVal = (&reference).into();
     assert_eq!(body.topics[3], want);
     assert_eq!((s.net, s.reserve), (800 * UNIT, 410 * UNIT));
     assert_eq!(bal(&w, &w.owner), 800 * UNIT);

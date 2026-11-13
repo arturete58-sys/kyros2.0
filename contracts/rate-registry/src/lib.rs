@@ -23,14 +23,18 @@
 //!
 //! The registry never holds or moves money.
 #![no_std]
-use kyros_types::{civil_from_days, days_from_civil};
+use kyros_types::{civil_from_days, days_from_civil, TTL_EXTEND_TO, TTL_THRESHOLD};
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, Address, Env, Symbol, Vec,
 };
 
-const DAY_IN_LEDGERS: u32 = 17_280;
+soroban_sdk::contractmeta!(key = "Description", val = "Kyros Rate Registry: dated VAT rates and public holidays per country, published with notice.");
+soroban_sdk::contractmeta!(
+    key = "Source",
+    val = "https://github.com/arturete58-sys/kyros2.0"
+);
+
 const DAY: u64 = 86_400;
-const TTL: u32 = 365 * DAY_IN_LEDGERS;
 /// Most dated entries kept per rate.
 const MAX_ENTRIES: u32 = 64;
 
@@ -44,11 +48,14 @@ pub enum RegistryError {
     InvalidRate = 2,
     /// The entry has started to apply and cannot change.
     AlreadyInForce = 3,
+    /// No entry applies from that moment.
     NotFound = 4,
     /// The rate already has entries: use `publish`.
     AlreadySeeded = 5,
+    /// More than `MAX_ENTRIES` dated entries for one rate.
     TooManyEntries = 6,
-    /// A day outside the year, or more than `MAX_HOLIDAYS` in a year.
+    /// A year outside 1970..=9999, a day outside its year, or more than
+    /// `MAX_HOLIDAYS` in a year.
     InvalidHolidays = 7,
     /// The year has started and its list exists: only future days can be added.
     YearStarted = 8,
@@ -61,7 +68,9 @@ pub const MAX_HOLIDAYS: u32 = 120;
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Entry {
+    /// UNIX seconds from which the rate applies.
     pub from: u64,
+    /// The rate, in basis points (2100 = 21%).
     pub bps: u32,
 }
 
@@ -140,10 +149,15 @@ fn entries(e: &Env, country: &Symbol, name: &Symbol) -> Vec<Entry> {
 fn save(e: &Env, country: &Symbol, name: &Symbol, v: &Vec<Entry>) {
     let k = Key::Rate(country.clone(), name.clone());
     e.storage().persistent().set(&k, v);
-    e.storage().persistent().extend_ttl(&k, TTL / 2, TTL);
-    e.storage().instance().extend_ttl(TTL / 2, TTL);
+    e.storage()
+        .persistent()
+        .extend_ttl(&k, TTL_THRESHOLD, TTL_EXTEND_TO);
+    e.storage()
+        .instance()
+        .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
 }
 
+/// The rate of the last entry that applies at `t` (entries are sorted by date).
 fn at(v: &Vec<Entry>, t: u64) -> Option<u32> {
     let mut found = None;
     for x in v.iter() {
@@ -172,8 +186,12 @@ fn holiday_list(e: &Env, country: &Symbol, year: u32) -> Option<Vec<u32>> {
 fn save_holidays(e: &Env, country: &Symbol, year: u32, v: &Vec<u32>) {
     let k = Key::Holidays(country.clone(), year);
     e.storage().persistent().set(&k, v);
-    e.storage().persistent().extend_ttl(&k, TTL / 2, TTL);
-    e.storage().instance().extend_ttl(TTL / 2, TTL);
+    e.storage()
+        .persistent()
+        .extend_ttl(&k, TTL_THRESHOLD, TTL_EXTEND_TO);
+    e.storage()
+        .instance()
+        .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
 }
 
 #[contract]
@@ -185,13 +203,18 @@ impl RateRegistry {
     pub fn __constructor(e: Env, admin: Address, min_notice: u64) {
         e.storage().instance().set(&Key::Admin, &admin);
         e.storage().instance().set(&Key::MinNotice, &min_notice);
-        e.storage().instance().extend_ttl(TTL / 2, TTL);
+        e.storage()
+            .instance()
+            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
     }
 
+    /// The publisher (a multisig of rule-pack maintainers).
     pub fn admin(e: Env) -> Address {
         admin(&e)
     }
 
+    /// The least time, in seconds, between publishing a rate and its date.
+    /// Fixed at deployment.
     pub fn min_notice(e: Env) -> u64 {
         min_notice(&e)
     }
@@ -359,6 +382,9 @@ impl RateRegistry {
             return Err(RegistryError::AlreadyInForce);
         }
         let (y, _, _) = civil_from_days(day as i64);
+        if y > 9999 {
+            return Err(RegistryError::InvalidHolidays);
+        }
         let year = y as u32;
         let mut v = holiday_list(&e, &country, year).unwrap_or(Vec::new(&e));
         if !v.contains(day) {

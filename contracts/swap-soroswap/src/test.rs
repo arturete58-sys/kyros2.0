@@ -11,12 +11,15 @@ use soroban_sdk::{
     BytesN,
 };
 
+#[allow(clippy::too_many_arguments)]
 mod factory {
     soroban_sdk::contractimport!(file = "../vendor/soroswap/soroswap_factory.optimized.wasm");
 }
+#[allow(clippy::too_many_arguments)]
 mod router {
     soroban_sdk::contractimport!(file = "../vendor/soroswap/soroswap_router.optimized.wasm");
 }
+#[allow(clippy::too_many_arguments)]
 mod pair {
     soroban_sdk::contractimport!(file = "../vendor/soroswap/soroswap_pair.optimized.wasm");
 }
@@ -137,7 +140,7 @@ fn a_vault_keeps_its_reserve_in_euros_through_soroswap() {
                 Address::generate(e),
                 notice,
                 PeriodKind::Quarter,
-                kyros_reserve_vault::dues_after(&e, 30 * 86_400u64),
+                kyros_reserve_vault::dues_after(e, 30 * 86_400u64),
                 soroban_sdk::vec![e, s.usdc.clone(), s.eurc.clone()],
             ),
         ),

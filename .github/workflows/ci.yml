@@ -17,6 +17,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32v1-none
+          components: clippy, rustfmt
       - name: Install the Stellar CLI
         run: |
           mkdir -p "$HOME/.local/bin"
@@ -25,11 +26,26 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: contracts
-      - name: Unit and integration tests
+      - name: Formatting
+        run: cargo fmt --all --check
+      - name: Lints (clippy, warnings are errors)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Docs (every public item documented, no broken links)
+        run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+      - name: Unit and integration tests (Stellar mainnet limits enforced)
         run: cargo test
       - name: Build the contracts
         run: stellar contract build
-      - run: ls -l target/wasm32v1-none/release/*.wasm
+      - name: Wasm sizes (mainnet allows 131,072 bytes per contract)
+        run: |
+          ls -l target/wasm32v1-none/release/*.wasm
+          for f in target/wasm32v1-none/release/*.wasm; do
+            size=$(stat -c %s "$f")
+            echo "$(basename "$f"): $size bytes" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$size" -gt 131072 ]; then echo "::error::$f is $size bytes, above the 131,072-byte limit"; exit 1; fi
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: contracts-wasm

@@ -11,12 +11,26 @@ pub const BPS: i128 = 10_000;
 /// Most buckets a rule may have besides VAT.
 pub const MAX_BUCKETS: u32 = 8;
 
+/// Ledgers in a day (one ledger every five seconds).
+pub const DAY_IN_LEDGERS: u32 = 17_280;
+/// How long an entry is kept alive each time it is extended: about six
+/// months, the most Stellar's network settings allow today (a longer request
+/// is clamped by the network, never refused).
+pub const TTL_EXTEND_TO: u32 = 180 * DAY_IN_LEDGERS;
+/// An entry that is used with less than this left is extended again: half
+/// of `TTL_EXTEND_TO`, so most calls pay no rent at all.
+pub const TTL_THRESHOLD: u32 = TTL_EXTEND_TO / 2;
+
+// ---- The split ----
+
 /// One reserve bucket charged on the taxable base, e.g. the Spanish
 /// income-tax prepayment (`irpf`, 2000 bps).
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Bucket {
+    /// The tax's short name (`irpf`, `ss`...); `vat` is reserved.
     pub name: Symbol,
+    /// Share of the taxable base, in basis points.
     pub bps: u32,
 }
 
@@ -25,7 +39,9 @@ pub struct Bucket {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
+    /// VAT included in the gross amount, in basis points (2100 = 21%).
     pub vat_bps: u32,
+    /// Every other tax, each a share of the base.
     pub buckets: Vec<Bucket>,
 }
 
@@ -59,6 +75,32 @@ pub struct Fixed {
 /// Most fixed amounts a vault may have.
 pub const MAX_FIXED: u32 = 4;
 
+/// How the payments of one invoice are split, registered by the vault owner
+/// when the invoice is issued and applied to every payment carrying its
+/// reference.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InvoiceTerms {
+    /// The VAT on the invoice (0 for exempt, reverse-charged or foreign).
+    pub vat_bps: u32,
+    /// Share of the base the client withholds and pays to the tax authority itself
+    /// (e.g. Spanish IRPF on professional invoices), so it never reaches the vault.
+    pub withholding_bps: u32,
+    /// The reserve buckets for this invoice, on its base.
+    pub buckets: Vec<Bucket>,
+}
+
+/// A token proposed for a vault to accept, waiting for its notice period.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PendingToken {
+    pub token: Address,
+    /// UNIX seconds from which the vault accepts it.
+    pub ready_at: u64,
+}
+
+// ---- Fiscal periods and due dates ----
+
 /// How the vault groups reserves into fiscal periods. Calendar periods use
 /// UTC; `Months(n)` are n-month periods from January (2: bimonthly, 4:
 /// four-monthly, 6: half-yearly; n divides 12); `Seconds` is a fixed length
@@ -66,10 +108,15 @@ pub const MAX_FIXED: u32 = 4;
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PeriodKind {
+    /// Calendar months.
     Month,
+    /// Calendar quarters.
     Quarter,
+    /// Calendar years.
     Year,
+    /// A fixed length in seconds, from the Unix epoch.
     Seconds(u64),
+    /// n-month periods from January (n divides 12).
     Months(u32),
 }
 
@@ -83,10 +130,15 @@ pub enum PeriodKind {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MonthDay {
+    /// Months after the one right after the period (0-24).
     pub months: u32,
+    /// Day of that month (1-31; past its end means its last day).
     pub day: u32,
+    /// The period's last month that has its own date (1-12), or 0.
     pub exception_month: u32,
+    /// `months` for that period.
     pub exception_months: u32,
+    /// `day` for that period.
     pub exception_day: u32,
 }
 
@@ -98,10 +150,15 @@ pub struct MonthDay {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct YearDate {
+    /// Month the fiscal year starts (1-12).
     pub fy_start_month: u32,
+    /// Day the fiscal year starts (1-31).
     pub fy_start_day: u32,
+    /// Month of the due date (1-12).
     pub month: u32,
+    /// Day of the due date (1-31; past the month's end means its last day).
     pub day: u32,
+    /// Years after the year the fiscal year starts in (0-3).
     pub years_after: u32,
 }
 
@@ -112,17 +169,24 @@ pub struct YearDate {
 pub enum Due {
     /// A fixed number of seconds after the period ends.
     After(u64),
+    /// A day of a month after the period ends.
     MonthDay(MonthDay),
+    /// A date after the fiscal year that contains the period.
     YearDate(YearDate),
 }
 
 /// Why a rule is invalid.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RuleError {
+    /// VAT above 100%.
     VatTooHigh,
+    /// More than `MAX_BUCKETS` buckets.
     TooManyBuckets,
+    /// The buckets together take more than the whole base.
     BucketsOverBase,
+    /// Two buckets with the same name.
     DuplicateBucket,
+    /// A bucket called `vat`.
     ReservedName,
 }
 
@@ -270,11 +334,11 @@ pub fn civil_from_days(z: i64) -> (i64, u32, u32) {
     (y, m, d)
 }
 
-/// Whether a period kind is usable: `Months(n)` needs n to divide 12, and
-/// `Seconds` a non-zero length.
 /// The longest fixed-length period (ten years).
 pub const MAX_PERIOD_SECS: u64 = 10 * 366 * 86_400;
 
+/// Whether a period kind is usable: `Months(n)` needs n to divide 12, and
+/// `Seconds` a length from a minute to `MAX_PERIOD_SECS`.
 pub fn valid_period(kind: &PeriodKind) -> bool {
     match kind {
         PeriodKind::Months(n) => *n > 0 && 12 % *n == 0,
@@ -395,28 +459,31 @@ pub fn due_at(kind: &PeriodKind, id: u32, due: &Due) -> u64 {
     }
 }
 
-/// How the payments of one invoice are split, registered by the vault owner
-/// when the invoice is issued and applied to every payment carrying its
-/// reference.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InvoiceTerms {
-    /// The VAT on the invoice (0 for exempt, reverse-charged or foreign).
-    pub vat_bps: u32,
-    /// Share of the base the client withholds and pays to the tax authority itself
-    /// (e.g. Spanish IRPF on professional invoices), so it never reaches the vault.
-    pub withholding_bps: u32,
-    /// The reserve buckets for this invoice, on its base.
-    pub buckets: Vec<Bucket>,
+/// Most days a due date can move forward over closed days and holidays. A
+/// holiday list that claims more cannot keep a reserve locked longer.
+pub const MAX_SHIFT_DAYS: u32 = 14;
+
+/// Weekday of a day number (days since 1970-01-01): Monday 0 … Sunday 6.
+pub fn weekday(day: u32) -> u32 {
+    (day + 3) % 7
 }
 
-/// A token proposed for a vault to accept, waiting for its notice period.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PendingToken {
-    pub token: Address,
-    pub ready_at: u64,
+/// A due date (the end of the due day, as [`due_at`] gives it) moved by
+/// whole days until the due day is one the tax office is open: `closed` is
+/// a bitmask of weekdays (bit 0 Monday … bit 6 Sunday) and `is_holiday`
+/// says whether a day number is a holiday. Moves at most [`MAX_SHIFT_DAYS`].
+pub fn next_open(end: u64, closed: u32, is_holiday: impl Fn(u32) -> bool) -> u64 {
+    let day = ((end - 1) / DAY as u64) as u32;
+    let mut moved = 0;
+    while moved < MAX_SHIFT_DAYS
+        && (closed & (1 << weekday(day + moved)) != 0 || is_holiday(day + moved))
+    {
+        moved += 1;
+    }
+    end + moved as u64 * DAY as u64
 }
+
+// ---- Interfaces between the contracts ----
 
 /// The part of the Reserve Vault that the Router, the Inbox and the CCTP receiver call.
 #[contractclient(name = "VaultClient")]
@@ -448,30 +515,6 @@ pub trait VaultApi {
 }
 
 /// What a vault reads from a Kyros Rate Registry.
-/// Most days a due date can move forward over closed days and holidays. A
-/// holiday list that claims more cannot keep a reserve locked longer.
-pub const MAX_SHIFT_DAYS: u32 = 14;
-
-/// Weekday of a day number (days since 1970-01-01): Monday 0 … Sunday 6.
-pub fn weekday(day: u32) -> u32 {
-    (day + 3) % 7
-}
-
-/// A due date (the end of the due day, as [`due_at`] gives it) moved by
-/// whole days until the due day is one the tax office is open: `closed` is
-/// a bitmask of weekdays (bit 0 Monday … bit 6 Sunday) and `is_holiday`
-/// says whether a day number is a holiday. Moves at most [`MAX_SHIFT_DAYS`].
-pub fn next_open(end: u64, closed: u32, is_holiday: impl Fn(u32) -> bool) -> u64 {
-    let day = ((end - 1) / DAY as u64) as u32;
-    let mut moved = 0;
-    while moved < MAX_SHIFT_DAYS
-        && (closed & (1 << weekday(day + moved)) != 0 || is_holiday(day + moved))
-    {
-        moved += 1;
-    }
-    end + moved as u64 * DAY as u64
-}
-
 #[contractclient(name = "RegistryClient")]
 pub trait RegistryApi {
     /// The rate `name` of `country` in force at `at` (Unix seconds), in bps.
@@ -529,6 +572,7 @@ pub enum Asset {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PriceData {
     pub price: i128,
+    /// UNIX seconds of the price.
     pub timestamp: u64,
 }
 

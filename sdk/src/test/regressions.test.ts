@@ -209,3 +209,36 @@ test('the shared wasm and contracts are extended before they are archived', asyn
   const t = await contractTtls(server as never, [vaultA, vaultB]);
   assert.deepEqual(t.map((x) => [x.name, Math.round(x.left / LEDGERS_PER_DAY)]), [[vaultA, 100], [vaultB, 5], [`wasm:${hash.toString('hex')}`, 3]]);
 });
+
+test('the guardian follows each correction on its own', async () => {
+  const { vaultEvents, GUARD_EVENT_KINDS } = await import('../events.js');
+  const { guardAlerts } = await import('../agents/watchdog.js');
+  const { nativeToScVal, StrKey } = await import('@stellar/stellar-sdk');
+  const sym = (s: string) => xdr.ScVal.scvSymbol(s);
+  const u32 = (n: number) => nativeToScVal(n, { type: 'u32' });
+  const token = StrKey.encodeContract(Buffer.alloc(32, 7));
+  const proposed = (id: number, amount: bigint) =>
+    nativeToScVal({
+      correction: nativeToScVal({
+        period: u32(8108),
+        token: nativeToScVal(token, { type: 'address' }),
+        bucket: sym('vat'),
+        amount: nativeToScVal(amount, { type: 'i128' }),
+        ready_at: nativeToScVal(2_000_000_000n, { type: 'u64' }),
+      }),
+    });
+  const ev = (i: number, topic: xdr.ScVal[], value: xdr.ScVal) => ({ id: String(i), ledger: i, ledgerClosedAt: '2026-11-13T00:00:00Z', txHash: `h${i}`, topic, value });
+  // A large correction, then a tiny one, then the tiny one is cancelled.
+  const all = [
+    ev(1, [sym('kyros_vault'), sym('correction_proposed'), u32(1)], proposed(1, 400_000_000n)),
+    ev(2, [sym('kyros_vault'), sym('correction_proposed'), u32(2)], proposed(2, 1n)),
+    ev(3, [sym('kyros_vault'), sym('correction_cancelled'), u32(2)], nativeToScVal({})),
+  ];
+  const server = { getEvents: async () => ({ events: all, cursor: '3' }) };
+  const rows = await vaultEvents(server as never, 'CV', 1, { kinds: GUARD_EVENT_KINDS });
+  assert.deepEqual(rows.map((r) => [r.kind, r.id]), [['correction_proposed', 1], ['correction_proposed', 2], ['correction_cancelled', 2]]);
+  // Without the vault's list of open corrections (the keeper), the newer one
+  // used to hide the first, and a cancelled one stayed flagged.
+  const alerts = guardAlerts(rows, [], { now: 1_900_000_000n });
+  assert.deepEqual(alerts.map((a) => [a.kind, a.id, a.detail]), [['correction', 1, '400000000']]);
+});

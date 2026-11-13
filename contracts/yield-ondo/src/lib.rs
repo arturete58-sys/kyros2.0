@@ -17,8 +17,17 @@
 //! contract) holding it has to be cleared first. Until then Kyros does not
 //! deploy this strategy, and the app shows it as coming.
 #![no_std]
-use kyros_types::{Asset, OracleClient, SwapClient};
+use kyros_types::{Asset, OracleClient, SwapClient, TTL_EXTEND_TO, TTL_THRESHOLD};
 use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, Env};
+
+soroban_sdk::contractmeta!(
+    key = "Description",
+    val = "Kyros yield strategy holding Ondo USDY, one per vault (not deployed)."
+);
+soroban_sdk::contractmeta!(
+    key = "Source",
+    val = "https://github.com/arturete58-sys/kyros2.0"
+);
 
 const BPS: i128 = 10_000;
 
@@ -26,12 +35,13 @@ const BPS: i128 = 10_000;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum YieldError {
+    /// The amount must be positive.
     InvalidAmount = 1,
     /// The oracle has no USDY price.
     NoPrice = 2,
     /// The USDY price is older than `max_age_secs`.
     StalePrice = 3,
-    /// Slippage above 5% or an age of zero.
+    /// Slippage above 5%, an age of zero, or tokens with different decimals.
     InvalidSetup = 4,
 }
 
@@ -54,7 +64,9 @@ pub struct Setup {
     pub swapper: Address,
     /// A SEP-40 oracle pricing USDY in US dollars.
     pub oracle: Address,
+    /// The most a swap may lose against the oracle price (at most 5%).
     pub max_slippage_bps: u32,
+    /// The oldest price a swap may trade at.
     pub max_age_secs: u64,
 }
 
@@ -77,10 +89,20 @@ fn last_price(e: &Env, s: &Setup) -> Result<(i128, i128, u64), YieldError> {
 /// The price to trade at: refused when older than `max_age_secs`.
 fn price(e: &Env, s: &Setup) -> Result<(i128, i128), YieldError> {
     let (p, scale, at) = last_price(e, s)?;
-    if e.ledger().timestamp() > at + s.max_age_secs {
+    if e.ledger().timestamp().saturating_sub(at) > s.max_age_secs {
         return Err(YieldError::StalePrice);
     }
     Ok((p, scale))
+}
+
+/// Extends this instance only: the shared wasm's rent is paid once for all
+/// instances (anyone can extend it), not by each vault's strategy.
+fn bump(e: &Env) {
+    e.deployer().extend_ttl_for_contract_instance(
+        e.current_contract_address(),
+        TTL_THRESHOLD,
+        TTL_EXTEND_TO,
+    );
 }
 
 #[contract]
@@ -88,6 +110,9 @@ pub struct OndoYield;
 
 #[contractimpl]
 impl OndoYield {
+    /// Sets the strategy up for `owner` (the vault). The prices compare the
+    /// two tokens unit for unit, so they must have the same decimals (7 for
+    /// every Stellar asset).
     #[allow(clippy::too_many_arguments)]
     pub fn __constructor(
         e: Env,
@@ -99,7 +124,10 @@ impl OndoYield {
         max_slippage_bps: u32,
         max_age_secs: u64,
     ) -> Result<(), YieldError> {
-        if max_slippage_bps > 500 || max_age_secs == 0 {
+        if max_slippage_bps > 500
+            || max_age_secs == 0
+            || token::Client::new(&e, &asset).decimals() != token::Client::new(&e, &usdy).decimals()
+        {
             return Err(YieldError::InvalidSetup);
         }
         e.storage().instance().set(
@@ -117,14 +145,17 @@ impl OndoYield {
         Ok(())
     }
 
+    /// The vault this instance works for: the only one that can move funds.
     pub fn owner(e: Env) -> Address {
         setup(&e).owner
     }
 
+    /// The dollar token the vault deposits and gets back.
     pub fn asset(e: Env) -> Address {
         setup(&e).asset
     }
 
+    /// Everything the strategy was set up with.
     pub fn setup(e: Env) -> Setup {
         setup(&e)
     }
@@ -143,8 +174,7 @@ impl OndoYield {
         let me = e.current_contract_address();
         token::Client::new(&e, &s.asset).transfer(&me, &s.swapper, &amount);
         SwapClient::new(&e, &s.swapper).swap(&s.asset, &s.usdy, &amount, &min_out, &me);
-        e.deployer()
-            .extend_ttl_for_contract_instance(me, 17_280 * 90, 17_280 * 180);
+        bump(&e);
         Ok(())
     }
 
@@ -173,7 +203,10 @@ impl OndoYield {
         let worth = sell * p / scale;
         let min_out = worth * (BPS - s.max_slippage_bps as i128) / BPS;
         token::Client::new(&e, &s.usdy).transfer(&me, &s.swapper, &sell);
-        Ok(SwapClient::new(&e, &s.swapper).swap(&s.usdy, &s.asset, &sell, &min_out, &s.owner))
+        let out =
+            SwapClient::new(&e, &s.swapper).swap(&s.usdy, &s.asset, &sell, &min_out, &s.owner);
+        bump(&e);
+        Ok(out)
     }
 
     /// What the owner would get back now, at the oracle's latest price less

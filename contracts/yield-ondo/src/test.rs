@@ -130,10 +130,10 @@ fn the_vault_buys_usdy_at_the_oracle_price_and_sells_it_back_with_the_yield() {
     // 1,100 dollars buy 1,000 USDY at 1.10.
     assert_eq!(bal(&w, &w.usdy, &w.y.address), 1_000 * UNIT);
     // Valued at the oracle price less the 0.5% slippage allowed.
-    assert_eq!(w.y.balance(), 1_094_5 * UNIT / 10);
+    assert_eq!(w.y.balance(), 10_945 * UNIT / 10);
     // The yield accrues in USDY's price: at 1.21, the same 1,000 USDY are worth 1,210.
     set_price(&w, 121, NOW);
-    assert_eq!(w.y.balance(), 1_203_95 * UNIT / 100);
+    assert_eq!(w.y.balance(), 120_395 * UNIT / 100);
     // Withdrawing 605 sells 500 USDY; the dollars go straight to the vault.
     let before = bal(&w, &w.usdc, &w.vault);
     assert_eq!(w.y.withdraw(&(605 * UNIT)), 605 * UNIT);
@@ -175,6 +175,36 @@ fn more_than_five_percent_slippage_is_refused() {
             w.swapper.address.clone(),
             w.oracle.address.clone(),
             501u32,
+            86_400u64,
+        ),
+    );
+}
+
+/// A token with 18 decimals, like a bridged ERC-20.
+#[contract]
+pub struct Token18;
+
+#[contractimpl]
+impl Token18 {
+    pub fn decimals(_e: Env) -> u32 {
+        18
+    }
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn tokens_with_different_decimals_are_refused() {
+    let w = world();
+    let usdy18 = w.e.register(Token18, ());
+    w.e.register(
+        OndoYield,
+        (
+            w.vault.clone(),
+            w.usdc.clone(),
+            usdy18,
+            w.swapper.address.clone(),
+            w.oracle.address.clone(),
+            50u32,
             86_400u64,
         ),
     );
