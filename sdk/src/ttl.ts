@@ -66,6 +66,14 @@ export async function contractTtls(server: Pick<rpc.Server, 'getLedgerEntries' |
   return out;
 }
 
+/** The network's longest TTL, in ledgers (from its state archival settings). */
+export async function maxEntryTtl(server: Pick<rpc.Server, 'getLedgerEntries'>): Promise<number | undefined> {
+  const key = xdr.LedgerKey.configSetting(new xdr.LedgerKeyConfigSetting({ configSettingId: xdr.ConfigSettingId.configSettingStateArchival() }));
+  const res = await server.getLedgerEntries(key).catch(() => undefined);
+  const e = res?.entries[0];
+  return e ? e.val.configSetting().stateArchivalSettings().maxEntryTtl() : undefined;
+}
+
 export interface KeepAliveResult {
   checked: TtlEntry[];
   /** The entries extended (empty when all had enough time left). */
@@ -75,11 +83,13 @@ export interface KeepAliveResult {
 
 /**
  * Extends, in one transaction, every entry with less than `minDays` left to
- * `extendDays` (the network caps it at its maximum TTL).
+ * `extendDays`, or the network's maximum TTL if that is shorter.
  */
 export async function keepAlive(client: KyrosClient, signer: Keypair, contracts: string[], o: { wasmHashes?: string[]; minDays?: number; extendDays?: number } = {}): Promise<KeepAliveResult> {
   const minLeft = (o.minDays ?? 30) * LEDGERS_PER_DAY;
-  const extendTo = (o.extendDays ?? 180) * LEDGERS_PER_DAY;
+  // An extension past the network's maximum TTL is refused as malformed.
+  const max = await maxEntryTtl(client.server);
+  const extendTo = Math.min((o.extendDays ?? 120) * LEDGERS_PER_DAY, max ? max - 1 : Infinity);
   const checked = await contractTtls(client.server, contracts, o.wasmHashes);
   const low = checked.filter((t) => t.left < minLeft);
   if (!low.length) return { checked, extended: [] };
