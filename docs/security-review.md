@@ -27,6 +27,8 @@ A review of the contracts, the SDK and keeper, the app and the checkout plugins.
 | App | Nothing stopped the testnet build from running against mainnet | Browser-kept keys and the published faucet key on the public network | The app refuses the public network | build |
 | SDK `inboxMoves` (guardian) | It read one page of the inbox's events | On a busy inbox (an x402 seller sweeps every few seconds) a proposal to move the payment address to another vault was not seen | Asks for the two move events by topic, page by page | `a move proposal on a busy inbox is not missed` |
 | SDK `vaultEvents` (guardian) | The guardian read every event of the day, up to 10,000 | With more payments than that in a day, a proposal (new payout address, new destination) after them was not seen | The guardian asks the RPC for proposals only (`GUARD_EVENT_KINDS`), with a full read as fallback; the testnet demo checks it against the real RPC | `the guardian finds a proposal on a busy vault`; demo step |
+| App due dates | The day was formatted in the device's time zone from a UTC end-of-day | In Spain every due date showed one day late ("pay before 21 April" for 20 April): a user could pay a day late | The contract's own (UTC) day, `dayString` | `a due date is shown on its own day in Spain, not the next one` |
+| x402 plugin `verifyVatId` | A check that threw failed the request | VIES down meant no sales | A failed check counts as not verified: the VAT is charged | `when the VAT number check is down, the VAT is charged` |
 | App dependencies | `npm audit` fixes that do not change the API | Known issues in transitive packages | Stellar Wallets Kit 2.8.0 and `follow-redirects` updated | `npm audit` |
 
 ## Earlier incidents, now with regression tests

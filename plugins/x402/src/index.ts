@@ -72,7 +72,8 @@ export function buyerFromHeaders(ctx: HTTPRequestContext): X402Buyer {
 export async function kyrosQuote(o: KyrosX402Options, ctx: HTTPRequestContext): Promise<{ vat: X402Vat; buyer: X402Buyer; amount: bigint; payTo: string }> {
   const pack = typeof o.seller === 'string' ? loadRulePack(o.seller) : o.seller;
   const buyer = await (o.buyer ?? buyerFromHeaders)(ctx);
-  if (buyer.vatId && o.verifyVatId && !(await o.verifyVatId(buyer.vatId, buyer.country ?? ''))) buyer.vatId = undefined;
+  // A check that fails (VIES is down) counts as not verified: the VAT is charged.
+  if (buyer.vatId && o.verifyVatId && !(await Promise.resolve(o.verifyVatId(buyer.vatId, buyer.country ?? '')).catch(() => false))) buyer.vatId = undefined;
   const vat = x402Vat(pack, buyer, { crossBorderB2cEur: o.crossBorderB2cEur, ossOptIn: o.ossOptIn });
   const payTo = o.inboxes[vat.vatBps];
   if (!payTo) throw new Error(`Kyros: no payment address for VAT ${vat.vatBps / 100}% (${vat.evidence}); add one in the Kyros app`);

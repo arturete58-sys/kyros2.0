@@ -19,7 +19,7 @@ const facilitator: FacilitatorClient = {
   settle: async () => ({ success: false, errorReason: 'test', transaction: '', network: 'stellar:testnet' }),
 } as unknown as FacilitatorClient;
 
-async function serve(extra: { verifyVatId?: (id: string) => boolean } = {}) {
+async function serve(extra: { verifyVatId?: (id: string) => boolean | Promise<boolean> } = {}) {
   const server = new x402ResourceServer(facilitator).register('stellar:testnet', new ExactStellarScheme());
   const seen: string[] = [];
   const app = express();
@@ -83,6 +83,16 @@ test('a buyer cannot declare another country or a fake VAT number to pay less VA
     assert.deepEqual([fake.accepts[0].payTo, fake.accepts[0].amount], [inboxes[1900], '119000']);
     const real = await required(s.url, { 'x-buyer-country': 'DE', 'x-buyer-vat-id': 'DE123456789' });
     assert.equal(real.accepts[0].amount, '100000');
+  } finally {
+    s.close();
+  }
+});
+
+test('when the VAT number check is down, the VAT is charged', async () => {
+  const s = await serve({ verifyVatId: async () => { throw new Error('VIES unavailable'); } });
+  try {
+    const r = await required(s.url, { 'x-buyer-country': 'DE', 'x-buyer-vat-id': 'DE123456789' });
+    assert.equal(r.accepts[0].amount, '119000');
   } finally {
     s.close();
   }

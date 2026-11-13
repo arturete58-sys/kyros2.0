@@ -168,3 +168,13 @@ test('the guardian finds a proposal on a busy vault', async () => {
   const rows = await vaultEvents(server as never, 'CV', 1, { kinds: GUARD_EVENT_KINDS });
   assert.deepEqual(rows.map((r) => [r.kind, r.payout]), [['payout_proposed', thief]]);
 });
+
+test('a due date is shown on its own day in Spain, not the next one', async () => {
+  const { dayString } = await import('../workdays.js');
+  // VAT due 20 April 2027: the vault's lock is the end of that day in UTC.
+  const due = BigInt(Date.UTC(2027, 3, 21) / 1000);
+  // Before: the app formatted (due - 1 s) in the device's time zone, which in
+  // Madrid is already 21 April: users saw one more day than they had.
+  assert.equal(new Date(Number(due - 1n) * 1000).toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }), '2027-04-21');
+  assert.equal(dayString(due), '2027-04-20');
+});

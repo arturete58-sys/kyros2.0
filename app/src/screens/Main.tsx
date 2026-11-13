@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { normalizeAmount, parseAmount, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
+import { normalizeAmount, parseAmount, dayString, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
 import { mixedOf, reclaimMixedVat, setAsideMissingVat, abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
@@ -560,7 +560,9 @@ export function periodText(kind: PeriodKind | null, id: number): string {
   }
 }
 
-const dueDay = (secs: bigint) => fmtDay(new Date(Number(secs - 1n) * 1000));
+// A due date ends at midnight UTC: in Spain that is already the next day, so the
+// day is the contract's (UTC) day, shown at noon so no time zone moves it.
+const dueDay = (secs: bigint) => fmtDay(new Date(`${dayString(secs)}T12:00:00Z`));
 const deadlineText = deadlineLabel;
 
 export function Pay() {
