@@ -694,6 +694,11 @@ export class KyrosClient {
     return BigInt(scValToNative(await this.read(vault, 'due_soon', addr(token))) as bigint);
   }
 
+  /** Whether a stopped strategy is still bringing its reserve back (`invest` finishes it). */
+  async stopping(vault: string): Promise<boolean> {
+    return scValToNative(await this.read(vault, 'stopping')) as boolean;
+  }
+
   /** What `invest` would move now: positive into the strategy, negative back to the vault. */
   async investPreview(vault: string): Promise<bigint> {
     return BigInt(scValToNative(await this.read(vault, 'invest')) as bigint);

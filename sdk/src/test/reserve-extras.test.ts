@@ -214,18 +214,20 @@ test('yield with Blend and Ondo together: USDY waits until it is active, and onl
 test('the keeper calls invest only when it would move something', async () => {
   const { Keeper } = await import('../keeper.js');
   const { Keypair } = await import('@stellar/stellar-sdk');
-  const moves: Record<string, bigint> = { a: -410n, b: 0n, c: 205n };
+  const moves: Record<string, bigint> = { a: -410n, b: 0n, c: 205n, d: 0n };
   const sent: string[] = [];
   const client = {
     strategy: async (v: string) => (v === 'none' ? null : { adapter: 'X', token: 'T', maxBps: 5000 }),
     investPreview: async (v: string) => moves[v],
+    stopping: async (v: string) => v === 'd',
     investOp: (v: string) => v,
     send: async (_k: unknown, op: string) => (sent.push(op), { hash: `h-${op}` }),
   } as unknown as ConstructorParameters<typeof Keeper>[0];
-  const k = new Keeper(client, Keypair.random(), [], () => {}, ['a', 'b', 'c', 'none']);
+  const k = new Keeper(client, Keypair.random(), [], () => {}, ['a', 'b', 'c', 'd', 'none']);
   const out = await k.rebalance();
-  assert.deepEqual(sent, ['a', 'c']);
-  assert.deepEqual(out.map((r) => [r.vault, r.moved, r.hash]), [['a', -410n, 'h-a'], ['c', 205n, 'h-c']]);
+  // 'd' moves nothing but is stopping: the call removes its strategy.
+  assert.deepEqual(sent, ['a', 'c', 'd']);
+  assert.deepEqual(out.map((r) => [r.vault, r.moved, r.hash]), [['a', -410n, 'h-a'], ['c', 205n, 'h-c'], ['d', 0n, 'h-d']]);
 });
 
 test('a payment link is read only when every part is well formed', async () => {

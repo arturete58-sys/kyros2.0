@@ -5,7 +5,7 @@
  * does not), the prepayments, and the reserve the vault should keep.
  */
 import { useMemo, useRef, useState } from 'react';
-import {
+import { normalizeAmount,
   assistantText,
   deductionSummary,
   deductionTexts,
@@ -29,7 +29,7 @@ const say = (k: string, vars?: Record<string, string | number>) => assistantText
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 const num = (x: number) => fmtNumber(x, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const parse = (s: string) => {
-  const v = Number(s.replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+  const v = Number(normalizeAmount(s) ?? NaN);
   return Number.isFinite(v) ? v : 0;
 };
 

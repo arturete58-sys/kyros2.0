@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
+import { normalizeAmount, parseAmount, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
 import { mixedOf, reclaimMixedVat, setAsideMissingVat, abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
@@ -424,7 +424,7 @@ export function Request() {
     currency: 'EUR',
     withholding: withhold ? { rate: '15' } : undefined,
     payTo: { address: vault.vault, asset: 'USDC' },
-    lines: [{ description: t('invoiceTo', { number, client }), quantity: '1', unitPrice: base || '0', vatRate: String(vatBps / 100) }],
+    lines: [{ description: t('invoiceTo', { number, client }), quantity: '1', unitPrice: normalizeAmount(base) ?? '0', vatRate: String(vatBps / 100) }],
   };
   let tot: ReturnType<typeof requestTotals> | null = null;
   try {
@@ -452,7 +452,7 @@ export function Request() {
             </div>
             <div className="field">
               <label htmlFor="req-base">{t('amountNoVat')}</label>
-              <input id="req-base" name="amount" autoComplete="off" className="input" inputMode="decimal" value={base} onChange={(e) => setBase(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))} />
+              <input id="req-base" name="amount" autoComplete="off" className="input" inputMode="decimal" value={base} onChange={(e) => setBase(e.target.value.replace(/[^\d.,\s'’]/g, ''))} />
             </div>
             {tot && (
               <div className="card">
@@ -577,7 +577,9 @@ export function Pay() {
   const payOne = (h: Held) =>
     run(t('paying'), async (step) => {
       const raw = amounts[key(h)];
-      const amount = raw ? BigInt(Math.round(Number(raw.replace(',', '.')) * 1e7)) : h.amount;
+      const typed = raw ? normalizeAmount(raw) : null;
+      if (raw && typed === null) throw new Error(t('badAmount', { max: money(h.amount) }));
+      const amount = typed ? parseAmount(typed.replace(/(\.\d{7})\d+$/, '$1')) : h.amount;
       if (amount <= 0n || amount > h.amount) throw new Error(t('badAmount', { max: money(h.amount) }));
       step(t('payingBucket', { what: bucketLabel(h.bucket), cur: cur(h) }));
       setHashes([await payBucket(chain, wallet, vault, h, amount)]);

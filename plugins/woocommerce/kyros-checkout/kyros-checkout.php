@@ -174,7 +174,8 @@ add_action('woocommerce_blocks_payment_method_type_registration', function ($reg
 });
 
 /**
- * POST /wp-json/kyros/v1/orders/{id} {key, hash|null}: the buyer's browser reports a transfer
+ * POST /wp-json/kyros/v1/orders/{id} {key, payer?, hash|null}: the buyer's browser says which
+ * wallet pays, then reports a transfer
  * (or asks what is paid). The hash is checked on chain before anything changes.
  */
 add_action('rest_api_init', function () {
@@ -213,7 +214,27 @@ function kyros_checkout_order_status(WP_REST_Request $req) {
 	$hash = strtolower((string) $req->get_param('hash'));
 	$gateway = WC()->payment_gateways()->payment_gateways()['kyros'] ?? null;
 
+	// The widget says which wallet pays before the buyer signs. Only transfers
+	// from that wallet, made after that moment, pay this order: a transfer
+	// someone else made (public on chain) cannot be claimed for it.
+	$payer = (string) $req->get_param('payer');
+	if ($payer !== '' && !$order->is_paid()) {
+		if (!preg_match('/^[GC][A-Z2-7]{55}$/', $payer)) {
+			return new WP_REST_Response(['error' => 'not a Stellar address'], 422);
+		}
+		if ($payer !== (string) $order->get_meta('_kyros_payer')) {
+			$order->update_meta_data('_kyros_payer', $payer);
+			$order->update_meta_data('_kyros_payer_at', (string) time());
+			$order->save();
+		}
+	}
+	$payer = (string) $order->get_meta('_kyros_payer');
+	$payer_at = (int) $order->get_meta('_kyros_payer_at');
+
 	if ($hash !== '' && $gateway && !$order->is_paid()) {
+		if ($payer === '' || $payer_at === 0) {
+			return new WP_REST_Response(['error' => 'say which wallet pays first'], 409);
+		}
 		// A transaction pays one order, once.
 		$used = wc_get_orders(['limit' => 1, 'return' => 'ids', 'meta_query' => [['key' => '_kyros_tx_' . $hash, 'compare' => 'EXISTS']]]);
 		// Claimed before the (slow) check on chain: the same transaction posted
@@ -226,7 +247,6 @@ function kyros_checkout_order_status(WP_REST_Request $req) {
 			$r = wp_remote_get($url, ['timeout' => 20]);
 			return is_wp_error($r) || wp_remote_retrieve_response_code($r) !== 200 ? null : json_decode(wp_remote_retrieve_body($r), true);
 		};
-		$created = $order->get_date_created();
 		$matched = false;
 		foreach ($payments as $p) {
 			if (isset($paid[$p['inbox']])) {
@@ -234,11 +254,14 @@ function kyros_checkout_order_status(WP_REST_Request $req) {
 			}
 			// The network may take a few seconds to show it.
 			for ($try = 0; $try < 3; $try++) {
-				$v = Kyros_Core::verify($get, $gateway->horizon($c), $hash, ['to' => $p['inbox'], 'amount' => (int) $p['amount'], 'code' => $asset['code'] ?? '', 'issuer' => $asset['issuer'] ?? ''], $created ? $created->getTimestamp() - 60 : null);
+				$v = Kyros_Core::verify($get, $gateway->horizon($c), $hash, ['to' => $p['inbox'], 'amount' => (int) $p['amount'], 'code' => $asset['code'] ?? '', 'issuer' => $asset['issuer'] ?? ''], $payer_at);
 				if ($v['ok'] || $v['reason'] !== 'not-found') {
 					break;
 				}
 				sleep(2);
+			}
+			if ($v['ok'] && ($v['from'] ?? '') !== $payer) {
+				$v = ['ok' => false, 'reason' => 'no-transfer'];
 			}
 			if ($v['ok']) {
 				$paid[$p['inbox']] = $hash;

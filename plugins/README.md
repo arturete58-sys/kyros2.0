@@ -17,7 +17,7 @@ A payment gateway for the classic and the block checkout.
 - **Install**: zip the `kyros-checkout` folder and upload it in Plugins → Add new → Upload, or copy it to `wp-content/plugins`.
 - **Settings**: WooCommerce → Settings → Payments → Kyros. Paste the configuration from the app. The store's currency must be the stablecoin's: USD for USDC, EUR for EURC. On mainnet, also set your Stellar RPC provider.
 - **VAT**: comes from your WooCommerce tax settings. Each line, shipping and fee is grouped by its rate. If a rate has no Kyros address, the order page says which one to add.
-- **Payment**: the order's payment page shows `<kyros-checkout>`. The buyer connects any Stellar wallet (LOBSTR, Freighter, xBull, Albedo, Hana, Rabet...) and signs one transfer per VAT rate in the order. After each transfer, the browser sends the transaction hash to `POST /wp-json/kyros/v1/orders/{id}`.
+- **Payment**: the order's payment page shows `<kyros-checkout>`. The buyer connects any Stellar wallet (LOBSTR, Freighter, xBull, Albedo, Hana, Rabet...) and signs one transfer per VAT rate in the order. Before the first signature the browser says which wallet pays (`payer`); after each transfer it sends the transaction hash to `POST /wp-json/kyros/v1/orders/{id}`.
 - **Checks before an order is marked paid**: Horizon confirms the transfer, to the right address, of the exact amount, made after the order was created. A transaction pays one order only, once.
 
 The tests run in CI: the core in plain PHP, then inside WordPress with WooCommerce. An order there is paid with a real transfer made on testnet by the testnet demo.
@@ -30,7 +30,7 @@ Shopify lets only approved payments partners add a payment method to its checkou
 - **What it does with each order:**
   - The `orders/create` webhook (signature checked) turns the order into one transfer per VAT rate. The rates come from Shopify's tax lines, with prices including or excluding tax and after discounts.
   - `/pay/<order>?n=<confirmation number>` shows `<kyros-checkout>`.
-  - Each transaction hash is checked on the Stellar RPC: right address, exact amount, after the order, used once.
+  - Each transaction hash is checked on the Stellar RPC: right address, exact amount, from the wallet the browser named, after it named it, used once. A transfer someone else made, visible on chain, cannot be claimed for another order.
   - When every transfer is in, the order is marked paid (`orderMarkAsPaid`), with the transactions in a `kyros.transactions` metafield and a `kyros-paid` tag.
 - **The Thank you page** (`extensions/kyros-pay-link`, a checkout UI extension on the 2026-01 API): when the buyer chose a manual payment method, a "Pay now" button and a QR code (to pay from a phone wallet) lead to that page. `shopify.app.toml.example` has the scopes and the webhook.
 
@@ -67,7 +67,7 @@ The buyer comes from `X-Buyer-Country` and `X-Buyer-VAT-ID`, or from the country
   return-url="https://shop.example/thanks"></kyros-checkout>
 ```
 
-The shop's endpoint checks each hash with `verifyCheckoutPayment` (SDK, Node) or `Kyros_Core::verify` (PHP), and answers `{ paid: [inbox...], complete, redirect }`.
+The widget posts `{ key, payer }` before paying and `{ key, hash, payer }` after each transfer. The shop's endpoint checks each hash with `verifyCheckoutPayment` (SDK, Node) or `Kyros_Core::verify` (PHP), and answers `{ paid: [inbox...], complete, redirect }`.
 
 ## What is not here
 

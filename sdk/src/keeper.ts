@@ -116,7 +116,8 @@ export class Keeper {
       try {
         if (!(await this.client.strategy(vault))) continue;
         moved = await this.client.investPreview(vault);
-        if (moved === 0n) continue;
+        // A stopping strategy that is already empty moves nothing, but the call removes it.
+        if (moved === 0n && !(await this.client.stopping(vault))) continue;
         out.push({ vault, moved, hash: (await this.client.send(this.key, this.client.investOp(vault))).hash });
       } catch (e) {
         out.push({ vault, moved, error: (e as Error).message });

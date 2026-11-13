@@ -288,15 +288,22 @@ fn bucket_due(d: &Dues, bucket: &Symbol) -> Due {
     d.buckets.get(bucket.clone()).unwrap_or(d.default.clone())
 }
 
-fn check_dues(d: &Dues) -> Result<(), VaultError> {
+fn check_dues(d: &Dues, period: &PeriodKind) -> Result<(), VaultError> {
     if d.closed >= 0b111_1111 {
         return Err(VaultError::InvalidDue);
     }
-    if !valid_due(&d.default) {
+    // Calendar due dates (a day of a month, a date after the fiscal year)
+    // only make sense for calendar periods: a fixed-length period can end
+    // after the day of its month, and its tax would be due before it ends.
+    let fits = |due: &Due| {
+        valid_due(due)
+            && (matches!(due, Due::After(_)) || !matches!(period, PeriodKind::Seconds(_)))
+    };
+    if !fits(&d.default) {
         return Err(VaultError::InvalidDue);
     }
     for (_, due) in d.buckets.iter() {
-        if !valid_due(&due) {
+        if !fits(&due) {
             return Err(VaultError::InvalidDue);
         }
     }
@@ -453,6 +460,9 @@ enum Key {
     /// Set once a token had more than `MAX_OPEN` such periods: `invest` then
     /// treats all its reserve as due soon.
     OpenFull(Address),
+    /// The owner stopped the strategy while it could not pay everything out:
+    /// `invest` brings the rest back and then removes it.
+    Stopping,
 }
 
 #[contractevent(topics = ["kyros_vault", "received"])]
@@ -641,6 +651,16 @@ pub struct StrategyProposed {
 pub struct StrategyStopped {
     /// What came back from the strategy.
     pub withdrawn: i128,
+}
+
+/// The owner stopped the strategy, but it could not pay everything out now:
+/// it takes nothing more, and `invest` brings the rest back.
+#[contractevent(topics = ["kyros_vault", "strategy_stopping"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StrategyStopping {
+    pub withdrawn: i128,
+    /// Still in the strategy.
+    pub left: i128,
 }
 
 #[contractevent(topics = ["kyros_vault", "invested"])]
@@ -1139,7 +1159,7 @@ impl ReserveVault {
         if !valid_period(&period) {
             return Err(VaultError::InvalidPeriod);
         }
-        check_dues(&dues)?;
+        check_dues(&dues, &period)?;
         if tokens.is_empty() {
             return Err(VaultError::NoTokens);
         }
@@ -2194,16 +2214,45 @@ impl ReserveVault {
         }
         let mut withdrawn = 0;
         if let Some(s) = s {
+            let me = e.current_contract_address();
+            let t = token::Client::new(&e, &s.token);
             let y = YieldClient::new(&e, &s.adapter);
             let all = y.balance();
             if all > 0 {
-                withdrawn = y.withdraw(&all);
+                let before = t.balance(&me);
+                let ok = matches!(y.try_withdraw(&all), Ok(Ok(_)));
+                withdrawn = t.balance(&me) - before;
+                if !ok {
+                    // A fully lent pool or a stale price: removing the strategy
+                    // now would strand what it holds. It takes nothing more,
+                    // and `invest` brings the rest back, then removes it.
+                    e.storage().instance().set(&Key::Strategy, &s);
+                    e.storage().instance().remove(&Key::PendingStrategy);
+                    e.storage().instance().set(&Key::Stopping, &true);
+                    bump_instance(&e);
+                    StrategyStopping {
+                        withdrawn,
+                        left: y.balance(),
+                    }
+                    .publish(&e);
+                    return Ok(withdrawn);
+                }
             }
         }
+        Self::drop_strategy(&e, withdrawn);
+        Ok(withdrawn)
+    }
+
+    /// Whether a stopped strategy is still bringing its reserve back.
+    pub fn stopping(e: Env) -> bool {
+        e.storage().instance().get(&Key::Stopping).unwrap_or(false)
+    }
+
+    fn drop_strategy(e: &Env, withdrawn: i128) {
         e.storage().instance().remove(&Key::Strategy);
         e.storage().instance().remove(&Key::PendingStrategy);
-        StrategyStopped { withdrawn }.publish(&e);
-        Ok(withdrawn)
+        e.storage().instance().remove(&Key::Stopping);
+        StrategyStopped { withdrawn }.publish(e);
     }
 
     /// Keeps the strategy at its share of the reserve that is not due soon.
@@ -2220,8 +2269,20 @@ impl ReserveVault {
         let me = e.current_contract_address();
         let t = token::Client::new(&e, &s.token);
         let y = YieldClient::new(&e, &s.adapter);
-        let soon = due_soon(&e, &c, &s.token);
         let liquid = t.balance(&me);
+        if Self::stopping(e.clone()) {
+            // Stopped by the owner: everything comes back, then it is removed.
+            let rest = y.balance();
+            // Payments may already have taken it all (`ensure_liquid`).
+            let ok = rest <= 0 || matches!(y.try_withdraw(&rest), Ok(Ok(_)));
+            let back = t.balance(&me) - liquid;
+            if ok {
+                Self::drop_strategy(&e, back);
+            }
+            bump_instance(&e);
+            return Ok(-back);
+        }
+        let soon = due_soon(&e, &c, &s.token);
         if liquid < soon {
             // A strategy that cannot pay out now is asked again on the next call.
             let _ = y.try_withdraw(&(soon - liquid));

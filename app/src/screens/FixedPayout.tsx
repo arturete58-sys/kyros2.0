@@ -7,7 +7,7 @@
  */
 import { useMemo, useState } from 'react';
 import { StrKey } from '@stellar/stellar-sdk';
-import { fixedFeeSuggestion, monthsIn, type PeriodKind } from 'kyros-sdk';
+import { normalizeAmount, fixedFeeSuggestion, monthsIn, type PeriodKind } from 'kyros-sdk';
 import { cancelPending, money, perUnit, proposeFixedFee, proposePayout, rememberMine, units } from '../kyros';
 import { fmtDateTime, fmtNumber, t, type Key } from '../i18n';
 import { Button, pct, Tabs, Top, TxLink, useApp } from '../ui';
@@ -43,7 +43,7 @@ export function FixedFee() {
   const [monthly, setMonthly] = useState(() => (current && kind ? String(units(current.amount) / monthsIn(kind)) : suggestion && sameCurrency ? String(suggestion.monthly) : ''));
   const [hash, setHash] = useState<string | null>(null);
   if (!vault || !wallet || !snap) return null;
-  const value = Number(monthly.replace(',', '.')) || 0;
+  const value = Number(normalizeAmount(monthly) ?? '0') || 0;
   const word = periodWord(kind);
   const perPeriod = kind ? value * monthsIn(kind) : value;
   const filled = current ? (snap.fixedFilled[current.token]?.social ?? 0n) : 0n;

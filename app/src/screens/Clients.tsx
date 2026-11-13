@@ -4,7 +4,7 @@
  * registered in the vault with that client's VAT and withholding.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { EU_STANDARD_VAT } from 'kyros-sdk';
+import { normalizeAmount, EU_STANDARD_VAT } from 'kyros-sdk';
 import { addClient, clientTermsNow, sameTerms, updateClient, type ClientAddress } from '../kyros';
 import { countries, countryName } from '../packs';
 import { t } from '../i18n';
@@ -161,7 +161,7 @@ export function Clients() {
             disabled={!ready}
             onClick={() =>
               run(t('clientAdding'), async (step) => {
-                const wh = business && country === home ? Math.round(Number(withholding.replace(',', '.') || '0') * 100) : 0;
+                const wh = business && country === home ? Math.round(Number(normalizeAmount(withholding) ?? '0') * 100) : 0;
                 setVault(
                   await addClient(
                     chain,

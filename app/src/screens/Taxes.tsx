@@ -4,7 +4,7 @@
  * on each prepayment, the tax office's letter, and scheduled payments.
  */
 import { useState } from 'react';
-import { daysFromCivil, dayString, drawFrom, incomeTaxBuckets, readNotice, suggestPrepayment, taxYearStart, vatRecovery, type Deadline, type PeriodKind, type ScheduledItem } from 'kyros-sdk';
+import { normalizeAmount, parseAmount, daysFromCivil, dayString, drawFrom, incomeTaxBuckets, readNotice, suggestPrepayment, taxYearStart, vatRecovery, type Deadline, type PeriodKind, type ScheduledItem } from 'kyros-sdk';
 import { applyNotice, cancelScheduled, figuresWithOutside, loadExpenses, loadInputs, money, noticeText, runDueScheduled, saveInputs, schedulePayment, taxYearPeriods, type Held, type Snapshot, type VaultInfo } from '../kyros';
 import { fmtDate as fmtDay, fmtNumber, locale, t } from '../i18n';
 import { Button, TxLink, useApp } from '../ui';
@@ -13,8 +13,8 @@ const DAY = 86_400n;
 const endOfDay = (iso: string) => (daysFromCivil(BigInt(iso.slice(0, 4)), Number(iso.slice(5, 7)), Number(iso.slice(8, 10))) + 1n) * DAY;
 const showDay = (iso: string) => fmtDay(new Date(`${iso}T12:00:00Z`));
 const toUnits = (raw: string): bigint | undefined => {
-  const n = Number(raw.replace(/\s/g, '').replace(',', '.'));
-  return raw.trim() && Number.isFinite(n) && n >= 0 ? BigInt(Math.round(n * 1e7)) : undefined;
+  const v = normalizeAmount(raw);
+  return v === null ? undefined : parseAmount(v.replace(/(\.\d{7})\d+$/, '$1'));
 };
 const fromUnits = (x: bigint | undefined) => (x === undefined ? '' : (Number(x) / 1e7).toFixed(2));
 

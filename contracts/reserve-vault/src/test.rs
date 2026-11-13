@@ -794,6 +794,58 @@ fn a_fully_lent_pool_is_asked_again_on_the_next_call() {
 }
 
 #[test]
+fn a_strategy_stopped_while_its_pool_is_lent_out_finishes_stopping_later() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &10_000);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    w.v.invest();
+    // Before: with the pool fully lent the owner could not stop it at all.
+    y.set_lent_out(&true);
+    assert_eq!(w.v.stop_strategy(), 0);
+    assert!(w.v.stopping());
+    assert_eq!(w.v.position(&w.token).invested, 410 * UNIT);
+    // While stopping it takes nothing more, and nothing else can start.
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    assert_eq!(w.v.invest(), 0);
+    assert_eq!(y.balance(), 410 * UNIT);
+    assert_eq!(
+        w.v.try_propose_strategy(&y.address, &10_000),
+        Err(Ok(VaultError::StrategyInUse))
+    );
+    // Once the pool can pay, the next call brings it all back and removes it.
+    y.set_lent_out(&false);
+    assert_eq!(w.v.invest(), -410 * UNIT);
+    assert!(!w.v.stopping());
+    assert_eq!(w.v.strategy(), None);
+    assert_eq!(bal(w, &w.v.address), 820 * UNIT);
+    assert_eq!(w.v.try_invest(), Err(Ok(VaultError::NoStrategy)));
+}
+
+#[test]
+fn a_stopping_strategy_emptied_by_payments_is_removed_on_the_next_call() {
+    let x = euro_world();
+    let w = &x.w;
+    w.v.receive(&w.payer, &w.token, &(1_210 * UNIT), &r(w));
+    let q = w.v.current_period();
+    let y = yield_for(&x, &w.v.address, &w.token);
+    w.v.propose_strategy(&y.address, &10_000);
+    w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
+    w.v.invest();
+    y.set_lent_out(&true);
+    w.v.stop_strategy();
+    // The tax payments themselves bring everything back from the pool.
+    y.set_lent_out(&false);
+    w.v.pay_tax(&q, &w.token, &symbol_short!("vat"), &(210 * UNIT));
+    w.v.pay_tax(&q, &w.token, &symbol_short!("irpf"), &(200 * UNIT));
+    assert_eq!(y.balance(), 0);
+    assert_eq!(w.v.invest(), 0);
+    assert_eq!(w.v.strategy(), None);
+}
+
+#[test]
 fn only_the_reserve_not_due_soon_is_invested() {
     let x = euro_world();
     let w = &x.w;
@@ -1635,4 +1687,42 @@ fn a_new_currency_can_be_cancelled_during_the_notice() {
     w.e.ledger().set_timestamp(FEB_10_2027 + NOTICE);
     assert!(!w.v.accepts(&cbdc));
     assert_eq!(w.v.pending_token(), None);
+}
+
+fn vault_on(w: &W, period: PeriodKind, dues: Dues) -> Address {
+    w.e.register(
+        ReserveVault,
+        (
+            w.owner.clone(),
+            spain(&w.e),
+            w.tax.clone(),
+            NOTICE,
+            period,
+            dues,
+            vec![&w.e, w.token.clone()],
+        ),
+    )
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #")]
+fn a_calendar_due_date_on_fixed_length_periods_is_refused() {
+    // Before: a weekly period ending on the 25th had its tax "due" on the 20th,
+    // before the period even ended.
+    let w = world();
+    vault_on(&w, PeriodKind::Seconds(7 * 86_400), spanish_dues(&w.e));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #")]
+fn a_due_date_past_the_clock_is_refused() {
+    // Before: every due date overflowed and the whole vault stopped.
+    let w = world();
+    vault_on(&w, PeriodKind::Quarter, dues_after(&w.e, u64::MAX));
+}
+
+#[test]
+fn fixed_length_periods_still_take_a_delay_after_they_end() {
+    let w = world();
+    vault_on(&w, PeriodKind::Seconds(3_600), dues_after(&w.e, 600));
 }

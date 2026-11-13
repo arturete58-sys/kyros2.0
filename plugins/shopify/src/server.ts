@@ -49,6 +49,9 @@ interface OrderRecord {
   payments: { inbox: string; bps: number; amount: string }[];
   paid: Record<string, string>;
   complete: boolean;
+  /** The wallet the buyer pays from, said before paying, and when. */
+  payer?: string;
+  payerAt?: string;
 }
 
 interface Store {
@@ -108,11 +111,23 @@ export function kyrosShopify(o: KyrosShopifyOptions): Server {
     return 'ok';
   }
 
-  async function onStatus(id: string, body: { key?: string; hash?: string | null }) {
+  async function onStatus(id: string, body: { key?: string; hash?: string | null; payer?: string | null }) {
     const rec = store.orders[id];
     if (!rec || !body.key || body.key !== rec.n) return [404, { error: 'unknown order' }] as const;
+    // The widget says which wallet pays before it asks the buyer to sign. Only
+    // transfers from that wallet, made after that moment, pay this order: a
+    // transfer someone else made (visible on chain) cannot be claimed for it.
+    if (body.payer && !rec.complete) {
+      if (!/^[GC][A-Z2-7]{55}$/.test(body.payer)) return [422, { error: 'not a Stellar address' }] as const;
+      if (body.payer !== rec.payer) {
+        rec.payer = body.payer;
+        rec.payerAt = new Date().toISOString();
+        save();
+      }
+    }
     const hash = (body.hash ?? '').toLowerCase();
     if (hash && !rec.complete) {
+      if (!rec.payer || !rec.payerAt) return [409, { error: 'say which wallet pays first' }] as const;
       if (!/^[0-9a-f]{64}$/.test(hash)) return [422, { error: 'not a transaction hash' }] as const;
       if (store.used[hash] || checking.has(hash)) return [409, { error: 'this transaction was already used' }] as const;
       checking.add(hash);
@@ -136,7 +151,7 @@ export function kyrosShopify(o: KyrosShopifyOptions): Server {
   }
 
   async function checkHash(id: string, rec: OrderRecord, hash: string) {
-    const notBefore = new Date(Date.parse(rec.createdAt) - 60_000).toISOString();
+    const notBefore = rec.payerAt!;
     let matched = false;
     for (const p of rec.payments) {
       if (rec.paid[p.inbox]) continue;
@@ -147,6 +162,7 @@ export function kyrosShopify(o: KyrosShopifyOptions): Server {
         if (v.ok || v.reason !== 'not-found') break;
         await new Promise((r) => setTimeout(r, 2000));
       }
+      if (v.ok && (v.from !== rec.payer || Date.parse(v.closedAt) < Date.parse(notBefore))) v = { ok: false, reason: 'no-transfer' };
       if (v.ok) {
         rec.paid[p.inbox] = hash;
         store.used[hash] = id;

@@ -337,10 +337,14 @@ fn end_of_day(y: i64, m: i64, day: u32) -> u64 {
     ((days_from_civil(y, m, d) + 1) * DAY) as u64
 }
 
+/// The longest a tax may fall due after its period ends with `Due::After`
+/// (four years: no tax waits longer, and the clock cannot overflow).
+pub const MAX_DUE_AFTER_SECS: u64 = 4 * 366 * 86_400;
+
 /// Whether a due rule is well formed.
 pub fn valid_due(due: &Due) -> bool {
     match due {
-        Due::After(_) => true,
+        Due::After(secs) => *secs <= MAX_DUE_AFTER_SECS,
         Due::MonthDay(md) => {
             md.months <= 24
                 && (1..=31).contains(&md.day)

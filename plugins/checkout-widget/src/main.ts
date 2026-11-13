@@ -61,6 +61,9 @@ const PASSPHRASE: Record<string, string> = { testnet: StellarNetworks.TESTNET, p
 const fmt = (units: bigint, lang: string) =>
   (Number(units) / 1e7).toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 7 });
 
+/** Text from wallets and the network is shown as text, never as markup. */
+const esc = (x: string) => x.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 class KyrosCheckout extends HTMLElement {
   private root = this.attachShadow({ mode: 'open' });
   private status: Status = { paid: [], complete: false };
@@ -94,13 +97,13 @@ class KyrosCheckout extends HTMLElement {
   }
 
   /** What the shop already has as paid (after a reload, or a payment in two steps). */
-  private async refresh(hash?: string) {
+  private async refresh(hash?: string, payer?: string) {
     const url = this.getAttribute('status-url');
     if (!url) return;
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ key: this.getAttribute('order-key') ?? '', hash: hash ?? null }),
+      body: JSON.stringify({ key: this.getAttribute('order-key') ?? '', hash: hash ?? null, ...(payer ? { payer } : {}) }),
     });
     const s = (await r.json()) as Status;
     if (!r.ok || s.error) throw new Error(s.error || `HTTP ${r.status}`);
@@ -123,6 +126,8 @@ class KyrosCheckout extends HTMLElement {
       const network = this.network;
       StellarWalletsKit.init({ modules: defaultModules(), network: network === 'pubnet' ? Networks.PUBLIC : Networks.TESTNET });
       const { address } = await StellarWalletsKit.authModal();
+      // The shop only counts transfers from the wallet named here, made after now.
+      await this.refresh(undefined, address);
       const rpcUrl = this.getAttribute('rpc') || RPC[network];
       if (!rpcUrl) throw new Error(this.t('failed', { why: 'no Stellar RPC set for mainnet' }));
       const server = new rpc.Server(rpcUrl);
@@ -148,7 +153,7 @@ class KyrosCheckout extends HTMLElement {
         if (res.status !== rpc.Api.GetTransactionStatus.SUCCESS) throw new Error(this.t('failed', { why: res.status }));
         this.message = this.t('checking');
         this.render();
-        await this.refresh(sent.hash);
+        await this.refresh(sent.hash, address);
       }
     } catch (e) {
       this.error = (e as Error).message || String(e);
@@ -162,7 +167,7 @@ class KyrosCheckout extends HTMLElement {
   private render() {
     const ps = this.payments;
     const total = ps.reduce((a, p) => a + BigInt(p.amount), 0n);
-    const code = this.getAttribute('asset-code') ?? 'USDC';
+    const code = esc(this.getAttribute('asset-code') ?? 'USDC');
     const pct = (bps: number) => `${(bps / 100).toLocaleString(this.language)} %`;
     const rows = ps
       .map((p) => {
@@ -191,8 +196,8 @@ class KyrosCheckout extends HTMLElement {
         <div class="total"><span>${this.t('total')}</span><span>${fmt(total, this.language)} ${code}</span></div>
         ${ps.length > 1 && !this.status.complete ? `<p class="muted">${this.t('several', { n: ps.length })}</p>` : ''}
         ${this.status.complete ? '' : `<button part="button" ${this.busy ? 'disabled' : ''}>${this.t('pay')}</button>`}
-        ${this.message ? `<p class="msg" role="status">${this.message}</p>` : ''}
-        ${this.error ? `<p class="err" role="alert">${this.error}</p>` : ''}
+        ${this.message ? `<p class="msg" role="status">${esc(this.message)}</p>` : ''}
+        ${this.error ? `<p class="err" role="alert">${esc(this.error)}</p>` : ''}
         <p class="muted">${this.t('note')}</p>
       </div>`;
     this.root.querySelector('button')?.addEventListener('click', () => void this.pay());

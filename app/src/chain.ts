@@ -4,7 +4,7 @@
  * friendbot. It pays network fees and deploys contracts; it never owns the
  * user's money (the vault's owner is the user's wallet).
  */
-import { Asset, BASE_FEE, Keypair, Operation, rpc, Transaction, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import { Asset, BASE_FEE, Keypair, Networks, Operation, rpc, Transaction, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
 import { t } from './i18n';
 import { KyrosClient } from 'kyros-sdk';
 import type { AppConfig } from './config';
@@ -44,6 +44,9 @@ export class Chain {
   readonly server: rpc.Server;
   readonly client: KyrosClient;
   constructor(readonly cfg: AppConfig) {
+    // Keys kept in the browser and a published faucet key are for testnet only:
+    // this build refuses to run against the public network.
+    if (cfg.networkPassphrase === Networks.PUBLIC) throw new Error('This build of Kyros is for testnet only.');
     this.server = new rpc.Server(cfg.rpcUrl);
     this.client = new KyrosClient({ rpcUrl: cfg.rpcUrl, networkPassphrase: cfg.networkPassphrase });
   }

@@ -80,3 +80,37 @@ test('a transaction the network dropped (NOT_FOUND) is sent again until it lands
 function fakeOp(): Buffer {
   return Operation.payment({ destination: Keypair.random().publicKey(), asset: Asset.native(), amount: '1' }).toXDR();
 }
+
+test('amounts typed the Spanish way are read as meant', async () => {
+  const { normalizeAmount } = await import('../split.js');
+  // Before: "1.210" became 1.21 and "1.210,50" was not a number at all.
+  const cases: [string, string | null][] = [
+    ['1.210', '1210'],
+    ['1.210,50', '1210.50'],
+    ['1,210.50', '1210.50'],
+    ['1 210,5', '1210.5'],
+    ['1 210,5', '1210.5'],
+    ["1'210.5", '1210.5'],
+    ['1.000.000', '1000000'],
+    ['12,5', '12.5'],
+    ['1210.5', '1210.5'],
+    ['0.125', '0.125'],
+    ['0,125', '0.125'],
+    ['1000', '1000'],
+    [',5', '0.5'],
+    ['', null],
+    ['abc', null],
+    ['-5', null],
+    ['1.2.3,4,5', null],
+  ];
+  for (const [text, want] of cases) assert.equal(normalizeAmount(text), want, text);
+});
+
+test('a token with no decimals is shown whole', async () => {
+  const { formatAmount, parseAmount } = await import('../split.js');
+  // Before: with 0 decimals 1210 came out as ".121".
+  assert.equal(formatAmount(1210n, 0), '1210');
+  assert.equal(formatAmount(-5n, 0), '-5');
+  assert.equal(parseAmount('1210', 0), 1210n);
+  assert.equal(formatAmount(12_105_000_000n), '1210.5');
+});

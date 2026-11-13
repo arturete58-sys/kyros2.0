@@ -90,10 +90,42 @@ export function validateWithholding(rule: Rule, withholdingBps: number): void {
 export function formatAmount(units: bigint, decimals = 7): string {
   const neg = units < 0n;
   const v = neg ? -units : units;
+  if (decimals <= 0) return `${neg ? '-' : ''}${v}`;
   const s = v.toString().padStart(decimals + 1, '0');
   const whole = s.slice(0, -decimals);
   const frac = s.slice(-decimals).replace(/0+$/, '');
   return `${neg ? '-' : ''}${whole}${frac ? `.${frac}` : ''}`;
+}
+
+/**
+ * Reads an amount as people type it, in any of the app's languages, into a
+ * plain decimal ("1210.50"); null if it is not one. "1.210,50", "1,210.50",
+ * "1 210,5" and "1'210.5" are all 1210.5. With one kind of separator: used
+ * more than once, or followed by exactly three digits after a non-zero whole
+ * part, it groups thousands ("1.210" is 1210, as written in Spain); otherwise
+ * it marks the decimals ("12,5", "0.125").
+ */
+export function normalizeAmount(text: string): string | null {
+  const t = text.replace(/[\s\u00a0\u202f'’]/g, '');
+  if (!/^[\d.,]+$/.test(t) || !/\d/.test(t)) return null;
+  const dots = t.split('.').length - 1;
+  const commas = t.split(',').length - 1;
+  let whole = t;
+  let frac = '';
+  if (dots && commas) {
+    const at = Math.max(t.lastIndexOf('.'), t.lastIndexOf(','));
+    whole = t.slice(0, at);
+    frac = t.slice(at + 1);
+    // The decimal mark appears once; the other one only groups thousands.
+    if (whole.includes(t[at])) return null;
+  } else if (dots + commas === 1) {
+    const [a, b] = t.split(/[.,]/);
+    if (b.length === 3 && /[1-9]/.test(a)) whole = a + b;
+    else [whole, frac] = [a, b];
+  }
+  whole = whole.replace(/[.,]/g, '');
+  if (!/^\d+$/.test(whole || '0') || /[.,]/.test(frac)) return null;
+  return frac ? `${whole || '0'}.${frac}` : whole;
 }
 
 /** Parses "1210.5" into 7-decimal units. */

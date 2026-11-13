@@ -275,3 +275,134 @@ fn due_days_move_past_closed_days_and_holidays_like_an_independent_calendar() {
         11 * 86_400 + 60
     );
 }
+
+/// A small deterministic generator, so the random cases repeat exactly.
+struct Rng(u64);
+impl Rng {
+    fn next(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+    fn upto(&mut self, n: u64) -> u64 {
+        self.next() % (n + 1)
+    }
+}
+
+#[test]
+fn every_split_adds_up_and_nothing_is_negative() {
+    let e = Env::default();
+    e.cost_estimate().budget().reset_unlimited();
+    let mut g = Rng(0x9E37_79B9_7F4A_7C15);
+    let names = ["a", "b", "c", "d", "e", "f"];
+    for case in 0..20_000 {
+        let vat = g.upto(BPS as u64) as u32;
+        let mut left = BPS as u64;
+        let mut buckets = Vec::new(&e);
+        for n in names.iter().take(g.upto(MAX_BUCKETS as u64 - 1) as usize) {
+            let bps = g.upto(left) as u32;
+            left -= bps as u64;
+            buckets.push_back(Bucket {
+                name: Symbol::new(&e, n),
+                bps,
+            });
+        }
+        let r = Rule {
+            vat_bps: vat,
+            buckets,
+        };
+        assert!(validate(&e, &r).is_ok());
+        let w = if case % 2 == 0 {
+            0
+        } else {
+            g.upto(left) as u32
+        };
+        if !validate_withholding(&r, w) {
+            continue;
+        }
+        // Up to 10^18 units: a trillion dollars in a 7-decimal token.
+        let gross = match case % 4 {
+            0 => g.upto(10) as i128,
+            1 => g.upto(1_000_000) as i128,
+            _ => g.upto(1_000_000_000_000_000_000) as i128,
+        };
+        let s = split_withheld(&e, &r, w, gross);
+        let parts: i128 = s.parts.iter().sum();
+        assert_eq!(s.net + s.reserve, gross, "case {case}");
+        assert_eq!(s.reserve, s.vat + parts, "case {case}");
+        assert!(
+            s.net >= 0 && s.vat >= 0 && s.base >= 0,
+            "case {case}: {s:?}"
+        );
+        assert!(s.parts.iter().all(|p| p >= 0), "case {case}");
+        assert!(
+            s.base * (BPS + vat as i128 - w as i128) / BPS <= gross,
+            "case {case}"
+        );
+    }
+}
+
+#[test]
+fn every_timestamp_falls_in_its_period_and_is_due_after_it() {
+    let mut g = Rng(0xD1B5_4A32_D192_ED03);
+    let kinds = [
+        PeriodKind::Month,
+        PeriodKind::Quarter,
+        PeriodKind::Year,
+        PeriodKind::Months(2),
+        PeriodKind::Months(6),
+    ];
+    let dues = [
+        Due::After(20 * 86_400),
+        Due::MonthDay(MonthDay {
+            months: 0,
+            day: 20,
+            exception_month: 7,
+            exception_months: 1,
+            exception_day: 20,
+        }),
+        Due::MonthDay(MonthDay {
+            months: 1,
+            day: 31,
+            exception_month: 0,
+            exception_months: 0,
+            exception_day: 0,
+        }),
+        Due::YearDate(YearDate {
+            fy_start_month: 4,
+            fy_start_day: 6,
+            month: 1,
+            day: 31,
+            years_after: 2,
+        }),
+    ];
+    for _ in 0..20_000 {
+        // From 1970 to 2100.
+        let ts = g.upto(4_102_444_800);
+        for k in kinds.iter() {
+            let id = period_of(k, ts);
+            assert!(
+                period_start(k, id) <= ts && ts < period_end(k, id),
+                "{k:?} {ts}"
+            );
+            for d in dues.iter() {
+                assert!(due_at(k, id, d) >= period_end(k, id), "{k:?} {d:?} {ts}");
+            }
+        }
+        // Fixed-length periods take only `After` (the vault refuses the rest).
+        let k = PeriodKind::Seconds(86_400 * 7);
+        let id = period_of(&k, ts);
+        assert!(period_start(&k, id) <= ts && ts < period_end(&k, id));
+        assert!(due_at(&k, id, &dues[0]) >= period_end(&k, id));
+    }
+}
+
+#[test]
+fn a_due_rule_that_would_overflow_the_clock_is_invalid() {
+    // Before: `After(u64::MAX)` was valid and every due date it gave overflowed,
+    // so release, invest and pay_tax failed for the whole vault.
+    assert!(!valid_due(&Due::After(u64::MAX)));
+    assert!(!valid_due(&Due::After(MAX_DUE_AFTER_SECS + 1)));
+    assert!(valid_due(&Due::After(MAX_DUE_AFTER_SECS)));
+}

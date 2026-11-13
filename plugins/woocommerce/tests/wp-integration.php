@@ -88,11 +88,25 @@ $paid->calculate_totals(false);
 $paid->set_date_created(strtotime($results['startedAt']));
 $paid->save();
 WC_Gateway_Kyros::payments_for($paid, $gateway->config());
-$call = function (WC_Order $order, ?string $h) {
+$call = function (WC_Order $order, ?string $h, ?string $payer = null) {
 	$r = new WP_REST_Request('POST', '/kyros/v1/orders/' . $order->get_id());
-	$r->set_body_params(['key' => $order->get_order_key(), 'hash' => $h]);
+	$r->set_body_params(['key' => $order->get_order_key(), 'hash' => $h] + ($payer ? ['payer' => $payer] : []));
 	return rest_do_request($r);
 };
+// The widget names the paying wallet before the buyer signs (here: at the
+// start of the demo run that made the transfer).
+$said_at = function (WC_Order $order) use ($results) {
+	$o = wc_get_order($order->get_id());
+	$o->update_meta_data('_kyros_payer_at', (string) strtotime($results['startedAt']));
+	$o->save();
+};
+kyros_check('a transfer before naming the paying wallet is refused', $call($paid, $hash)->get_status(), 409);
+$call($paid, null, $results['accounts']['issuer']);
+$said_at($paid);
+kyros_check('a transfer from another wallet does not pay the order', $call($paid, $hash)->get_status(), 422);
+$call($paid, null, $results['accounts']['client']);
+kyros_check('naming the payer after the transfer is too late', $call($paid, $hash)->get_status(), 422);
+$said_at($paid);
 $bad = $call($paid, str_repeat('0', 64));
 kyros_check('an unknown transaction is refused', $bad->get_status(), 422);
 $res = $call($paid, $hash);
@@ -108,6 +122,8 @@ $again->calculate_totals(false);
 $again->set_date_created(strtotime($results['startedAt']));
 $again->save();
 WC_Gateway_Kyros::payments_for($again, $gateway->config());
+$call($again, null, $results['accounts']['client']);
+$said_at($again);
 kyros_check('the same transaction cannot pay a second order', $call($again, $hash)->get_status(), 409);
 // Another request is checking a transaction right now: this one does not check it too.
 $inFlight = str_repeat('1', 64);
