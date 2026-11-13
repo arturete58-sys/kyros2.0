@@ -22,6 +22,7 @@ import {
   transfersInto,
   upcomingDeadlines,
   vaultEvents,
+  GUARD_EVENT_KINDS,
   inboxMoves,
   guardAlerts,
   calendarOf,
@@ -495,8 +496,10 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const since = Math.max(latest.sequence - 17_000, 1);
   const allTokens = [...dollars, eur.contract, ...euros];
   const otherInboxes = [...Object.values(v.shopInboxes ?? {}), ...(v.clients ?? []).map((x) => x.inbox)];
-  const [events, corrections, general, abroad, moves, others, pendingPayout, pendingFixed, pendingToken] = await Promise.all([
+  const [events, guardRows, corrections, general, abroad, moves, others, pendingPayout, pendingFixed, pendingToken] = await Promise.all([
     safe(() => vaultEvents(chain.server, v.vault, since), []),
+    // Proposals asked for by topic: on a busy vault they would be lost among the payments.
+    safe(() => vaultEvents(chain.server, v.vault, since, { kinds: GUARD_EVENT_KINDS }), []),
     safe(() => c.corrections(v.vault), [] as Correction[]),
     safe(() => transfersInto(chain.server, allTokens, v.inbox, since), [] as Transfer[]),
     v.abroadInbox ? safe(() => transfersInto(chain.server, allTokens, v.abroadInbox!, since), [] as Transfer[]) : Promise.resolve([] as Transfer[]),
@@ -510,7 +513,7 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   for (const st of states) if (st && st.id === period && Object.keys(st.p.fixed ?? {}).length) fixedFilled[st.tk] = st.p.fixed;
   // The guardian: anything pending that the owner did not propose from here, or that goes somewhere unknown.
   const known = new Set([chain.cfg.taxAccount, ...(chain.cfg.conversion ? [chain.cfg.conversion.swapper] : [])]);
-  const guard = guardAlerts(events, moves, {
+  const guard = guardAlerts(guardRows, moves, {
     now: BigInt(Math.floor(Date.now() / 1000)),
     mine: new Set(v.mine ?? []),
     known,

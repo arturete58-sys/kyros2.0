@@ -114,3 +114,57 @@ test('a token with no decimals is shown whole', async () => {
   assert.equal(parseAmount('1210', 0), 1210n);
   assert.equal(formatAmount(12_105_000_000n), '1210.5');
 });
+
+test('a move proposal on a busy inbox is not missed', async () => {
+  const { inboxMoves } = await import('../events.js');
+  const { nativeToScVal, StrKey } = await import('@stellar/stellar-sdk');
+  const sym = (s: string) => xdr.ScVal.scvSymbol(s);
+  const thief = StrKey.encodeContract(Buffer.alloc(32, 9));
+  const ev = (i: number, kind: string, value: xdr.ScVal) => ({ id: String(i), ledger: i, ledgerClosedAt: '2026-11-13T00:00:00Z', txHash: `h${i}`, topic: [sym('kyros_inbox'), sym(kind)], value });
+  // 450 sweeps, then someone proposes moving the inbox to another vault.
+  const all = [
+    ...Array.from({ length: 450 }, (_, i) => ev(i, 'swept', nativeToScVal(1n, { type: 'i128' }))),
+    ev(450, 'move_proposed', nativeToScVal({ vault: nativeToScVal(thief, { type: 'address' }), ready_at: nativeToScVal(99n, { type: 'u64' }) })),
+  ];
+  const asked: unknown[] = [];
+  const server = {
+    getEvents: async (req: { filters: { topics?: string[][] }[]; cursor?: string }) => {
+      asked.push(req.filters[0].topics);
+      const wanted = req.filters[0].topics ? all.filter((e) => req.filters[0].topics!.some((t) => t[1] === e.topic[1].toXDR('base64'))) : all;
+      const from = req.cursor ? Number(req.cursor) : 0;
+      const page = wanted.slice(from, from + 200);
+      return { events: page, cursor: String(from + page.length) };
+    },
+  };
+  // Before: one page of the inbox's events (the first 200 sweeps) and no move.
+  const moves = await inboxMoves(server as never, 'CINBOX', 1);
+  assert.equal(moves.length, 1);
+  assert.equal(moves[0].vault, thief);
+});
+
+test('the guardian finds a proposal on a busy vault', async () => {
+  const { vaultEvents, GUARD_EVENT_KINDS } = await import('../events.js');
+  const { nativeToScVal, StrKey } = await import('@stellar/stellar-sdk');
+  const sym = (s: string) => xdr.ScVal.scvSymbol(s);
+  const thief = StrKey.encodeEd25519PublicKey(Buffer.alloc(32, 5));
+  const ev = (i: number, topic: xdr.ScVal[], value: xdr.ScVal) => ({ id: String(i), ledger: i, ledgerClosedAt: '2026-11-13T00:00:00Z', txHash: `h${i}`, topic, value });
+  const received = nativeToScVal({ gross: nativeToScVal(1n, { type: 'i128' }) });
+  // 12,000 payments in a day, then someone proposes a new payout address.
+  const all = [
+    ...Array.from({ length: 12_000 }, (_, i) => ev(i, [sym('kyros_vault'), sym('received'), sym('T'), nativeToScVal(1, { type: 'u32' })], received)),
+    ev(12_000, [sym('kyros_vault'), sym('payout_proposed')], nativeToScVal({ payout: nativeToScVal(thief, { type: 'address' }), ready_at: nativeToScVal(99n, { type: 'u64' }) })),
+  ];
+  const server = {
+    getEvents: async (req: { filters: { topics?: string[][] }[]; cursor?: string }) => {
+      const pats = req.filters.flatMap((f) => f.topics ?? []);
+      const wanted = pats.length ? all.filter((e) => pats.some((p) => p.length === e.topic.length && p.every((t, i) => t === '*' || t === e.topic[i].toXDR('base64')))) : all;
+      const from = req.cursor ? Number(req.cursor) : 0;
+      const page = wanted.slice(from, from + 200);
+      return { events: page, cursor: String(from + page.length) };
+    },
+  };
+  // Reading everything stops after 50 pages (10,000 events) and never sees it.
+  assert.equal((await vaultEvents(server as never, 'CV', 1)).some((r) => r.kind === 'payout_proposed'), false);
+  const rows = await vaultEvents(server as never, 'CV', 1, { kinds: GUARD_EVENT_KINDS });
+  assert.deepEqual(rows.map((r) => [r.kind, r.payout]), [['payout_proposed', thief]]);
+});

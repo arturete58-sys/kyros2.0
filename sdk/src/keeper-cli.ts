@@ -32,7 +32,7 @@ import { KyrosClient } from './client.js';
 import { Keeper } from './keeper.js';
 import { parseAmount } from './split.js';
 import { fetchAttestation, mintAndPayOp } from './cctp.js';
-import { inboxMoves, vaultEvents } from './events.js';
+import { GUARD_EVENT_KINDS, inboxMoves, vaultEvents } from './events.js';
 import { guardAlerts, guardMessage, notifyTelegram, notifyWebhook } from './agents/watchdog.js';
 
 const args = process.argv.slice(2);
@@ -120,7 +120,7 @@ async function guardLoop(): Promise<void> {
           const cfg = await reader.config(g.vault).catch(() => null);
           known.set(g.vault, new Set(cfg ? [cfg.taxDestination] : []));
         }
-        const [rows, moves] = await Promise.all([vaultEvents(reader.server, g.vault, since), g.inbox ? inboxMoves(reader.server, g.inbox, since) : Promise.resolve([])]);
+        const [rows, moves] = await Promise.all([vaultEvents(reader.server, g.vault, since, { kinds: GUARD_EVENT_KINDS }), g.inbox ? inboxMoves(reader.server, g.inbox, since) : Promise.resolve([])]);
         for (const a of guardAlerts(rows, moves, { now, known: known.get(g.vault) })) {
           if (sent.has(a.tx)) continue;
           sent.add(a.tx);

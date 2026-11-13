@@ -25,6 +25,8 @@ A review of the contracts, the SDK and keeper, the app and the checkout plugins.
 | App amounts | Each screen read typed amounts its own way | "1.210" (Spanish for 1,210) became 1.21: paying a tax of 1.210 € paid 1.21 €; "1.210,50" was not read at all | One reader, `normalizeAmount`, for every screen | `amounts typed the Spanish way are read as meant` |
 | SDK `formatAmount` | Wrong with 0 decimals | 1210 shown as ".121" | Fixed | `a token with no decimals is shown whole` |
 | App | Nothing stopped the testnet build from running against mainnet | Browser-kept keys and the published faucet key on the public network | The app refuses the public network | build |
+| SDK `inboxMoves` (guardian) | It read one page of the inbox's events | On a busy inbox (an x402 seller sweeps every few seconds) a proposal to move the payment address to another vault was not seen | Asks for the two move events by topic, page by page | `a move proposal on a busy inbox is not missed` |
+| SDK `vaultEvents` (guardian) | The guardian read every event of the day, up to 10,000 | With more payments than that in a day, a proposal (new payout address, new destination) after them was not seen | The guardian asks the RPC for proposals only (`GUARD_EVENT_KINDS`), with a full read as fallback; the testnet demo checks it against the real RPC | `the guardian finds a proposal on a busy vault`; demo step |
 | App dependencies | `npm audit` fixes that do not change the API | Known issues in transitive packages | Stellar Wallets Kit 2.8.0 and `follow-redirects` updated | `npm audit` |
 
 ## Earlier incidents, now with regression tests

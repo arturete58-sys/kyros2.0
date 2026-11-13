@@ -94,15 +94,52 @@ const KINDS = new Set([
   'token_added',
 ]);
 
-/** Every Kyros event of `vault` from `startLedger` on (RPC keeps a limited window of history). */
-export async function vaultEvents(server: rpc.Server, vault: string, startLedger: number): Promise<VaultEventRow[]> {
+/**
+ * The events the guardian reads: every proposal, and what clears one. They are
+ * few; a busy vault has thousands of `received` events a day, so the guardian
+ * asks for these by topic instead of reading everything.
+ */
+export const GUARD_EVENT_KINDS: VaultEventRow['kind'][] = [
+  'rule_proposed',
+  'destination_proposed',
+  'strategy_proposed',
+  'conversion_proposed',
+  'correction_proposed',
+  'payout_proposed',
+  'fixed_proposed',
+  'token_proposed',
+  'change_cancelled',
+  'strategy_stopped',
+  'conversion_stopped',
+];
+
+/** Topics of the vault's events that carry more than their name (`correction_proposed` has its id). */
+const EXTRA_TOPICS: Partial<Record<VaultEventRow['kind'], number>> = { correction_proposed: 1, correction_applied: 1, received: 2, deposited: 2, tax_paid: 2, released: 2, converted: 1 };
+
+/**
+ * Kyros events of `vault` from `startLedger` on (RPC keeps a limited window of
+ * history): all of them, or only `kinds`, asked for by topic.
+ */
+export async function vaultEvents(server: rpc.Server, vault: string, startLedger: number, o: { kinds?: VaultEventRow['kind'][] } = {}): Promise<VaultEventRow[]> {
   const rows: VaultEventRow[] = [];
   let cursor: string | undefined;
+  const sym = (x: string) => xdr.ScVal.scvSymbol(x).toXDR('base64');
+  const patterns = (o.kinds ?? []).map((k) => [sym('kyros_vault'), sym(k), ...Array(EXTRA_TOPICS[k] ?? 0).fill('*')]);
+  // At most five topic patterns per filter, five filters per request.
+  const filters = o.kinds?.length
+    ? Array.from({ length: Math.ceil(patterns.length / 5) }, (_, i) => ({ type: 'contract' as const, contractIds: [vault], topics: patterns.slice(i * 5, i * 5 + 5) }))
+    : [{ type: 'contract' as const, contractIds: [vault] }];
+  if (filters.length > 5) throw new Error('vaultEvents: at most 25 kinds at once');
   for (let page = 0; page < 50; page++) {
-    const req = cursor
-      ? { filters: [{ type: 'contract' as const, contractIds: [vault] }], cursor, limit: 200 }
-      : { filters: [{ type: 'contract' as const, contractIds: [vault] }], startLedger, limit: 200 };
-    const res = await server.getEvents(req as rpc.Server.GetEventsRequest);
+    const req = cursor ? { filters, cursor, limit: 200 } : { filters, startLedger, limit: 200 };
+    let res: rpc.Api.GetEventsResponse;
+    try {
+      res = await server.getEvents(req as rpc.Server.GetEventsRequest);
+    } catch (e) {
+      // An RPC that does not take these topic filters: read everything and keep the kinds asked for.
+      if (o.kinds?.length && page === 0) return (await vaultEvents(server, vault, startLedger)).filter((r) => o.kinds!.includes(r.kind));
+      throw e;
+    }
     for (const ev of res.events) {
       const topics = ev.topic.map((t: xdr.ScVal) => scValToNative(t));
       if (topics[0] !== 'kyros_vault' || !KINDS.has(String(topics[1]))) continue;
@@ -191,13 +228,24 @@ export interface InboxMove {
 
 /** The inbox's move proposals and cancellations from `startLedger` on. */
 export async function inboxMoves(server: rpc.Server, inbox: string, startLedger: number): Promise<InboxMove[]> {
-  const res = await server.getEvents({ filters: [{ type: 'contract' as const, contractIds: [inbox] }], startLedger, limit: 200 } as rpc.Server.GetEventsRequest);
+  // Only the two move events, asked for by topic and read page by page: a busy
+  // inbox (an x402 seller sweeps every few seconds) has far more `swept`
+  // events than one page, and a move proposal must never be missed.
+  const sym = (s: string) => xdr.ScVal.scvSymbol(s).toXDR('base64');
+  const filters = [{ type: 'contract' as const, contractIds: [inbox], topics: [[sym('kyros_inbox'), sym('move_proposed')], [sym('kyros_inbox'), sym('move_cancelled')]] }];
   const out: InboxMove[] = [];
-  for (const ev of res.events) {
-    const t = ev.topic.map((x: xdr.ScVal) => scValToNative(x));
-    if (t[0] !== 'kyros_inbox' || (t[1] !== 'move_proposed' && t[1] !== 'move_cancelled')) continue;
-    const v = (scValToNative(ev.value) ?? {}) as { vault?: string; ready_at?: bigint };
-    out.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind: t[1], vault: v.vault ? String(v.vault) : undefined, readyAt: v.ready_at !== undefined ? BigInt(v.ready_at) : undefined });
+  let cursor: string | undefined;
+  for (let page = 0; page < 50; page++) {
+    const req = cursor ? { filters, cursor, limit: 200 } : { filters, startLedger, limit: 200 };
+    const res = await server.getEvents(req as rpc.Server.GetEventsRequest);
+    for (const ev of res.events) {
+      const t = ev.topic.map((x: xdr.ScVal) => scValToNative(x));
+      if (t[0] !== 'kyros_inbox' || (t[1] !== 'move_proposed' && t[1] !== 'move_cancelled')) continue;
+      const v = (scValToNative(ev.value) ?? {}) as { vault?: string; ready_at?: bigint };
+      out.push({ ledger: ev.ledger, closedAt: ev.ledgerClosedAt, txHash: ev.txHash, kind: t[1], vault: v.vault ? String(v.vault) : undefined, readyAt: v.ready_at !== undefined ? BigInt(v.ready_at) : undefined });
+    }
+    if (res.events.length < 200 || !res.cursor) break;
+    cursor = res.cursor;
   }
   return out;
 }

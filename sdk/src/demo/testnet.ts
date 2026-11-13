@@ -42,7 +42,7 @@ import { REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
 import { money, payableUnits, requestRef, requestTerms, requestTotals, type PaymentRequest } from '../payment-request.js';
 import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
 import { invoiceReference, KyrosClient, KyrosError } from '../client.js';
-import { transfersInto, vaultEvents, toCsv } from '../events.js';
+import { GUARD_EVENT_KINDS, transfersInto, vaultEvents, toCsv } from '../events.js';
 import { Keeper } from '../keeper.js';
 import { periodLabel } from '../periods.js';
 import { loadRulePack, periodKindOf, termsFromPack, vatUpdatePlan } from '../rulepacks.js';
@@ -272,6 +272,10 @@ async function main(): Promise<void> {
   steps.push({ step: 'Freelancer proposes a new tax destination (2-minute notice in this demo)', ok: true, tx: proposed.hash, detail: k.newDestination.publicKey() });
   const notYet = await expectRefusal(() => c.send(k.keeper, c.applyPendingOp(vault.contractId)), 'ChangeNotReady');
   steps.push({ step: 'Applying it before the notice has passed is refused', ok: true, detail: `refused by the contract: ${notYet}` });
+  // The guardian asks the RPC for proposals by topic (a busy vault has thousands of payments a day).
+  const seen = (await vaultEvents(c.server, vault.contractId, Math.max((await c.server.getLatestLedger()).sequence - 500, 1), { kinds: GUARD_EVENT_KINDS })).find((e) => e.txHash === proposed.hash);
+  if (seen?.kind !== 'destination_proposed' || seen.destination !== k.newDestination.publicKey()) throw new Error(`the guardian did not find the proposal by topic: ${JSON.stringify(seen)}`);
+  steps.push({ step: 'The guardian finds the proposal by asking the RPC for proposals only', ok: true, detail: seen.kind });
 
   log('clients abroad: a second inbox without VAT, client terms and a correction with notice');
   // The chain does not say where a payer is: the freelancer gives clients abroad a second address,
