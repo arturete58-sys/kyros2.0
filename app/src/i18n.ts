@@ -259,7 +259,7 @@ const D = {
   al_usd: { es: 'Reserva en dólares', en: 'Reserve in dollars', pt: 'Reserva em dólares', fr: 'Réserve en dollars', de: 'Rücklage in Dollar', it: 'Riserva in dollari' },
   al_usdBody: { es: 'Tienes reserva en USDC pendiente de cambiar a euros. Puedes hacerlo en Ajustes.', en: 'You have reserve in USDC waiting to be changed into euros. You can do it in Settings.', pt: 'Tem reserva em USDC por trocar em euros. Pode fazê-lo nas Definições.', fr: 'Vous avez une réserve en USDC à convertir en euros. Vous pouvez le faire dans Réglages.', de: 'Du hast eine USDC-Rücklage, die noch in Euro getauscht werden kann. Das geht in den Einstellungen.', it: 'Hai riserva in USDC da cambiare in euro. Puoi farlo in Impostazioni.' },
   al_paid: { es: 'Pagado', en: 'Paid', pt: 'Pago', fr: 'Payé', de: 'Bezahlt', it: 'Pagato' },
-  al_paidBody: { es: '{n} pago(s) de impuestos hechos desde tu bóveda.', en: '{n} tax payment(s) made from your vault.', pt: '{n} pagamento(s) de impostos feitos a partir do cofre.', fr: '{n} paiement(s) d’impôts effectué(s) depuis votre coffre.', de: '{n} Steuerzahlung(en) aus deinem Tresor.', it: '{n} pagamento/i di imposte dal caveau.' },
+  al_paidBody: { es: 'Pagos de impuestos hechos desde tu bóveda: {n}.', en: 'Tax payments made from your vault: {n}.', pt: 'Pagamentos de impostos feitos a partir do cofre: {n}.', fr: 'Paiements d’impôts effectués depuis votre coffre : {n}.', de: 'Steuerzahlungen aus deinem Tresor: {n}.', it: 'Pagamenti di imposte dal caveau: {n}.' },
   tabHome: { es: 'Inicio', en: 'Home', pt: 'Início', fr: 'Accueil', de: 'Start', it: 'Home' },
   // Pay link
   invoicePayment: { es: 'Pago de factura', en: 'Invoice payment', pt: 'Pagamento de fatura', fr: 'Paiement de facture', de: 'Rechnungszahlung', it: 'Pagamento della fattura' },
@@ -702,7 +702,9 @@ export function t(key: Key, vars: Record<string, string | number> = {}): string 
 /** The locale for numbers and dates in the language in use. */
 export const locale = () => localeOf(current);
 
-export const fmtNumber = (n: number, o?: Intl.NumberFormatOptions) => n.toLocaleString(locale(), o);
+// A value that rounds to zero is shown as 0, never "-0,00".
+export const fmtNumber = (n: number, o?: Intl.NumberFormatOptions) =>
+  (Math.abs(n) < 0.5 * 10 ** -(o?.maximumFractionDigits ?? 3) ? 0 : n).toLocaleString(locale(), o);
 export const fmtDate = (d: Date) => d.toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' });
 export const fmtDateTime = (d: Date) => d.toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
 export const fmtTime = (d: Date) => d.toLocaleTimeString(locale(), { timeStyle: 'short' });

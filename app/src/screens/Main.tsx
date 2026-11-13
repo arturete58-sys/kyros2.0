@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { normalizeAmount, parseAmount, dayString, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, money as cents, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
+import { normalizeAmount, parseAmount, dayString, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
 import { mixedOf, reclaimMixedVat, setAsideMissingVat, abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
@@ -9,7 +9,7 @@ import { ExpensesCard } from './Expenses';
 import { ArchivedBanner, MoveCard, PreviousVaults } from './Move';
 import { WalletsCard } from './Wallets';
 import { PublicMoneyLink } from './PublicMoney';
-import { fmtDate as fmtDay, fmtDateTime, fmtTime, getLang, locale, t, type Key } from '../i18n';
+import { fmtDate as fmtDay, fmtDateTime, fmtNumber, fmtTime, getLang, locale, t, type Key } from '../i18n';
 
 const UNIT = 10_000_000n;
 const bucketLabel = (b: string) => t(b === 'vat' ? 'bucketVat' : b === 'social' ? 'bucketFixed' : 'bucketIncome');
@@ -562,6 +562,8 @@ export function periodText(kind: PeriodKind | null, id: number): string {
 
 // A due date ends at midnight UTC: in Spain that is already the next day, so the
 // day is the contract's (UTC) day, shown at noon so no time zone moves it.
+// Cents shown the way the language writes them ("1.060,00" in Spanish).
+const cents = (c: bigint) => fmtNumber(Number(c) / 100, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dueDay = (secs: bigint) => fmtDay(new Date(`${dayString(secs)}T12:00:00Z`));
 const deadlineText = deadlineLabel;
 

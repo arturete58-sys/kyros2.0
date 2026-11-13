@@ -59,8 +59,8 @@ export function fixtureSnapshot(pack: RulePack, holidays?: HolidayData): Snapsho
     held: [
       { period: q - 1, bucket: 'vat', token: usd, which: 'usd', amount: 798_00n * (U / 100n), dueAt: 1_792_540_800n, payBy: 1_792_540_800n },
       { period: q, bucket: 'vat', token: usd, which: 'usd', amount: 588_00n * (U / 100n), dueAt: 1_801_526_400n, payBy: 1_801_526_400n },
-      { period: q - 1, bucket: 'irpf', token: usd, which: 'usd', amount: 760_00n * (U / 100n), dueAt: 1_814_486_400n, payBy: 1_814_486_400n },
-      { period: q, bucket: 'irpf', token: usd, which: 'usd', amount: 772_40n * (U / 100n), dueAt: 1_814_486_400n, payBy: 1_814_486_400n },
+      { period: q - 1, bucket: 'irpf', token: usd, which: 'usd', amount: 760_00n * (U / 100n), dueAt: 1_814_400_000n, payBy: 1_814_400_000n },
+      { period: q, bucket: 'irpf', token: usd, which: 'usd', amount: 772_40n * (U / 100n), dueAt: 1_814_400_000n, payBy: 1_814_400_000n },
     ],
     period: q,
     periodKind: kind,
