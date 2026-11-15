@@ -1,0 +1,12 @@
+# RustSec advisories accepted for the contracts' dependency graph, each with
+# the reason. CI checks that every crate listed here stays out of the
+# deployed wasm (`cargo tree --target wasm32v1-none`).
+[advisories]
+ignore = [
+    # crypto-bigint 0.5 timing variability. Pulled in only by the native
+    # Soroban host that runs the tests (soroban-env-host -> k256 ->
+    # elliptic-curve); the contracts compiled to wasm do not contain it, and
+    # the tests sign nothing secret. Goes away when soroban-env-host moves
+    # to elliptic-curve 0.14.
+    "RUSTSEC-2026-0387",
+]

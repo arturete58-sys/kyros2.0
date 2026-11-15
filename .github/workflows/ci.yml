@@ -132,9 +132,19 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-audit
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
       - name: Known vulnerabilities in the contracts' dependencies
         working-directory: contracts
         run: cargo audit
+      - name: Accepted advisories stay out of the deployed wasm
+        working-directory: contracts
+        run: |
+          for crate in crypto-bigint; do
+            out=$(cargo tree --workspace --target wasm32v1-none -e normal -i "$crate" 2>/dev/null || true)
+            if [ -n "$out" ]; then echo "::error::$crate reaches the contract wasm:"; echo "$out"; exit 1; fi
+          done
       - name: Scout (CoinFabrik's Soroban detectors)
         uses: coinfabrik/scout-actions@6f5e53f890c1fe20c9b08369aec4f183a5b710b2 # v3.2
         with:
