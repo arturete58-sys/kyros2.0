@@ -168,6 +168,13 @@ After the new tests: the shared types 100% (45 of 45), the vault sample
 `contracts/.cargo/mutants.toml`: in `release`, `v > 0` against `v >= 0`
 for a bucket that is empty either way.
 
+The first full run over every contract (15 November 2026) scored 89.9%:
+901 mutants caught, 1 timed out, 101 missed, 99 that do not compile. The
+survivors are the next work list, mostly bounds that no test hits exactly:
+the CCTP receiver's length and amount checks (17), the vault's strategy and
+change proposals (22), the registry's date and range bounds (10), and the
+calendar (16). The badge on `contracts/README.md` follows each weekly run.
+
 **Releases.** Each wasm carries its version and source repository in its
 contract metadata (`version`, `source_repo`, SEP-0055). A `v*` tag runs
 `.github/workflows/release.yml`: a pinned toolchain (Rust 1.97.0, Stellar
