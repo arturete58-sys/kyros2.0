@@ -31,19 +31,19 @@ gh attestation verify target/wasm32v1-none/release/kyros_reserve_vault.wasm --re
 
 Lines are non-blank, non-comment lines of contract code, tests excluded.
 Wasm hashes are those of the release build at the frozen commit; the values
-below are from the release workflow's dry run on `main` and are replaced by
-the tagged release's.
+below are from the release workflow's dry run on `main` at `01bd1b2`
+(2026-11-15, version 0.1.0) and are replaced by the tagged release's.
 
 | Contract | Path | Lines | Wasm SHA-256 | What it does |
 | --- | --- | --- | --- | --- |
-| Reserve Vault | `contracts/reserve-vault` | 2,258 | `HASH_VAULT` | One per user. Splits each payment into net and reserve, locks each tax bucket until its due date, pays the tax destination, releases to the owner after the due date; invoice and payer terms, fixed amounts, deposits, corrections, scheduled payments, registry-followed VAT, opt-in conversion and yield. All settings that could redirect the reserve wait a notice period. |
+| Reserve Vault | `contracts/reserve-vault` | 2,258 | `053aeca32f46f2ef2b5ae7609ca335b3c3f71e08a83b67ff085d1e9b60088540` | One per user. Splits each payment into net and reserve, locks each tax bucket until its due date, pays the tax destination, releases to the owner after the due date; invoice and payer terms, fixed amounts, deposits, corrections, scheduled payments, registry-followed VAT, opt-in conversion and yield. All settings that could redirect the reserve wait a notice period. |
 | Shared types | `contracts/types` | 437 | (library) | Checked 256-bit arithmetic, the split, the fiscal calendar (periods, due dates, weekends, holidays), and the traits the contracts call each other through. |
-| Router | `contracts/router` | 83 | `HASH_ROUTER` | Pays a vault inside the payer's transaction; `pay_many` for payroll runs, all or nothing. Stateless. |
-| Inbox | `contracts/inbox` | 207 | `HASH_INBOX` | One per user. A payment address anyone can sweep through its vault; moved to another vault of the same owner only with notice. |
-| CCTP receiver | `contracts/cctp-pay` | 222 | `HASH_CCTP` | Receives a Circle CCTP V2 message, mints the USDC and pays it into the vault named in the hook data, in one call. Holds nothing between calls. |
-| Rate Registry | `contracts/rate-registry` | 316 | `HASH_REGISTRY` | Dated VAT rates and public holidays, published by a multisig at least a notice period ahead. Moves no money. |
-| Soroswap swapper | `contracts/swap-soroswap` | 86 | `HASH_SWAP` | `SwapApi` over the Soroswap router, for the vault's conversion. Holds nothing between calls. |
-| Blend yield strategy | `contracts/yield-blend` | 145 | `HASH_BLEND` | One per lending vault. Supplies to a Blend v2 pool, never borrows; only its vault moves funds. |
+| Router | `contracts/router` | 83 | `bbac4c284cbb3ed5a40303bdca9d4ac7918d4ec0f397bfd1d5ebbb6e99123d0c` | Pays a vault inside the payer's transaction; `pay_many` for payroll runs, all or nothing. Stateless. |
+| Inbox | `contracts/inbox` | 207 | `f8f40b28d1c856a2c98be3047f63c011e8ccad8b4aff46a71508642726f7dc89` | One per user. A payment address anyone can sweep through its vault; moved to another vault of the same owner only with notice. |
+| CCTP receiver | `contracts/cctp-pay` | 222 | `60a16826c153618d41c52e81a1256b39c61012369b8c97097c4797137c9331d4` | Receives a Circle CCTP V2 message, mints the USDC and pays it into the vault named in the hook data, in one call. Holds nothing between calls. |
+| Rate Registry | `contracts/rate-registry` | 316 | `d1eae744af2edc78d877d800a64b8367e22ce83677c5d57e011b31fc5ace595f` | Dated VAT rates and public holidays, published by a multisig at least a notice period ahead. Moves no money. |
+| Soroswap swapper | `contracts/swap-soroswap` | 86 | `bdd193fe15e97dc3d9b02016e87e63301712f22e394bdbcf88dc7bf982ffab44` | `SwapApi` over the Soroswap router, for the vault's conversion. Holds nothing between calls. |
+| Blend yield strategy | `contracts/yield-blend` | 145 | `d9bfb98e027d04067ab7f81f66c12808969efba2e60a192c79ef91f1a2755de5` | One per lending vault. Supplies to a Blend v2 pool, never borrows; only its vault moves funds. |
 | **Total** | | **3,754** | | |
 
 ### Out of scope
