@@ -153,8 +153,8 @@ stellar contract build     # wasm32v1-none, release profile
 CI runs all of these on every push: formatting, clippy, rustdoc, the tests,
 coverage of the contract code (tests and vendored wasm excluded; summary in
 each run and the badge above, with a floor the build may not drop below),
-RustSec advisories for the dependencies (`cargo audit`), CoinFabrik's Scout
-detectors for Soroban, the build, and each wasm's size against the
+RustSec advisories for the dependencies (`cargo audit`, with the one
+accepted advisory checked to stay out of the wasm), the build, and each wasm's size against the
 network's 128 KiB limit. A second workflow deploys the contracts to testnet
 and runs the end-to-end demo (`sdk/src/demo/testnet.ts`). Integration tests
 run against the real Soroswap and Blend wasm builds in `vendor/`.

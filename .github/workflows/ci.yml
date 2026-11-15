@@ -124,7 +124,7 @@ jobs:
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
 
   rust-security:
-    name: Rust dependencies (RustSec) and Soroban static analysis (Scout)
+    name: Rust dependencies (RustSec)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -145,15 +145,6 @@ jobs:
             out=$(cargo tree --workspace --target wasm32v1-none -e normal -i "$crate" 2>/dev/null || true)
             if [ -n "$out" ]; then echo "::error::$crate reaches the contract wasm:"; echo "$out"; exit 1; fi
           done
-      - name: Scout (CoinFabrik's Soroban detectors)
-        uses: coinfabrik/scout-actions@6f5e53f890c1fe20c9b08369aec4f183a5b710b2 # v3.2
-        with:
-          working_directory: contracts
-          fail_on_error: false
-      - name: Scout report
-        if: always()
-        run: |
-          if [ -f report.md ]; then cat report.md >> "$GITHUB_STEP_SUMMARY"; else echo "Scout produced no report." >> "$GITHUB_STEP_SUMMARY"; fi
 
   sdk:
     runs-on: ubuntu-latest

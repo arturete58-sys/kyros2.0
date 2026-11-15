@@ -110,7 +110,7 @@ Three gaps against production protocols (Blend, Phoenix, Comet), closed in one p
 
 **Stateful properties.** `invariants.rs` runs random sequences of up to 40 operations (payments, deposits, tax payments, releases, corrections, donations, yield earned, lent out, rebalanced, time passing) and checks eight invariants after every step, refused or not. It was checked against injected bugs: dropping the bookkeeping line in `release`, and releasing before the due date, were each caught and shrunk to a short sequence. proptest runs on stable Rust in every CI run; cargo-fuzz would need nightly and libFuzzer for the same properties.
 
-**CI.** A coverage job (cargo-llvm-cov) measures lines, regions and functions of the contract code only, publishes the summary in each run and a badge on `contracts/README.md`, and fails below a floor. A security job runs RustSec advisories over the dependencies (`cargo audit`) and CoinFabrik's Scout detectors for Soroban.
+**CI.** A coverage job (cargo-llvm-cov) measures lines, regions and functions of the contract code only, publishes the summary in each run and a badge on `contracts/README.md`, and fails below a floor. A security job runs RustSec advisories over the dependencies (`cargo audit`). One advisory is accepted (RUSTSEC-2026-0387, crypto-bigint timing): it reaches only the native host that runs the tests, and a CI step fails if it ever reaches the contract wasm. CoinFabrik's Scout action was tried and dropped for now: its image fails to build its own linter driver (dylint), upstream. The Scout detectors that apply to this code (integer overflow, division before multiplication, unchecked arithmetic in general) are covered by the denied `arithmetic_side_effects` lint and the 256-bit helpers.
 
 ## Randomized checks
 
