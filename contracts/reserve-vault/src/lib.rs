@@ -75,6 +75,7 @@
 //! | `conversion`, `strategy` | Opt-in currency conversion and yield |
 //! | `reads` | Read-only entry points |
 //! | `internal` | Steps shared by the entry points |
+//! | `math` | Checked arithmetic: every amount operation fails with a readable code |
 //!
 //! Every Soroban storage choice is deliberate: the configuration and the
 //! small, bounded lists live in instance storage (read on every call); the
@@ -84,10 +85,10 @@
 //! transaction that needs it.
 #![no_std]
 use kyros_types::{
-    civil_from_days, due_at, next_open, period_end, period_of, split, split_withheld, valid_due,
-    valid_period, validate, validate_withholding, vat_symbol, Asset, Due, Fixed, OracleClient,
-    PeriodKind, RegistryClient, Rule, Split, SwapClient, YieldClient, BPS, MAX_FIXED,
-    MAX_SHIFT_DAYS, TTL_EXTEND_TO, TTL_THRESHOLD,
+    civil_from_days, due_at, mul3_div_floor, mul_div_floor, next_open, period_end, period_of,
+    pow10, split, split_withheld, valid_due, valid_period, validate, validate_withholding,
+    vat_symbol, Asset, Due, Fixed, MathError, OracleClient, PeriodKind, RegistryClient, Rule,
+    Split, SwapClient, YieldClient, BPS, MAX_FIXED, MAX_SHIFT_DAYS, TTL_EXTEND_TO, TTL_THRESHOLD,
 };
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, token, Address, BytesN,
@@ -101,6 +102,7 @@ mod corrections;
 mod error;
 mod events;
 mod internal;
+mod math;
 mod money_in;
 mod money_out;
 mod reads;
@@ -114,6 +116,7 @@ pub use calendar::dues_after;
 use calendar::*;
 pub use error::*;
 pub use events::*;
+use math::*;
 use storage::*;
 use strategy::*;
 use terms::*;
@@ -143,6 +146,9 @@ impl ReserveVault {
         tokens: Vec<Address>,
     ) -> Result<(), VaultError> {
         check_rule(&e, &rule)?;
+        if notice_secs > MAX_NOTICE_SECS {
+            return Err(VaultError::InvalidNotice);
+        }
         if !valid_period(&period) {
             return Err(VaultError::InvalidPeriod);
         }

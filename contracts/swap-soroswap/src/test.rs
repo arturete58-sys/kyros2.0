@@ -1,5 +1,6 @@
 //! Runs the swapper against the Soroswap contracts deployed on mainnet, and a
 //! Reserve Vault converting its USDC reserve to EURC through it.
+#![allow(clippy::arithmetic_side_effects)] // test code: amounts are small and known
 extern crate std;
 use super::*;
 use kyros_reserve_vault::{Conversion, ReserveVault, ReserveVaultClient};

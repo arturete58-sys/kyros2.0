@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   contracts:
     runs-on: ubuntu-latest
@@ -28,14 +31,14 @@ jobs:
           workspaces: contracts
       - name: Formatting
         run: cargo fmt --all --check
-      - name: Lints (clippy, warnings are errors)
+      - name: Lints (clippy, warnings are errors; unchecked arithmetic denied workspace-wide)
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Docs (every public item documented, no broken links)
         run: cargo doc --workspace --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
-      - name: Unit and integration tests (Stellar mainnet limits enforced)
-        run: cargo test
+      - name: Unit, integration, adversarial and property tests (Stellar mainnet limits enforced)
+        run: cargo test --workspace
       - name: Build the contracts
         run: stellar contract build
       - name: Wasm sizes (mainnet allows 131,072 bytes per contract)
@@ -50,6 +53,97 @@ jobs:
         with:
           name: contracts-wasm
           path: contracts/target/wasm32v1-none/release/*.wasm
+
+  coverage:
+    name: Contract coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # publishes the badge to the `badges` branch, on main only
+    defaults:
+      run:
+        working-directory: contracts
+    env:
+      # Contract code only: tests, the adversarial suites and vendored wasm are not measured.
+      COV_IGNORE: '(/test\.rs$|/tests/|test-suites/|/vendor/)'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+          key: coverage
+      - name: Run every test with coverage
+        run: cargo llvm-cov --workspace --ignore-filename-regex "$COV_IGNORE" --lcov --output-path lcov.info
+      - name: Coverage report
+        run: |
+          cargo llvm-cov report --ignore-filename-regex "$COV_IGNORE" --json --summary-only --output-path cov.json
+          cargo llvm-cov report --ignore-filename-regex "$COV_IGNORE" > cov.txt
+          read lines regions functions < <(jq -r '.data[0].totals | "\(.lines.percent) \(.regions.percent) \(.functions.percent)"' cov.json)
+          printf -v L '%.1f' "$lines"; printf -v R '%.1f' "$regions"; printf -v F '%.1f' "$functions"
+          echo "LINES=$L" >> "$GITHUB_ENV"
+          {
+            echo "## Contract coverage"
+            echo
+            echo "| Lines | Regions (branches) | Functions |"
+            echo "| --- | --- | --- |"
+            echo "| $L% | $R% | $F% |"
+            echo
+            echo "<details><summary>By file</summary>"
+            echo
+            echo '```'
+            cat cov.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Coverage floor
+        run: cargo llvm-cov report --ignore-filename-regex "$COV_IGNORE" --fail-under-lines 90 > /dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: contracts-lcov
+          path: contracts/lcov.info
+      - name: Publish the coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          color=red
+          awk "BEGIN{exit !($LINES >= 80)}" && color=yellow
+          awk "BEGIN{exit !($LINES >= 90)}" && color=brightgreen
+          dir=$(mktemp -d)
+          printf '{"schemaVersion":1,"label":"contract coverage","message":"%s%%","color":"%s"}\n' "$LINES" "$color" > "$dir/coverage.json"
+          cd "$dir"
+          git init -q -b badges
+          git add coverage.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Coverage badge: $LINES%"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
+
+  rust-security:
+    name: Rust dependencies (RustSec) and Soroban static analysis (Scout)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - name: Known vulnerabilities in the contracts' dependencies
+        working-directory: contracts
+        run: cargo audit
+      - name: Scout (CoinFabrik's Soroban detectors)
+        uses: coinfabrik/scout-actions@6f5e53f890c1fe20c9b08369aec4f183a5b710b2 # v3.2
+        with:
+          working_directory: contracts
+          fail_on_error: false
+      - name: Scout report
+        if: always()
+        run: |
+          if [ -f report.md ]; then cat report.md >> "$GITHUB_STEP_SUMMARY"; else echo "Scout produced no report." >> "$GITHUB_STEP_SUMMARY"; fi
 
   sdk:
     runs-on: ubuntu-latest

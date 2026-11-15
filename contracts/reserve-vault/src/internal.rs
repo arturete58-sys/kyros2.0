@@ -38,14 +38,11 @@ impl ReserveVault {
         if amount > held_now {
             return Err(VaultError::ExceedsReserve);
         }
-        p.buckets.set(bucket.clone(), held_now - amount);
-        p.paid += amount;
-        p.paid_buckets.set(
-            bucket.clone(),
-            p.paid_buckets.get(bucket.clone()).unwrap_or(0) + amount,
-        );
+        p.buckets.set(bucket.clone(), sub(held_now, amount)?);
+        p.paid = add(p.paid, amount)?;
+        credit(&mut p.paid_buckets, &bucket, amount)?;
         save_period(e, period, &token, &p);
-        add_held(e, &token, -amount);
+        add_held(e, &token, neg(amount)?)?;
         ensure_liquid(e, &token, amount)?;
         let memo = to.id();
         token::Client::new(e, &token).transfer(&e.current_contract_address(), &to, &amount);

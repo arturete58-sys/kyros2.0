@@ -28,20 +28,35 @@ pub(crate) fn price(
 }
 
 /// The least a swap of `amount` must return: the oracle price minus the tolerance.
+///
+/// ```text
+/// floor = floor(amount * pf * 10^(dt - df) * (10000 - slippage) / (pt * 10000))
+/// ```
+///
+/// One division, at the end, with the product in 256 bits: a large reserve
+/// between tokens of different decimals (7 and 18, say) multiplies past
+/// i128 long before the result does. Rounded down: the floor is never above
+/// the oracle price minus the tolerance, so a fair swap is never refused.
 pub(crate) fn floor_out(e: &Env, c: &Conversion, amount: i128) -> Result<i128, VaultError> {
     let o = OracleClient::new(e, &c.oracle);
     let pf = price(e, &o, &c.from_price, c.max_age_secs)?;
     let pt = price(e, &o, &c.to_price, c.max_age_secs)?;
     let df = token::Client::new(e, &c.from_token).decimals();
     let dt = token::Client::new(e, &c.to_token).decimals();
-    // One division at the end: scaling a rounded quotient up would round
-    // the floor down by up to 10^(dt - df) units.
-    let (num, den) = if dt >= df {
-        (amount * pf * 10i128.pow(dt - df), pt)
+    // At most MAX_SLIPPAGE_BPS (checked when proposed), so keep > 0.
+    let keep = sub(BPS, c.max_slippage_bps as i128)?;
+    let shift = pow10(dt.abs_diff(df))?;
+    let (scale, den) = if dt >= df {
+        (mul(shift, keep)?, mul(pt, BPS)?)
     } else {
-        (amount * pf, pt * 10i128.pow(df - dt))
+        (keep, mul(mul(pt, shift)?, BPS)?)
     };
-    Ok(num * (BPS - c.max_slippage_bps as i128) / (den * BPS))
+    Ok(mul3_div_floor(e, amount, pf, scale, den)?)
+}
+
+/// `a * b`, for scales and prices.
+fn mul(a: i128, b: i128) -> Result<i128, VaultError> {
+    a.checked_mul(b).ok_or(VaultError::MathOverflow)
 }
 
 #[contractimpl]
@@ -72,7 +87,7 @@ impl ReserveVault {
             return Err(VaultError::InvalidConversion);
         }
         Self::fold_extras(&e);
-        let ready_at = now(&e) + c.notice_secs;
+        let ready_at = later(now(&e), c.notice_secs)?;
         e.storage().instance().set(
             &Key::PendingConversion,
             &PendingConversion {
@@ -112,10 +127,7 @@ impl ReserveVault {
         Self::fold_extras(&e);
         let me = e.current_contract_address();
         let mut from = load_period(&e, period, &c.from_token);
-        let mut total: i128 = 0;
-        for (_, v) in from.buckets.iter() {
-            total += v;
-        }
+        let total = sum(from.buckets.values().iter())?;
         if total <= 0 {
             return Err(VaultError::NothingToConvert);
         }
@@ -125,33 +137,34 @@ impl ReserveVault {
         let before = out_token.balance(&me);
         token::Client::new(&e, &c.from_token).transfer(&me, &c.swapper, &total);
         SwapClient::new(&e, &c.swapper).swap(&c.from_token, &c.to_token, &total, &floor, &me);
-        let out = out_token.balance(&me) - before;
+        let out = sub(out_token.balance(&me), before)?;
         if out < floor {
             return Err(VaultError::SwapBelowFloor);
         }
-        // Each bucket keeps its share: what it held over the total, of what came out.
+        // Each bucket keeps its share: what it held over the total, of what
+        // came out, rounded down; the last bucket takes the remainder, so the
+        // shares add up to exactly what came out.
         let mut to = load_period(&e, period, &c.to_token);
-        let n = from.buckets.len();
+        let last = from.buckets.len().saturating_sub(1);
         let mut given: i128 = 0;
         let mut emptied = Map::new(&e);
         for (i, (k, v)) in from.buckets.iter().enumerate() {
-            let share = if i as u32 + 1 == n {
-                out - given
+            let share = if i as u32 == last {
+                sub(out, given)?
             } else {
-                out * v / total
+                mul_div(&e, out, v, total)?
             };
-            given += share;
-            to.buckets
-                .set(k.clone(), to.buckets.get(k.clone()).unwrap_or(0) + share);
+            given = add(given, share)?;
+            credit(&mut to.buckets, &k, share)?;
             emptied.set(k, 0i128);
         }
         from.buckets = emptied;
-        from.converted += total;
-        to.reserved += out;
+        from.converted = add(from.converted, total)?;
+        to.reserved = add(to.reserved, out)?;
         save_period(&e, period, &c.from_token, &from);
         save_period(&e, period, &c.to_token, &to);
-        add_held(&e, &c.from_token, -total);
-        add_held(&e, &c.to_token, out);
+        add_held(&e, &c.from_token, neg(total)?)?;
+        add_held(&e, &c.to_token, out)?;
         bump_instance(&e);
         Converted {
             period,

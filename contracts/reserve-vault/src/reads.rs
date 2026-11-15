@@ -60,15 +60,20 @@ impl ReserveVault {
     }
 
     /// The split the current rule gives for `gross`.
-    pub fn quote(e: Env, gross: i128) -> Split {
-        split(&e, &effective(&e).rule, gross)
+    pub fn quote(e: Env, gross: i128) -> Result<Split, VaultError> {
+        Ok(split(&e, &effective(&e).rule, gross)?)
     }
 
     /// The split `receive` will make for this payer and reference: an
     /// invoice's terms, else the payer's, else the rule. Contracts that
     /// authorize the exact transfers (the Inbox, the CCTP receiver) ask this.
-    pub fn quote_for(e: Env, from: Address, reference: BytesN<32>, gross: i128) -> Split {
-        split_for(&e, &effective(&e).rule, &from, &reference, gross).1
+    pub fn quote_for(
+        e: Env,
+        from: Address,
+        reference: BytesN<32>,
+        gross: i128,
+    ) -> Result<Split, VaultError> {
+        Ok(split_for(&e, &effective(&e).rule, &from, &reference, gross)?.1)
     }
 
     /// Exactly what `receive` will do for this payment now, in `token`: the
@@ -79,16 +84,16 @@ impl ReserveVault {
         token: Address,
         reference: BytesN<32>,
         gross: i128,
-    ) -> Split {
+    ) -> Result<Split, VaultError> {
         let c = effective(&e);
-        let mut s = split_for(&e, &c.rule, &from, &reference, gross).1;
+        let mut s = split_for(&e, &c.rule, &from, &reference, gross)?.1;
         let p = load_period(&e, period_of(&c.period, now(&e)), &token);
-        for (_, take) in fixed_takes(&e, &c, &token, &p, s.net).iter() {
-            s.fixed += take;
+        for (_, take) in fixed_takes(&e, &c, &token, &p, s.net)?.iter() {
+            s.fixed = add(s.fixed, take)?;
         }
-        s.net -= s.fixed;
-        s.reserve += s.fixed;
-        s
+        s.net = sub(s.net, s.fixed)?;
+        s.reserve = add(s.reserve, s.fixed)?;
+        Ok(s)
     }
 
     /// The fiscal period payments are booked to now.

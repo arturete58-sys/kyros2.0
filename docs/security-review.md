@@ -89,6 +89,29 @@ The code's shape:
 - **CI gates.** Formatting, clippy with warnings as errors, rustdoc with warnings as errors, the tests with mainnet limits, the build, and each wasm's size against the network's 128 KiB limit.
 - **Checked and kept:** the swapper receives the output of the swap itself and forwards it, because Soroswap's router requires the recipient to sign; a direct payout to the vault fails authorization (tried and reverted, with a comment in the code).
 
+## Fourth pass: checked arithmetic, attack suites, coverage
+
+Three gaps against production protocols (Blend, Phoenix, Comet), closed in one pass.
+
+**Arithmetic.** Every operation on an amount is checked and fails with a contract error a client can read, never a host trap: `MathOverflow` (40) and `DivisionByZero` (41) in the vault, `MathOverflow` in the Inbox and both yield adapters (and `DivisionByZero` in Ondo's), and `BadSplit`/`MathOverflow` in the CCTP receiver. Ratios are taken in 256 bits with the host's `I256` (`kyros_types::mul_div_floor`, `mul3_div_floor`, `mul_div_ceil`), so every gross from 0 to `i128::MAX` splits exactly. Clippy's `arithmetic_side_effects` is denied workspace-wide: unchecked arithmetic no longer compiles, except in the two calendar modules (bounded dates, exempt by module with the reason) and the tests. `overflow-checks` stays on in release as a backstop. The rounding direction of each formula is written next to it and summed up in the [threat model](threat-model.md#rounding).
+
+| Where | Problem | What could happen | Fix | Test |
+| --- | --- | --- | --- | --- |
+| `reserve-vault` conversion floor | `amount x price x 10^(dt - df)` in i128 | Converting a reserve of about 2 million dollars into a currency with 18 decimals trapped with "attempt to multiply with overflow": the conversion could never run | One division at the end, product in 256 bits | `hostile::a_large_reserve_converts_into_an_18_decimal_currency` (fails on the old code) |
+| `reserve-vault` constructor | Notice period unbounded | A notice near `u64::MAX` made every proposal trap when adding it to the date | Capped at a year (`InvalidNotice` = 42) | `economic::an_unbounded_notice_is_refused` |
+| `reserve-vault` `position`, `harvest` | A strategy's reported balance added without a check | A strategy reporting `i128::MAX` trapped both | `MathOverflow`; payments never depend on that figure | `hostile::a_strategy_lying_about_its_balance_breaks_no_payment` |
+| `reserve-vault` `receive`, `deposit` | Tokens moved before the books were updated | No exploit (Soroban refuses re-entry and reverts on failure), but every check now runs before any token moves | Books first, transfers last | `hostile::a_token_with_hooks_cannot_re_enter_the_vault` |
+| `cctp-pay` | `net + reserve` from the vault unchecked | A vault answering amounts that overflow trapped instead of `BadSplit` | Checked; overflow is a bad split | existing `a_fake_vault_cannot_take_more_than_the_payment` |
+| `inbox` | Sweep counter `n + 1` | After 2^32 sweeps every sweep would trap | Wrapping counter (it only shows progress) | — |
+| `reserve-vault` `invest` | When reserve came due, it brought back only what was due soon, not down to the share | The strategy could stay above `max_bps` (by one unit in the shrunk case) until the next call | One rule: the strategy is brought back to its share, which also keeps the reserve due soon in the vault | `invariants::regression_reserve_coming_due_leaves_the_strategy_within_its_share` (found by the property test, fails on the old code) |
+| `yield-ondo` | `10^oracle decimals` unchecked; double rounding in the value | An oracle with more than 38 decimals trapped; values rounded twice | `pow10` with `MathOverflow`; one rounding | existing Ondo tests |
+
+**Attack suites.** A new crate, `contracts/test-suites`, holds one test per threat in [threat-model.md](threat-model.md): donations and inflation, dust, the edges of i128, zero and negative amounts, overdrafts, missing and foreign signatures, signatures for another amount, re-entry from a token with hooks, from a strategy and from a swapper, a strategy lying about its balance, entries kept alive and restored, the cost of the thousandth payment, list caps, and junk tokens in an Inbox. Its mocks include a SEP-41 token with any number of decimals and hostile contracts.
+
+**Stateful properties.** `invariants.rs` runs random sequences of up to 40 operations (payments, deposits, tax payments, releases, corrections, donations, yield earned, lent out, rebalanced, time passing) and checks eight invariants after every step, refused or not. It was checked against injected bugs: dropping the bookkeeping line in `release`, and releasing before the due date, were each caught and shrunk to a short sequence. proptest runs on stable Rust in every CI run; cargo-fuzz would need nightly and libFuzzer for the same properties.
+
+**CI.** A coverage job (cargo-llvm-cov) measures lines, regions and functions of the contract code only, publishes the summary in each run and a badge on `contracts/README.md`, and fails below a floor. A security job runs RustSec advisories over the dependencies (`cargo audit`) and CoinFabrik's Scout detectors for Soroban.
+
 ## Randomized checks
 
 `every_split_adds_up_and_nothing_is_negative` runs 20,000 random rules, withholdings and amounts up to 10^18 units through the split: the parts always add up to the payment and nothing is negative. `every_timestamp_falls_in_its_period_and_is_due_after_it` runs 20,000 dates from 1970 to 2100 through every period kind and due rule.

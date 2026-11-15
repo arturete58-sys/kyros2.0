@@ -1,4 +1,10 @@
 //! Due dates: the rule pack's dates, weekends and holidays, and dates set by the tax office.
+//!
+//! Date arithmetic over a bounded domain (days as u32, periods of at most
+//! ten years, ledger times before the year 9999) stays far inside u64, so
+//! this module, like `kyros_types::calendar`, is exempt from the
+//! `arithmetic_side_effects` lint; money never passes through it.
+#![allow(clippy::arithmetic_side_effects)]
 use crate::*;
 
 /// Dues with one fixed delay after the period for every bucket (tests, simple regimes).
@@ -88,6 +94,8 @@ impl ReserveVault {
     ) -> Result<(), VaultError> {
         let c = active(&e);
         c.owner.require_auth();
+        // `to - from` only once `to >= from`; the other date sums stay below
+        // the year 9999 (u32 days, ten-year periods), far inside u64.
         if to_period < from_period || to_period - from_period >= MAX_BATCH {
             return Err(VaultError::TooMany);
         }
@@ -100,7 +108,7 @@ impl ReserveVault {
         for p in from_period..=to_period {
             // The cheap check first: the lock (which may ask the registry for
             // holidays) is only read for a date inside the notice period.
-            if new_lock < now(&e) + c.notice_secs && new_lock < lock_at(&e, &c, p, &bucket) {
+            if new_lock < later(now(&e), c.notice_secs)? && new_lock < lock_at(&e, &c, p, &bucket) {
                 return Err(VaultError::DueTooSoon);
             }
         }

@@ -34,6 +34,10 @@ pub const MAX_PRICE_AGE_SECS: u64 = 86_400;
 /// Most scheduled payments open at once.
 pub const MAX_SCHEDULED: u32 = 40;
 
+/// The longest notice period a vault may have (a year): long enough for any
+/// owner, and every date it adds to stays far inside `u64`.
+pub const MAX_NOTICE_SECS: u64 = 366 * 86_400;
+
 /// How the payments of one invoice are split (shared with the CCTP receiver, which predicts the split).
 pub use kyros_types::InvoiceTerms;
 

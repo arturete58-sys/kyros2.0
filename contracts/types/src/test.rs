@@ -1,3 +1,4 @@
+#![allow(clippy::arithmetic_side_effects)] // test code: amounts are small and known
 extern crate std;
 use super::*;
 use soroban_sdk::{vec, Env, Symbol};
@@ -29,7 +30,7 @@ fn rule(e: &Env, vat: u32, buckets: &[(&str, u32)]) -> Rule {
 fn the_worked_example_from_the_architecture_document() {
     let e = Env::default();
     // 1,210 USDC (7 decimals), 21% VAT included, 20% income-tax prepayment on the base.
-    let s = split(&e, &rule(&e, 2100, &[("irpf", 2000)]), 12_100_000_000);
+    let s = split(&e, &rule(&e, 2100, &[("irpf", 2000)]), 12_100_000_000).unwrap();
     assert_eq!(s.base, 10_000_000_000);
     assert_eq!(s.vat, 2_100_000_000);
     assert_eq!(s.parts, vec![&e, 2_000_000_000]);
@@ -56,7 +57,7 @@ fn every_shared_split_vector_matches() {
             buckets: b,
         };
         assert_eq!(validate(&e, &r), Ok(()));
-        let s = split(&e, &r, num(&c["gross"]));
+        let s = split(&e, &r, num(&c["gross"])).unwrap();
         let name: String = c["rule"].as_str().unwrap().into();
         assert_eq!(s.base, num(&c["base"]), "{name}");
         assert_eq!(s.vat, num(&c["vat"]), "{name}");
@@ -77,7 +78,7 @@ fn parts_always_add_up_and_net_is_never_negative() {
     let e = Env::default();
     let r = rule(&e, 10_000, &[("a", 6_000), ("b", 4_000)]);
     for g in [0i128, 1, 2, 3, 99, 100, 101, 1_000_003, i64::MAX as i128] {
-        let s = split(&e, &r, g);
+        let s = split(&e, &r, g).unwrap();
         assert_eq!(s.net + s.reserve, g);
         assert!(s.net >= 0 && s.reserve >= 0);
     }
@@ -327,7 +328,7 @@ fn every_split_adds_up_and_nothing_is_negative() {
             1 => g.upto(1_000_000) as i128,
             _ => g.upto(1_000_000_000_000_000_000) as i128,
         };
-        let s = split_withheld(&e, &r, w, gross);
+        let s = split_withheld(&e, &r, w, gross).unwrap();
         let parts: i128 = s.parts.iter().sum();
         assert_eq!(s.net + s.reserve, gross, "case {case}");
         assert_eq!(s.reserve, s.vat + parts, "case {case}");
@@ -415,4 +416,135 @@ fn a_fixed_length_period_that_would_overflow_the_clock_is_invalid() {
     assert!(!valid_period(&PeriodKind::Seconds(1)));
     assert!(valid_period(&PeriodKind::Seconds(60)));
     assert!(valid_period(&PeriodKind::Seconds(MAX_PERIOD_SECS)));
+}
+
+// ---- Checked arithmetic ----
+
+mod math {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// `q = floor(a * b / d)` exactly when `q * d <= a * b < q * d + d`,
+    /// checked with the host's 256-bit integers.
+    fn is_floor(e: &Env, a: i128, b: i128, d: i128, q: i128) -> bool {
+        let p = I256::from_i128(e, a).mul(&I256::from_i128(e, b));
+        let qd = I256::from_i128(e, q).mul(&I256::from_i128(e, d));
+        qd <= p && p < qd.add(&I256::from_i128(e, d))
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(4_000))]
+
+        #[test]
+        fn mul_div_floor_is_the_exact_floor(a in any::<i128>(), b in any::<i128>(), d in 1..=i128::MAX) {
+            let e = Env::default();
+            e.cost_estimate().budget().reset_unlimited();
+            match mul_div_floor(&e, a, b, d) {
+                Ok(q) => prop_assert!(is_floor(&e, a, b, d, q)),
+                // Only when the true result does not fit: |a * b / d| > i128::MAX.
+                Err(err) => {
+                    prop_assert_eq!(err, MathError::Overflow);
+                    let p = I256::from_i128(&e, a).mul(&I256::from_i128(&e, b));
+                    let lo = I256::from_i128(&e, i128::MIN).mul(&I256::from_i128(&e, d));
+                    let hi = I256::from_i128(&e, i128::MAX).add(&I256::from_i128(&e, 1)).mul(&I256::from_i128(&e, d));
+                    prop_assert!(p < lo || p >= hi);
+                }
+            }
+        }
+
+        #[test]
+        fn mul_div_ceil_is_one_above_the_floor_unless_exact(a in 0..=i128::MAX, b in 0..=i128::MAX, d in 1..=i128::MAX) {
+            let e = Env::default();
+            e.cost_estimate().budget().reset_unlimited();
+            if let (Ok(f), Ok(c)) = (mul_div_floor(&e, a, b, d), mul_div_ceil(&e, a, b, d)) {
+                let p = I256::from_i128(&e, a).mul(&I256::from_i128(&e, b));
+                let exact = I256::from_i128(&e, f).mul(&I256::from_i128(&e, d)) == p;
+                prop_assert_eq!(c, if exact { f } else { f + 1 });
+            }
+        }
+
+        #[test]
+        fn every_gross_splits_and_adds_up(
+            gross in 0..=i128::MAX,
+            vat in 0u32..=10_000,
+            a in 0u32..=5_000,
+            b in 0u32..=5_000,
+        ) {
+            let e = Env::default();
+            e.cost_estimate().budget().reset_unlimited();
+            let r = rule(&e, vat, &[("irpf", a), ("ss", b)]);
+            let s = split(&e, &r, gross).unwrap();
+            prop_assert_eq!(s.net + s.reserve, gross);
+            prop_assert!(s.net >= 0 && s.reserve >= 0 && s.base <= gross);
+            // The reserve is never above the exact figure, and short of it by
+            // less than one unit per bucket other than VAT.
+            let exact_parts = (a + b) as i128;
+            let floor_sum: i128 = s.parts.iter().sum();
+            prop_assert!(floor_sum <= mul_div_floor(&e, s.base, exact_parts, BPS).unwrap() );
+            prop_assert!(mul_div_ceil(&e, s.base, exact_parts, BPS).unwrap() - floor_sum <= 2);
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(2_000))]
+
+        #[test]
+        fn mul3_div_floor_is_the_exact_floor(a in 0..=i128::MAX, b in 0..=i128::MAX >> 64, c in 0..=1i128 << 40, d in 1..=i128::MAX) {
+            let e = Env::default();
+            e.cost_estimate().budget().reset_unlimited();
+            if let Ok(q) = mul3_div_floor(&e, a, b, c, d) {
+                let p = I256::from_i128(&e, a).mul(&I256::from_i128(&e, b)).mul(&I256::from_i128(&e, c));
+                let qd = I256::from_i128(&e, q).mul(&I256::from_i128(&e, d));
+                prop_assert!(qd <= p && p < qd.add(&I256::from_i128(&e, d)));
+            }
+        }
+    }
+
+    #[test]
+    fn a_zero_or_negative_divisor_is_an_error_not_a_trap() {
+        let e = Env::default();
+        assert_eq!(mul_div_floor(&e, 1, 1, 0), Err(MathError::DivisionByZero));
+        assert_eq!(mul_div_floor(&e, 1, 1, -5), Err(MathError::DivisionByZero));
+        assert_eq!(mul_div_ceil(&e, 1, 1, 0), Err(MathError::DivisionByZero));
+        assert_eq!(
+            mul3_div_floor(&e, 1, 1, 1, 0),
+            Err(MathError::DivisionByZero)
+        );
+        // Three factors beyond 256 bits.
+        assert_eq!(
+            mul3_div_floor(&e, i128::MAX, i128::MAX, i128::MAX, 1),
+            Err(MathError::Overflow)
+        );
+    }
+
+    #[test]
+    fn products_beyond_i128_are_exact() {
+        let e = Env::default();
+        // i128::MAX * 10_000 / 12_100 overflows any i128 product but the result fits.
+        let q = mul_div_floor(&e, i128::MAX, BPS, 12_100).unwrap();
+        assert!(is_floor(&e, i128::MAX, BPS, 12_100, q));
+        assert_eq!(mul_div_floor(&e, i128::MAX, 2, 1), Err(MathError::Overflow));
+        assert_eq!(mul_div_floor(&e, -7, 1, 2), Ok(-4));
+        assert_eq!(mul_div_ceil(&e, 7, 1, 2), Ok(4));
+        assert_eq!(add(i128::MAX, 1), Err(MathError::Overflow));
+        assert_eq!(sub(i128::MIN, 1), Err(MathError::Overflow));
+        assert_eq!(later(u64::MAX, 1), Err(MathError::Overflow));
+        assert_eq!(pow10(39), Err(MathError::Overflow));
+        assert_eq!(pow10(38), Ok(10i128.pow(38)));
+    }
+
+    #[test]
+    fn the_largest_gross_splits_exactly() {
+        let e = Env::default();
+        let r = rule(&e, 2100, &[("irpf", 2000)]);
+        let s = split(&e, &r, i128::MAX).unwrap();
+        assert_eq!(s.net + s.reserve, i128::MAX);
+        // A withholding above the VAT makes the base exceed the gross: it
+        // cannot fit at the very top, and says so.
+        let abroad = rule(&e, 0, &[]);
+        assert_eq!(
+            split_withheld(&e, &abroad, 1_500, i128::MAX),
+            Err(MathError::Overflow)
+        );
+    }
 }

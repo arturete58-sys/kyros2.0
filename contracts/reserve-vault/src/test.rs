@@ -1,3 +1,4 @@
+#![allow(clippy::arithmetic_side_effects)] // test code: amounts are small and known
 extern crate std;
 use super::*;
 use kyros_types::Bucket;

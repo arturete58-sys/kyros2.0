@@ -22,24 +22,31 @@ impl ReserveVault {
         if !c.tokens.contains(&token) {
             return Err(VaultError::TokenNotAccepted);
         }
-        let (rule, mut s) = split_for(&e, &c.rule, &from, &reference, gross);
+        let (rule, mut s) = split_for(&e, &c.rule, &from, &reference, gross)?;
         c.rule = rule;
         let id = period_of(&c.period, now(&e));
         let mut p = load_period(&e, id, &token);
         // The period's fixed amounts come first, out of the net amount.
-        for (bucket, take) in fixed_takes(&e, &c, &token, &p, s.net).iter() {
-            p.buckets.set(
-                bucket.clone(),
-                p.buckets.get(bucket.clone()).unwrap_or(0) + take,
-            );
-            p.fixed.set(
-                bucket.clone(),
-                p.fixed.get(bucket.clone()).unwrap_or(0) + take,
-            );
-            s.fixed += take;
+        for (bucket, take) in fixed_takes(&e, &c, &token, &p, s.net)?.iter() {
+            credit(&mut p.buckets, &bucket, take)?;
+            credit(&mut p.fixed, &bucket, take)?;
+            s.fixed = add(s.fixed, take)?;
         }
-        s.net -= s.fixed;
-        s.reserve += s.fixed;
+        s.net = sub(s.net, s.fixed)?;
+        s.reserve = add(s.reserve, s.fixed)?;
+        // Books first, transfers last: every amount is checked before any
+        // token moves (the host also refuses re-entry into the vault).
+        credit(&mut p.buckets, &vat_symbol(&e), s.vat)?;
+        for (b, part) in c.rule.buckets.iter().zip(s.parts.iter()) {
+            credit(&mut p.buckets, &b.name, part)?;
+        }
+        p.reserved = add(p.reserved, s.reserve)?;
+        p.income = add(p.income, s.base)?;
+        // What the client withheld and paid to the tax office itself.
+        p.withheld = add(p.withheld, sub(add(s.base, s.vat)?, s.gross)?)?;
+        save_period(&e, id, &token, &p);
+        add_held(&e, &token, s.reserve)?;
+        bump_instance(&e);
         let t = token::Client::new(&e, &token);
         if s.net > 0 {
             t.transfer(&from, &c.payout, &s.net);
@@ -47,20 +54,6 @@ impl ReserveVault {
         if s.reserve > 0 {
             t.transfer(&from, e.current_contract_address(), &s.reserve);
         }
-        let vat = vat_symbol(&e);
-        p.buckets
-            .set(vat.clone(), p.buckets.get(vat).unwrap_or(0) + s.vat);
-        for (i, b) in c.rule.buckets.iter().enumerate() {
-            let part = s.parts.get(i as u32).unwrap();
-            p.buckets
-                .set(b.name.clone(), p.buckets.get(b.name).unwrap_or(0) + part);
-        }
-        p.reserved += s.reserve;
-        p.income += s.base;
-        p.withheld += s.base + s.vat - s.gross;
-        save_period(&e, id, &token, &p);
-        add_held(&e, &token, s.reserve);
-        bump_instance(&e);
         Received {
             token,
             period: id,
@@ -104,17 +97,14 @@ impl ReserveVault {
         if !Self::bucket_names(&e, &c).contains(&bucket) {
             return Err(VaultError::UnknownBucket);
         }
-        token::Client::new(&e, &token).transfer(&from, e.current_contract_address(), &amount);
         let mut p = load_period(&e, period, &token);
-        p.buckets.set(
-            bucket.clone(),
-            p.buckets.get(bucket.clone()).unwrap_or(0) + amount,
-        );
-        p.reserved += amount;
-        p.deposited += amount;
+        credit(&mut p.buckets, &bucket, amount)?;
+        p.reserved = add(p.reserved, amount)?;
+        p.deposited = add(p.deposited, amount)?;
         save_period(&e, period, &token, &p);
-        add_held(&e, &token, amount);
+        add_held(&e, &token, amount)?;
         bump_instance(&e);
+        token::Client::new(&e, &token).transfer(&from, e.current_contract_address(), &amount);
         Deposited {
             token,
             period,

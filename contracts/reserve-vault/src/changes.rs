@@ -21,7 +21,7 @@ impl ReserveVault {
         c.owner.require_auth();
         check_rule(&e, &rule)?;
         Self::fold(&e);
-        let ready_at = (now(&e) + c.notice_secs).max(effective_at);
+        let ready_at = later(now(&e), c.notice_secs)?.max(effective_at);
         e.storage().instance().set(
             &Key::PendingRule,
             &PendingRule {
@@ -44,7 +44,7 @@ impl ReserveVault {
             return Err(VaultError::CannotHold);
         }
         Self::fold(&e);
-        let ready_at = now(&e) + c.notice_secs;
+        let ready_at = later(now(&e), c.notice_secs)?;
         e.storage().instance().set(
             &Key::PendingDestination,
             &PendingDestination {
@@ -70,7 +70,7 @@ impl ReserveVault {
             return Err(VaultError::CannotHold);
         }
         Self::fold(&e);
-        let ready_at = now(&e) + c.notice_secs;
+        let ready_at = later(now(&e), c.notice_secs)?;
         e.storage().instance().set(
             &Key::PendingPayout,
             &PendingPayout {
@@ -90,7 +90,7 @@ impl ReserveVault {
         c.owner.require_auth();
         check_fixed(&e, &c, &fixed)?;
         Self::fold(&e);
-        let ready_at = now(&e) + c.notice_secs;
+        let ready_at = later(now(&e), c.notice_secs)?;
         e.storage().instance().set(
             &Key::PendingFixed,
             &PendingFixed {
@@ -121,7 +121,7 @@ impl ReserveVault {
             return Err(VaultError::CannotHold);
         }
         Self::fold(&e);
-        let ready_at = now(&e) + c.notice_secs;
+        let ready_at = later(now(&e), c.notice_secs)?;
         e.storage().instance().set(
             &Key::PendingToken,
             &PendingToken {

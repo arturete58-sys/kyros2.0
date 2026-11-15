@@ -102,7 +102,7 @@ impl SoroswapSwapper {
             &vec![&e, token_in, token_out.clone()],
             &me,
             // The router needs a deadline strictly after now; the swap happens in this call.
-            &(e.ledger().timestamp() + 1),
+            &e.ledger().timestamp().saturating_add(1),
         );
         let out = amounts.last().unwrap();
         token::Client::new(&e, &token_out).transfer(&me, &to, &out);

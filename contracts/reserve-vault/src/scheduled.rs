@@ -34,7 +34,9 @@ impl ReserveVault {
             return Err(VaultError::TooMany);
         }
         let id: u32 = e.storage().instance().get(&Key::NextScheduled).unwrap_or(1);
-        e.storage().instance().set(&Key::NextScheduled, &(id + 1));
+        e.storage()
+            .instance()
+            .set(&Key::NextScheduled, &next_id(id)?);
         let k = Key::Scheduled(id);
         e.storage().persistent().set(
             &k,
@@ -89,7 +91,7 @@ impl ReserveVault {
             let amount = p.amount.min(held_now);
             if amount > 0 {
                 Self::pay_out(&e, &c, p.period, p.token, p.bucket, amount, to.clone())?;
-                paid += amount;
+                paid = add(paid, amount)?;
             }
         }
         Self::drop_scheduled(&e, id);

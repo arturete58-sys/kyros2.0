@@ -17,8 +17,13 @@
 //! contract) holding it has to be cleared first. Until then Kyros does not
 //! deploy this strategy, and the app shows it as coming.
 #![no_std]
-use kyros_types::{Asset, OracleClient, SwapClient, TTL_EXTEND_TO, TTL_THRESHOLD};
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, Env};
+use kyros_types::{
+    mul3_div_floor, mul_div_ceil, mul_div_floor, pow10, sub, Asset, MathError, OracleClient,
+    SwapClient, TTL_EXTEND_TO, TTL_THRESHOLD,
+};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, panic_with_error, token, Address, Env,
+};
 
 soroban_sdk::contractmeta!(
     key = "Description",
@@ -43,6 +48,11 @@ pub enum YieldError {
     StalePrice = 3,
     /// Slippage above 5%, an age of zero, or tokens with different decimals.
     InvalidSetup = 4,
+    /// An amount beyond what an i128 holds, or an oracle with more than 38
+    /// decimals.
+    MathOverflow = 5,
+    /// A price or scale of zero.
+    DivisionByZero = 6,
 }
 
 #[contracttype]
@@ -83,7 +93,30 @@ fn last_price(e: &Env, s: &Setup) -> Result<(i128, i128, u64), YieldError> {
     if p.price <= 0 {
         return Err(YieldError::NoPrice);
     }
-    Ok((p.price, 10i128.pow(o.decimals()), p.timestamp))
+    Ok((p.price, pow10(o.decimals())?, p.timestamp))
+}
+
+impl From<MathError> for YieldError {
+    fn from(m: MathError) -> Self {
+        match m {
+            MathError::Overflow => YieldError::MathOverflow,
+            MathError::DivisionByZero => YieldError::DivisionByZero,
+        }
+    }
+}
+
+/// What `amount` USDY is worth in dollars at price `p`, less the slippage
+/// allowed, in one rounding (down: never counts on more than a sale returns).
+fn worth_after_slippage(
+    e: &Env,
+    s: &Setup,
+    amount: i128,
+    p: i128,
+    scale: i128,
+) -> Result<i128, YieldError> {
+    let keep = sub(BPS, s.max_slippage_bps as i128)?;
+    let den = scale.checked_mul(BPS).ok_or(YieldError::MathOverflow)?;
+    Ok(mul3_div_floor(e, amount, p, keep, den)?)
 }
 
 /// The price to trade at: refused when older than `max_age_secs`.
@@ -169,8 +202,10 @@ impl OndoYield {
             return Err(YieldError::InvalidAmount);
         }
         let (p, scale) = price(&e, &s)?;
-        let expected = amount * scale / p;
-        let min_out = expected * (BPS - s.max_slippage_bps as i128) / BPS;
+        // USDY the dollars buy at the oracle price, less the slippage, rounded
+        // down: a fair swap is never refused.
+        let expected = mul_div_floor(&e, amount, scale, p)?;
+        let min_out = mul_div_floor(&e, expected, sub(BPS, s.max_slippage_bps as i128)?, BPS)?;
         let me = e.current_contract_address();
         token::Client::new(&e, &s.asset).transfer(&me, &s.swapper, &amount);
         SwapClient::new(&e, &s.swapper).swap(&s.asset, &s.usdy, &amount, &min_out, &me);
@@ -192,16 +227,15 @@ impl OndoYield {
         // USDY to sell for `amount` dollars, rounded up, never more than held.
         // Asking for at least what `balance` reports sells everything: the
         // vault's "stop" asks for that, and nothing may be left behind.
-        let mut sell = (amount * scale + p - 1) / p;
-        let worth_all = held * p / scale * (BPS - s.max_slippage_bps as i128) / BPS;
+        let mut sell = mul_div_ceil(&e, amount, scale, p)?;
+        let worth_all = worth_after_slippage(&e, &s, held, p, scale)?;
         if sell > held || amount >= worth_all {
             sell = held;
         }
         if sell <= 0 {
             return Ok(0);
         }
-        let worth = sell * p / scale;
-        let min_out = worth * (BPS - s.max_slippage_bps as i128) / BPS;
+        let min_out = worth_after_slippage(&e, &s, sell, p, scale)?;
         token::Client::new(&e, &s.usdy).transfer(&me, &s.swapper, &sell);
         let out =
             SwapClient::new(&e, &s.swapper).swap(&s.usdy, &s.asset, &sell, &min_out, &s.owner);
@@ -217,7 +251,8 @@ impl OndoYield {
         let s = setup(&e);
         let held = token::Client::new(&e, &s.usdy).balance(&e.current_contract_address());
         match last_price(&e, &s) {
-            Ok((p, scale, _)) => held * p / scale * (BPS - s.max_slippage_bps as i128) / BPS,
+            Ok((p, scale, _)) => worth_after_slippage(&e, &s, held, p, scale)
+                .unwrap_or_else(|err| panic_with_error!(&e, err)),
             Err(_) => 0,
         }
     }

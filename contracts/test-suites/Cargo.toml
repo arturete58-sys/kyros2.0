@@ -1,0 +1,23 @@
+[package]
+name = "kyros-test-suites"
+description = "Adversarial and property-based tests across the Kyros contracts."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+kyros-types = { workspace = true, features = ["testutils"] }
+kyros-reserve-vault = { path = "../reserve-vault" }
+kyros-inbox = { path = "../inbox" }
+kyros-router = { path = "../router" }
+
+[dev-dependencies]
+proptest = { workspace = true }
+
+[lints]
+workspace = true

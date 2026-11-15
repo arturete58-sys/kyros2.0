@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["types", "reserve-vault", "router", "inbox", "rate-registry", "swap-soroswap", "yield-blend", "yield-ondo", "cctp-pay"]
+members = ["types", "reserve-vault", "router", "inbox", "rate-registry", "swap-soroswap", "yield-blend", "yield-ondo", "cctp-pay", "test-suites"]
 
 [workspace.package]
 edition = "2021"
@@ -11,8 +11,17 @@ repository = "https://github.com/arturete58-sys/kyros2.0"
 [workspace.dependencies]
 soroban-sdk = "28.0.0"
 kyros-types = { path = "types" }
+proptest = { version = "1.12", default-features = false, features = ["std"] }
+
+[workspace.lints.clippy]
+# Every operation on an amount is checked (each crate's `math` helpers), so
+# unchecked arithmetic is a build error. The calendar's bounded date
+# arithmetic and the tests opt out where they are, with the reason.
+arithmetic_side_effects = "deny"
 
 [profile.release]
+# Defence in depth: every amount is checked explicitly (MathOverflow), and
+# anything left (the calendar's bounded date arithmetic) still traps.
 opt-level = "z"
 overflow-checks = true
 debug = 0

@@ -10,10 +10,11 @@
 //! Risks the owner takes: the pool's bad debt (covered first by its
 //! backstop), and a pool so fully lent out that a withdrawal has to wait.
 #![no_std]
-use kyros_types::{TTL_EXTEND_TO, TTL_THRESHOLD};
+use kyros_types::{mul_div_floor, TTL_EXTEND_TO, TTL_THRESHOLD};
 use soroban_sdk::{
     auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
-    contract, contracterror, contractimpl, contracttype, token, vec, Address, Env, IntoVal, Symbol,
+    contract, contracterror, contractimpl, contracttype, panic_with_error, token, vec, Address,
+    Env, IntoVal, Symbol,
 };
 
 soroban_sdk::contractmeta!(
@@ -43,6 +44,8 @@ const SCALAR_12: i128 = 1_000_000_000_000;
 pub enum YieldError {
     /// The amount must be positive.
     InvalidAmount = 1,
+    /// A position worth more than an i128 holds.
+    MathOverflow = 2,
 }
 
 #[contracttype]
@@ -163,7 +166,9 @@ impl BlendYield {
             ],
         );
         bump(&e);
-        Ok(t.balance(&s.owner) - before)
+        t.balance(&s.owner)
+            .checked_sub(before)
+            .ok_or(YieldError::MathOverflow)
     }
 
     /// The asset the position is worth now: supply b-tokens times the pool's b_rate.
@@ -176,7 +181,10 @@ impl BlendYield {
             .supply
             .get(reserve.config.index)
             .unwrap_or(0);
-        b * reserve.data.b_rate / SCALAR_12
+        // b-tokens times Blend's rate, rounded down as Blend itself does
+        // when paying out: never counts on more than a withdrawal returns.
+        mul_div_floor(&e, b, reserve.data.b_rate, SCALAR_12)
+            .unwrap_or_else(|_| panic_with_error!(&e, YieldError::MathOverflow))
     }
 }
 

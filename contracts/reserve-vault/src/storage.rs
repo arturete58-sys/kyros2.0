@@ -159,12 +159,17 @@ pub(crate) fn held(e: &Env, token: &Address) -> i128 {
         .unwrap_or(0)
 }
 
-pub(crate) fn add_held(e: &Env, token: &Address, delta: i128) {
+/// Moves the vault's total reserve in `token` by `delta`. Invariant: it is
+/// always the sum of every period's buckets in that token, so never negative.
+pub(crate) fn add_held(e: &Env, token: &Address, delta: i128) -> Result<(), VaultError> {
     let k = Key::Held(token.clone());
-    e.storage().persistent().set(&k, &(held(e, token) + delta));
+    e.storage()
+        .persistent()
+        .set(&k, &add(held(e, token), delta)?);
     e.storage()
         .persistent()
         .extend_ttl(&k, TTL_THRESHOLD, PERIOD_TTL);
+    Ok(())
 }
 
 pub(crate) fn save_period(e: &Env, id: u32, token: &Address, s: &PeriodState) {

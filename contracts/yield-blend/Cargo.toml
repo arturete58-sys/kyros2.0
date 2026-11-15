@@ -17,3 +17,6 @@ kyros-types = { workspace = true }
 soroban-sdk = { workspace = true, features = ["testutils"] }
 kyros-types = { workspace = true, features = ["testutils"] }
 kyros-reserve-vault = { path = "../reserve-vault" }
+
+[lints]
+workspace = true

@@ -38,13 +38,15 @@ impl ReserveVault {
             .instance()
             .get(&Key::NextCorrection)
             .unwrap_or(1);
-        e.storage().instance().set(&Key::NextCorrection, &(id + 1));
+        e.storage()
+            .instance()
+            .set(&Key::NextCorrection, &next_id(id)?);
         let correction = Correction {
             period,
             token,
             bucket,
             amount,
-            ready_at: now(&e) + c.notice_secs,
+            ready_at: later(now(&e), c.notice_secs)?,
         };
         let k = Key::Correction(id);
         e.storage().persistent().set(&k, &correction);
@@ -88,10 +90,10 @@ impl ReserveVault {
         let amount = x.amount.min(held_now);
         Self::drop_correction(&e, id);
         if amount > 0 {
-            p.buckets.set(x.bucket.clone(), held_now - amount);
-            p.released += amount;
+            p.buckets.set(x.bucket.clone(), sub(held_now, amount)?);
+            p.released = add(p.released, amount)?;
             save_period(&e, x.period, &x.token, &p);
-            add_held(&e, &x.token, -amount);
+            add_held(&e, &x.token, neg(amount)?)?;
             ensure_liquid(&e, &x.token, amount)?;
             token::Client::new(&e, &x.token).transfer(
                 &e.current_contract_address(),

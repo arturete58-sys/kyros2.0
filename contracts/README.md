@@ -1,5 +1,7 @@
 # Kyros contracts
 
+[![CI](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml/badge.svg)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml) [![contract coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/arturete58-sys/kyros2.0/badges/coverage.json)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml)
+
 Soroban contracts for Kyros, written in Rust with `soroban-sdk` 28. Each user
 gets their own Reserve Vault: every payment is split as it arrives, the net
 amount goes to the user and the tax reserve stays locked until the tax is
@@ -15,7 +17,7 @@ every issue found and the test that reproduces it, is in
 
 | Crate | Instances | Role | Holds money | Privileged role |
 | --- | --- | --- | --- | --- |
-| `types` | library | Split arithmetic, fiscal calendar, cross-contract interfaces. Pure functions, no storage | — | — |
+| `types` | library | Checked 256-bit arithmetic, the split, the fiscal calendar, cross-contract interfaces. Pure functions, no storage | — | — |
 | `reserve-vault` | one per user | Splits payments, locks the reserve until each tax is due, pays the tax office | yes | the owner (the user) |
 | `inbox` | one per user | A plain payment address; anyone sweeps it through the vault | between a payment and its sweep | none (the vault's owner can move it, with notice) |
 | `router` | one, shared | Splits a payment inside the payer's own transaction; payroll runs | no | none |
@@ -24,6 +26,7 @@ every issue found and the test that reproduces it, is in
 | `swap-soroswap` | one, shared | `SwapApi` over the Soroswap router, used for converting the reserve | no (nothing between calls) | none |
 | `yield-blend` | one per vault | `YieldApi` over a Blend v2 pool: plain supply, never borrows | the lent reserve | the vault |
 | `yield-ondo` | one per vault | `YieldApi` holding Ondo USDY. Not deployed (USDY eligibility) | the invested reserve | the vault |
+| `test-suites` | tests only | Adversarial suites and stateful property tests across the contracts ([threat model](../docs/threat-model.md)) | — | — |
 
 Contracts only call each other through the traits in `types`
 (`VaultApi`, `RegistryApi`, `YieldApi`, `SwapApi`, `OracleApi`), so any
@@ -45,6 +48,7 @@ vault always waits for that vault's notice.
 | `conversion`, `strategy` | Opt-in currency conversion and yield |
 | `reads` | Read-only entry points |
 | `internal` | Steps shared by the entry points (paying out, applying changes) |
+| `math` | Checked arithmetic: every operation on an amount fails with a readable code |
 
 Each module adds its own `#[contractimpl]` block to the one `ReserveVault`
 contract, so the exported interface is the union of all of them.
@@ -62,11 +66,18 @@ Each line is enforced on-chain and covered by tests in `reserve-vault/src/test.r
   Stopping a conversion or a strategy, unfollowing the registry and
   cancelling a pending change apply at once, because they can only make the
   vault safer.
-- **Exact splits.** Integer arithmetic in `i128` with `overflow-checks` on in
-  release builds. Every bucket rounds down, the remainder goes to the net
-  amount, and `net + reserve = gross` always. The same vectors
-  (`test-vectors/vectors.json`) are checked in Rust and in the TypeScript SDK,
-  plus 20,000 random cases per property.
+- **Exact splits.** Every gross from 0 to `i128::MAX` splits exactly:
+  ratios are taken in 256 bits (`mul_div_floor`) and `net + reserve =
+  gross` always. VAT is what the base leaves, so it is never rounded down;
+  each other bucket rounds down by less than one unit. The same vectors
+  (`test-vectors/vectors.json`) are checked in Rust and in the TypeScript
+  SDK, plus property tests over the whole i128 range.
+- **Checked arithmetic.** No operation on an amount relies on
+  `overflow-checks`: each one is checked and fails with a contract error
+  (`MathOverflow` = 40, `DivisionByZero` = 41) before any token moves.
+  Clippy's `arithmetic_side_effects` is denied workspace-wide, so unchecked
+  arithmetic does not compile; only the calendar's bounded date arithmetic
+  is exempt, by module, with the reason written down.
 - **Liquidity.** Reserve due within 14 days is kept in the vault, never
   lent. The strategy never holds more than the owner's share (`max_bps`) of
   the reserve that is not due soon: `invest` brings the excess back when
@@ -106,30 +117,47 @@ Each line is enforced on-chain and covered by tests in `reserve-vault/src/test.r
   vault's behalf (inbox, CCTP receiver, swapper, Blend adapter) call
   `authorize_as_current_contract` with the exact sub-invocations: token,
   function, recipient and amount. Nothing broader.
+- **Re-entry.** The Soroban host refuses to re-enter a contract already on
+  the call stack, and the vault books every amount before it transfers.
+  `test-suites/tests/hostile.rs` pins this down for each external call made
+  while money moves: a token with transfer hooks, a strategy and a swapper.
 - **Muxed addresses.** `pay_tax_to` pays the destination as a muxed account
   (CAP-67), so an anchor can match the payment by its memo id.
 - **Events.** Every change and every movement of money publishes a typed
   `#[contractevent]` with indexed topics, so apps and keepers filter by kind
   through the RPC.
-- **Errors.** `#[contracterror]` enums with fixed numeric codes. Codes are
+- **Errors.** `#[contracterror]` enums with fixed numeric codes, including
+  the arithmetic ones (`MathOverflow`, `DivisionByZero`). Codes are
   never renumbered; new ones are appended.
 - **Metadata.** Each wasm carries `contractmeta!` entries (`Description`,
   `Source`) for explorers and verifiers.
 
-## Building and testing
+## Testing
+
+| Suite | Where | What it shows |
+| --- | --- | --- |
+| Unit and integration | each crate's `src/test.rs` | Every entry point, every error, the testnet flows, the heaviest vault against mainnet limits |
+| Property tests | `types/src/test.rs` | The 256-bit arithmetic and the split over the whole i128 range (proptest) |
+| Adversarial | `test-suites/tests/{economic,auth,hostile,ttl_and_limits}.rs` | One test per threat in [docs/threat-model.md](../docs/threat-model.md): donations, dust, i128 edges, signatures, re-entry, lying strategies, archival, denial of service |
+| Stateful properties | `test-suites/tests/invariants.rs` | Random sequences of payments, tax payments, releases, corrections, donations, yield and time; eight invariants checked after every step, failures shrunk to the shortest sequence |
 
 ```sh
 cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
+cargo clippy --workspace --all-targets -- -D warnings   # unchecked arithmetic is an error
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
-cargo test                 # mainnet resource limits enforced
+cargo test --workspace     # mainnet resource limits enforced
+cargo llvm-cov --workspace --ignore-filename-regex '(/test\.rs$|/tests/|test-suites/|/vendor/)'
 stellar contract build     # wasm32v1-none, release profile
 ```
 
-CI runs all of these on every push and fails if any wasm exceeds the
-network's 128 KiB contract size limit. A second workflow deploys the
-contracts to testnet and runs the end-to-end demo (`sdk/src/demo/testnet.ts`). Integration tests run against the real
-Soroswap and Blend wasm builds in `vendor/`.
+CI runs all of these on every push: formatting, clippy, rustdoc, the tests,
+coverage of the contract code (tests and vendored wasm excluded; summary in
+each run and the badge above, with a floor the build may not drop below),
+RustSec advisories for the dependencies (`cargo audit`), CoinFabrik's Scout
+detectors for Soroban, the build, and each wasm's size against the
+network's 128 KiB limit. A second workflow deploys the contracts to testnet
+and runs the end-to-end demo (`sdk/src/demo/testnet.ts`). Integration tests
+run against the real Soroswap and Blend wasm builds in `vendor/`.
 
 ## External contracts
 

@@ -1,6 +1,8 @@
 //! Runs the strategy against the Blend v2 contracts (pool, factory,
 //! backstop, emitter, Comet), set up the way Blend's own test fixture does,
 //! with a borrower paying interest so the supply earns.
+#![allow(clippy::arithmetic_side_effects)]
+// test code: amounts are small and known
 // Blend writes its 7-decimal fixed-point numbers as 0_7500000 (0.75): kept
 // as in Blend's own tests, so they read the same.
 #![allow(clippy::zero_prefixed_literal, clippy::inconsistent_digit_grouping)]

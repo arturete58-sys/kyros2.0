@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 590be61242397a67890b4394199110fd30d173cea5fa27315de578e26590bf12 # shrinks to ops = [Days(8), Days(30), Pay(1), Days(19), Days(23), Release { period: 2 }]
+cc 83f854c9f993229c535227be8d121f40c35bfb10d44ffc450e92820efcaf5673 # shrinks to ops = [Days(5), Days(21), Days(32), Days(43), Pay(7), Days(40), Pay(1), Invest, Days(16), Invest]

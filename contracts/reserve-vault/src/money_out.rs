@@ -54,10 +54,10 @@ impl ReserveVault {
         let mut after = Map::new(&e);
         for (k, v) in p.buckets.iter() {
             if v > 0 && t >= lock_at(&e, &c, period, &k) {
-                total += v;
+                total = add(total, v)?;
                 after.set(k, 0i128);
             } else {
-                held_back += v;
+                held_back = add(held_back, v)?;
                 after.set(k, v);
             }
         }
@@ -69,9 +69,9 @@ impl ReserveVault {
             });
         }
         p.buckets = after;
-        p.released += total;
+        p.released = add(p.released, total)?;
         save_period(&e, period, &token, &p);
-        add_held(&e, &token, -total);
+        add_held(&e, &token, neg(total)?)?;
         ensure_liquid(&e, &token, total)?;
         token::Client::new(&e, &token).transfer(&e.current_contract_address(), &c.payout, &total);
         Released {

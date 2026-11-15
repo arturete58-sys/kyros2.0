@@ -44,6 +44,9 @@ pub enum InboxError {
     AlreadyMoved = 5,
     /// The vault will accept this token after its notice: wait and `sweep`.
     TokenPending = 6,
+    /// A date beyond what a u64 of seconds holds (a vault reporting an
+    /// impossible notice period).
+    MathOverflow = 7,
 }
 
 /// A move to another vault, waiting for the notice period.
@@ -154,7 +157,8 @@ impl Inbox {
         }
         // Fold a move that already took effect before starting a new one.
         e.storage().instance().set(&Key::Vault, &current.address);
-        let ready_at = e.ledger().timestamp() + current.notice_secs();
+        let ready_at = kyros_types::later(e.ledger().timestamp(), current.notice_secs())
+            .map_err(|_| InboxError::MathOverflow)?;
         e.storage().instance().set(
             &Key::PendingVault,
             &PendingVault {
@@ -184,7 +188,7 @@ impl Inbox {
         Ok(())
     }
 
-    /// Number of sweeps so far (a cheap way for the keeper to see progress).
+    /// Number of sweeps so far, modulo 2^32 (a cheap way for the keeper to see progress).
     pub fn sweeps(e: Env) -> u32 {
         e.storage().instance().get(&Key::Swept).unwrap_or(0)
     }
@@ -229,7 +233,13 @@ impl Inbox {
         }
         e.authorize_as_current_contract(auths);
         let done = v.receive(&me, &token, &gross, &reference);
-        let n: u32 = e.storage().instance().get(&Key::Swept).unwrap_or(0) + 1;
+        // A progress counter only: it wraps rather than ever blocking a sweep.
+        let n: u32 = e
+            .storage()
+            .instance()
+            .get::<Key, u32>(&Key::Swept)
+            .unwrap_or(0)
+            .wrapping_add(1);
         e.storage().instance().set(&Key::Swept, &n);
         bump(&e);
         Swept {

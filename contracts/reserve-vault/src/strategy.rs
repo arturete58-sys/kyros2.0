@@ -12,6 +12,7 @@ pub(crate) fn active_strategy(e: &Env) -> Option<Strategy> {
     e.storage().instance().get(&Key::Strategy)
 }
 
+/// What the strategy holds for the vault, if it lends `token`.
 pub(crate) fn invested(e: &Env, token: &Address) -> i128 {
     match active_strategy(e) {
         Some(s) if s.token == *token => YieldClient::new(e, &s.adapter).balance(),
@@ -31,7 +32,7 @@ pub(crate) fn ensure_liquid(e: &Env, token: &Address, amount: i128) -> Result<()
     if let Some(s) = active_strategy(e) {
         if s.token == *token {
             // A strategy that cannot pay out now (e.g. a fully lent pool) leaves the payment waiting.
-            let _ = YieldClient::new(e, &s.adapter).try_withdraw(&(amount - liquid));
+            let _ = YieldClient::new(e, &s.adapter).try_withdraw(&sub(amount, liquid)?);
             if t.balance(&me) >= amount {
                 return Ok(());
             }
@@ -44,24 +45,24 @@ pub(crate) fn ensure_liquid(e: &Env, token: &Address, amount: i128) -> Result<()
 /// (or already past due). For each bucket it takes the earlier of the rule's
 /// date (before any holiday moves it) and the earliest date set by hand for
 /// that period: never later than the real one.
-pub(crate) fn due_soon(e: &Env, c: &Config, token: &Address) -> i128 {
+pub(crate) fn due_soon(e: &Env, c: &Config, token: &Address) -> Result<i128, VaultError> {
     let total = held(e, token);
-    let (soon, tracked) = scan_open(e, c, token);
+    let (soon, tracked) = scan_open(e, c, token)?;
     let store = e.storage().persistent();
     // Some period with reserve went untracked (more than `MAX_OPEN` at once):
     // all of it counts as due until the tracked periods account for it all.
     if tracked < total && store.get(&Key::OpenFull(token.clone())).unwrap_or(false) {
-        return total;
+        return Ok(total);
     }
-    soon.min(total)
+    Ok(soon.min(total))
 }
 
 /// Over the tracked open periods of `token`: the reserve due within
 /// `INVEST_HORIZON_SECS`, and all the reserve they hold.
-pub(crate) fn scan_open(e: &Env, c: &Config, token: &Address) -> (i128, i128) {
+pub(crate) fn scan_open(e: &Env, c: &Config, token: &Address) -> Result<(i128, i128), VaultError> {
     let store = e.storage().persistent();
     let ids: Vec<u32> = store.get(&Key::Open(token.clone())).unwrap_or(Vec::new(e));
-    let limit = now(e) + INVEST_HORIZON_SECS;
+    let limit = later(now(e), INVEST_HORIZON_SECS)?;
     let (mut soon, mut tracked) = (0, 0);
     for id in ids.iter() {
         // Two reads per period (its buckets and the earliest date set by
@@ -72,23 +73,24 @@ pub(crate) fn scan_open(e: &Env, c: &Config, token: &Address) -> (i128, i128) {
             if amount <= 0 {
                 continue;
             }
-            tracked += amount;
+            tracked = add(tracked, amount)?;
             let rule = due_at(&c.period, id, &bucket_due(&c.dues, &bucket));
             if set.map_or(rule, |x| x.min(rule)) <= limit {
-                soon += amount;
+                soon = add(soon, amount)?;
             }
         }
     }
-    (soon, tracked)
+    Ok((soon, tracked))
 }
 
 /// Clears `OpenFull` once the tracked periods hold all of `token`'s reserve
 /// (the untracked ones were paid or released): `invest` works normally again.
-pub(crate) fn settle_open_full(e: &Env, c: &Config, token: &Address) {
+pub(crate) fn settle_open_full(e: &Env, c: &Config, token: &Address) -> Result<(), VaultError> {
     let k = Key::OpenFull(token.clone());
-    if e.storage().persistent().has(&k) && scan_open(e, c, token).1 >= held(e, token) {
+    if e.storage().persistent().has(&k) && scan_open(e, c, token)?.1 >= held(e, token) {
         e.storage().persistent().remove(&k);
     }
+    Ok(())
 }
 
 /// Removes the strategy (and any pending one) once all it held is back.
@@ -112,16 +114,16 @@ impl ReserveVault {
     }
 
     /// Where the reserve in `token` is and what it has earned.
-    pub fn position(e: Env, token: Address) -> Position {
+    pub fn position(e: Env, token: Address) -> Result<Position, VaultError> {
         let held = held(&e, &token);
         let liquid = token::Client::new(&e, &token).balance(&e.current_contract_address());
         let invested = invested(&e, &token);
-        Position {
+        Ok(Position {
             held,
             liquid,
             invested,
-            surplus: liquid + invested - held,
-        }
+            surplus: sub(add(liquid, invested)?, held)?,
+        })
     }
 
     /// Proposes a yield strategy that may hold up to `max_bps` of the reserve
@@ -141,7 +143,7 @@ impl ReserveVault {
         {
             return Err(VaultError::InvalidStrategy);
         }
-        let ready_at = now(&e) + c.notice_secs;
+        let ready_at = later(now(&e), c.notice_secs)?;
         let strategy = Strategy {
             adapter,
             token,
@@ -177,7 +179,7 @@ impl ReserveVault {
             if all > 0 {
                 let before = t.balance(&me);
                 let ok = matches!(y.try_withdraw(&all), Ok(Ok(_)));
-                withdrawn = t.balance(&me) - before;
+                withdrawn = sub(t.balance(&me), before)?;
                 if !ok {
                     // A fully lent pool or a stale price: removing the strategy
                     // now would strand what it holds. It takes nothing more,
@@ -225,43 +227,32 @@ impl ReserveVault {
             let rest = y.balance();
             // Payments may already have taken it all (`ensure_liquid`).
             let ok = rest <= 0 || matches!(y.try_withdraw(&rest), Ok(Ok(_)));
-            let back = t.balance(&me) - liquid;
+            let back = sub(t.balance(&me), liquid)?;
             if ok {
                 drop_strategy(&e, back);
             }
             bump_instance(&e);
-            return Ok(-back);
+            return neg(back);
         }
-        settle_open_full(&e, &c, &s.token);
-        let soon = due_soon(&e, &c, &s.token);
-        if liquid < soon {
-            // A strategy that cannot pay out now is asked again on the next call.
-            let _ = y.try_withdraw(&(soon - liquid));
-            let back = t.balance(&me) - liquid;
-            bump_instance(&e);
-            if back > 0 {
-                Divested {
-                    token: s.token,
-                    amount: back,
-                }
-                .publish(&e);
-            }
-            return Ok(-back);
-        }
+        settle_open_full(&e, &c, &s.token)?;
+        let soon = due_soon(&e, &c, &s.token)?;
         let held = held(&e, &s.token);
-        let target = (held - soon) * s.max_bps as i128 / BPS;
+        // Rounded down: the strategy never gets more than its share.
+        let target = mul_div(&e, sub(held, soon)?, s.max_bps as i128, BPS)?;
         // The reserve that depends on the strategy is what the vault does not
         // hold itself (what the strategy earned is the owner's, and a loss
-        // still counts). Payments from the vault raise it: past `max_bps`, the
-        // excess comes back.
-        let at_risk = (held - liquid).max(0);
+        // still counts). One rule keeps both limits: it may not exceed
+        // `target`, and since `target <= held - soon`, keeping to it also
+        // keeps the reserve due soon in the vault.
+        let at_risk = sub(held, liquid)?.max(0);
         if at_risk > target {
-            let excess = (at_risk - target).min(y.balance());
+            let excess = sub(at_risk, target)?.min(y.balance());
             if excess <= 0 {
                 return Ok(0);
             }
+            // A strategy that cannot pay out now is asked again on the next call.
             let _ = y.try_withdraw(&excess);
-            let back = t.balance(&me) - liquid;
+            let back = sub(t.balance(&me), liquid)?;
             bump_instance(&e);
             if back > 0 {
                 Divested {
@@ -270,9 +261,9 @@ impl ReserveVault {
                 }
                 .publish(&e);
             }
-            return Ok(-back);
+            return neg(back);
         }
-        let amount = (target - at_risk).min(liquid - soon);
+        let amount = sub(target, at_risk)?.min(sub(liquid, soon)?);
         if amount <= 0 {
             return Ok(0);
         }
@@ -289,7 +280,7 @@ impl ReserveVault {
 
     /// The reserve in `token` due within `INVEST_HORIZON_SECS` (or past due),
     /// which `invest` keeps in the vault.
-    pub fn due_soon(e: Env, token: Address) -> i128 {
+    pub fn due_soon(e: Env, token: Address) -> Result<i128, VaultError> {
         due_soon(&e, &active(&e), &token)
     }
 
@@ -304,7 +295,7 @@ impl ReserveVault {
         let t = token::Client::new(&e, &token);
         let held = held(&e, &token);
         let liquid = t.balance(&me);
-        let surplus = liquid + invested(&e, &token) - held;
+        let surplus = sub(add(liquid, invested(&e, &token))?, held)?;
         if surplus <= 0 {
             return Ok(0);
         }
@@ -313,7 +304,7 @@ impl ReserveVault {
             let _ = YieldClient::new(&e, &s.adapter).try_withdraw(&surplus);
         }
         // The reserve the vault held itself before stays in it.
-        let amount = surplus.min(t.balance(&me) - liquid.min(held));
+        let amount = surplus.min(sub(t.balance(&me), liquid.min(held))?);
         if amount <= 0 {
             return Ok(0);
         }

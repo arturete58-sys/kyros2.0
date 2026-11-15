@@ -78,6 +78,8 @@ pub enum CctpPayError {
     NothingMinted = 7,
     /// The vault's split moves more than the payment it was given.
     BadSplit = 8,
+    /// A balance change beyond what an i128 holds.
+    MathOverflow = 9,
 }
 
 #[contracttype]
@@ -126,23 +128,27 @@ pub struct Payment {
     pub reference: BytesN<32>,
 }
 
+/// Where a field of `len` bytes at `at` ends; past the message is `BadMessage`.
+fn field_end(e: &Env, b: &Bytes, at: u32, len: u32) -> u32 {
+    match at.checked_add(len) {
+        Some(end) if end <= b.len() => end,
+        _ => panic_with_error!(e, CctpPayError::BadMessage),
+    }
+}
+
 /// The big-endian u32 at `at`; a message too short is `BadMessage`.
 fn read_u32(e: &Env, b: &Bytes, at: u32) -> u32 {
-    if b.len() < at + 4 {
-        panic_with_error!(e, CctpPayError::BadMessage);
-    }
+    let end = field_end(e, b, at, 4);
     let mut x = [0u8; 4];
-    b.slice(at..at + 4).copy_into_slice(&mut x);
+    b.slice(at..end).copy_into_slice(&mut x);
     u32::from_be_bytes(x)
 }
 
 /// The 32 bytes at `at`; a message too short is `BadMessage`.
 fn read_32(e: &Env, b: &Bytes, at: u32) -> BytesN<32> {
-    if b.len() < at + 32 {
-        panic_with_error!(e, CctpPayError::BadMessage);
-    }
+    let end = field_end(e, b, at, 32);
     let mut x = [0u8; 32];
-    b.slice(at..at + 32).copy_into_slice(&mut x);
+    b.slice(at..end).copy_into_slice(&mut x);
     BytesN::from_array(e, &x)
 }
 
@@ -233,7 +239,10 @@ impl CctpPay {
             &message,
             &attestation,
         );
-        let gross = t.balance(&me) - before;
+        let gross = t
+            .balance(&me)
+            .checked_sub(before)
+            .unwrap_or_else(|| panic_with_error!(&e, CctpPayError::MathOverflow));
         if gross <= 0 {
             panic_with_error!(&e, CctpPayError::NothingMinted);
         }
@@ -244,7 +253,9 @@ impl CctpPay {
         let s = v.quote_in(&me, &token, &p.reference, &gross);
         // Only this payment may leave: never anything else held here (a burn
         // someone redeemed at Circle directly lands here unpaid).
-        if s.net < 0 || s.reserve < 0 || s.net + s.reserve > gross {
+        // Checked: a vault answering amounts that overflow is a bad split too.
+        let total = s.net.checked_add(s.reserve);
+        if s.net < 0 || s.reserve < 0 || total.is_none_or(|t| t > gross) {
             panic_with_error!(&e, CctpPayError::BadSplit);
         }
         let owner = v.payout();

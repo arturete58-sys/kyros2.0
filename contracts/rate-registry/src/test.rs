@@ -1,4 +1,5 @@
 #![cfg(test)]
+#![allow(clippy::arithmetic_side_effects)] // test code: amounts are small and known
 use super::*;
 use soroban_sdk::{
     symbol_short,

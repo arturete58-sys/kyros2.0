@@ -21,7 +21,7 @@ pub(crate) fn split_for(
     from: &Address,
     reference: &BytesN<32>,
     gross: i128,
-) -> (Rule, Split) {
+) -> Result<(Rule, Split), VaultError> {
     // An invoice's own terms first, then the terms registered for this payer.
     // Terms in use have their lifetime extended, so a payer's terms (e.g. the
     // inbox for clients abroad) are never archived while payments keep coming.
@@ -40,10 +40,10 @@ pub(crate) fn split_for(
                 vat_bps: t.vat_bps,
                 buckets: t.buckets,
             };
-            let s = split_withheld(e, &r, t.withholding_bps, gross);
-            (r, s)
+            let s = split_withheld(e, &r, t.withholding_bps, gross)?;
+            Ok((r, s))
         }
-        None => (rule.clone(), split(e, rule, gross)),
+        None => Ok((rule.clone(), split(e, rule, gross)?)),
     }
 }
 
@@ -55,7 +55,7 @@ pub(crate) fn fixed_takes(
     token: &Address,
     p: &PeriodState,
     net: i128,
-) -> Vec<(Symbol, i128)> {
+) -> Result<Vec<(Symbol, i128)>, VaultError> {
     let mut out = Vec::new(e);
     let mut left = net;
     for f in c.fixed.iter() {
@@ -65,14 +65,14 @@ pub(crate) fn fixed_takes(
         if f.token != *token {
             continue;
         }
-        let want = f.amount - p.fixed.get(f.bucket.clone()).unwrap_or(0);
+        let want = sub(f.amount, p.fixed.get(f.bucket.clone()).unwrap_or(0))?;
         let take = want.min(left);
         if take > 0 {
             out.push_back((f.bucket, take));
-            left -= take;
+            left = sub(left, take)?;
         }
     }
-    out
+    Ok(out)
 }
 
 /// At most `MAX_FIXED` amounts, each positive, in an accepted token, in its
@@ -86,7 +86,7 @@ pub(crate) fn check_fixed(e: &Env, c: &Config, fixed: &Vec<Fixed>) -> Result<(),
         if f.amount <= 0 || f.bucket == vat || !c.tokens.contains(&f.token) {
             return Err(VaultError::InvalidFixed);
         }
-        for other in fixed.iter().skip(i + 1) {
+        for other in fixed.iter().skip(i.saturating_add(1)) {
             if other.bucket == f.bucket {
                 return Err(VaultError::InvalidFixed);
             }

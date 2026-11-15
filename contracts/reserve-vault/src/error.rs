@@ -62,12 +62,15 @@ pub enum VaultError {
     InvalidDue = 29,
     /// An earlier due date must still be at least the notice period away.
     DueTooSoon = 30,
+    /// No scheduled payment with that id.
     UnknownPayment = 31,
     /// A scheduled payment's date has not come yet.
     NotYet = 32,
     /// Too many payments or periods in one call.
     TooMany = 33,
+    /// No terms registered for that payer.
     UnknownPayer = 34,
+    /// No pending correction with that id.
     UnknownCorrection = 35,
     /// Fixed amounts that cannot be used (too many, not positive, the `vat`
     /// bucket, a token the vault does not accept, the same bucket twice).
@@ -80,4 +83,12 @@ pub enum VaultError {
     /// destination that can hold none (a Stellar account without the
     /// trustline): every payment to it would fail.
     CannotHold = 39,
+    /// An amount or a date beyond what the vault can represent (i128 amounts,
+    /// u64 seconds). No real payment reaches it; the operation is refused
+    /// whole and nothing changes.
+    MathOverflow = 40,
+    /// A price or a scale of zero where one is needed to divide.
+    DivisionByZero = 41,
+    /// A notice period longer than `MAX_NOTICE_SECS`.
+    InvalidNotice = 42,
 }

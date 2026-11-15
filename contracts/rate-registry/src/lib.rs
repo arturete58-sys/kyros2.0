@@ -170,11 +170,19 @@ fn at(v: &Vec<Entry>, t: u64) -> Option<u32> {
     found
 }
 
-/// First and last day number of a calendar year.
+/// First and last day number of a calendar year. Callers pass years in
+/// 1970..=9999, whose day numbers fit in u32 with room to spare.
+#[allow(clippy::arithmetic_side_effects)]
 fn year_days(year: u32) -> (u32, u32) {
     let first = days_from_civil(year as i64, 1, 1) as u32;
     let last = days_from_civil(year as i64 + 1, 1, 1) as u32 - 1;
     (first, last)
+}
+
+/// When day number `day` starts, in UNIX seconds (a u32 of days times 86,400
+/// stays below 2^49).
+fn day_start(day: u32) -> u64 {
+    u64::from(day).saturating_mul(DAY)
 }
 
 fn holiday_list(e: &Env, country: &Symbol, year: u32) -> Option<Vec<u32>> {
@@ -273,7 +281,9 @@ impl RateRegistry {
         if bps > 10_000 {
             return Err(RegistryError::InvalidRate);
         }
-        if from < now(&e) + min_notice(&e) {
+        // Saturating: a notice past the end of time means nothing can be
+        // published, which is what it says, rather than a trap.
+        if from < now(&e).saturating_add(min_notice(&e)) {
             return Err(RegistryError::TooSoon);
         }
         let old = entries(&e, &country, &name);
@@ -361,7 +371,7 @@ impl RateRegistry {
         if days.len() > MAX_HOLIDAYS || days.iter().any(|d| d < first || d > last) {
             return Err(RegistryError::InvalidHolidays);
         }
-        if holiday_list(&e, &country, year).is_some() && now(&e) >= first as u64 * DAY {
+        if holiday_list(&e, &country, year).is_some() && now(&e) >= day_start(first) {
             return Err(RegistryError::YearStarted);
         }
         save_holidays(&e, &country, year, &days);
@@ -378,7 +388,7 @@ impl RateRegistry {
     /// the year). It can only make a due date later.
     pub fn add_holiday(e: Env, country: Symbol, day: u32) -> Result<(), RegistryError> {
         admin(&e).require_auth();
-        if (day as u64) * DAY <= now(&e) {
+        if day_start(day) <= now(&e) {
             return Err(RegistryError::AlreadyInForce);
         }
         let (y, _, _) = civil_from_days(day as i64);
