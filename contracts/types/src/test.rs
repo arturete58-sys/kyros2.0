@@ -433,7 +433,7 @@ mod math {
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(4_000))]
+        #![proptest_config(ProptestConfig { cases: 4_000, failure_persistence: None, ..ProptestConfig::default() })]
 
         #[test]
         fn mul_div_floor_is_the_exact_floor(a in any::<i128>(), b in any::<i128>(), d in 1..=i128::MAX) {
@@ -486,7 +486,7 @@ mod math {
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(2_000))]
+        #![proptest_config(ProptestConfig { cases: 2_000, failure_persistence: None, ..ProptestConfig::default() })]
 
         #[test]
         fn mul3_div_floor_is_the_exact_floor(a in 0..=i128::MAX, b in 0..=i128::MAX >> 64, c in 0..=1i128 << 40, d in 1..=i128::MAX) {
@@ -547,4 +547,66 @@ mod math {
             Err(MathError::Overflow)
         );
     }
+}
+
+// ---- Rule and withholding validation, at their boundaries ----
+
+#[test]
+fn a_rule_may_take_exactly_everything_and_no_more() {
+    let e = Env::default();
+    assert_eq!(validate(&e, &rule(&e, 10_000, &[])), Ok(()));
+    assert_eq!(
+        validate(&e, &rule(&e, 10_001, &[])),
+        Err(RuleError::VatTooHigh)
+    );
+    assert_eq!(
+        validate(&e, &rule(&e, 0, &[("a", 6_000), ("b", 4_000)])),
+        Ok(())
+    );
+    assert_eq!(
+        validate(&e, &rule(&e, 0, &[("a", 6_000), ("b", 4_001)])),
+        Err(RuleError::BucketsOverBase)
+    );
+    let eight = [
+        ("a", 1),
+        ("b", 1),
+        ("c", 1),
+        ("d", 1),
+        ("f", 1),
+        ("g", 1),
+        ("h", 1),
+        ("i", 1),
+    ];
+    assert_eq!(validate(&e, &rule(&e, 0, &eight)), Ok(()));
+    let mut nine = eight.to_vec();
+    nine.push(("j", 1));
+    assert_eq!(
+        validate(&e, &rule(&e, 0, &nine)),
+        Err(RuleError::TooManyBuckets)
+    );
+    assert_eq!(
+        validate(&e, &rule(&e, 0, &[("vat", 1)])),
+        Err(RuleError::ReservedName)
+    );
+    assert_eq!(
+        validate(&e, &rule(&e, 0, &[("a", 1), ("a", 1)])),
+        Err(RuleError::DuplicateBucket)
+    );
+}
+
+#[test]
+fn a_withholding_may_take_up_to_the_base_and_leave_something_to_pay() {
+    let e = Env::default();
+    let spain = rule(&e, 2_100, &[("irpf", 500)]);
+    assert!(validate_withholding(&spain, 1_500));
+    // Withholding and buckets together: exactly the whole base, and no more.
+    assert!(validate_withholding(&spain, 9_500));
+    assert!(!validate_withholding(&spain, 9_501));
+    // A 100% withholding is fine while there is VAT to pay...
+    let only_vat = rule(&e, 2_100, &[]);
+    assert!(validate_withholding(&only_vat, 10_000));
+    // ...and refused with none: the client would pay nothing at all.
+    let no_vat = rule(&e, 0, &[]);
+    assert!(!validate_withholding(&no_vat, 10_000));
+    assert!(validate_withholding(&no_vat, 9_999));
 }

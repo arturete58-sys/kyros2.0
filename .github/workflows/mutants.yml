@@ -1,0 +1,146 @@
+name: Mutation testing
+
+# cargo-mutants changes the contracts' code one mutation at a time and checks
+# that a test fails. Coverage says a line ran; the mutation score says the
+# tests would notice if it were wrong.
+#
+# - Pull requests: only the lines the PR changes.
+# - Weekly and on demand: every contract, in shards, with a combined score
+#   in the run summary and a badge on contracts/README.md.
+# Configuration: contracts/.cargo/mutants.toml.
+
+on:
+  pull_request:
+    paths: ["contracts/**"]
+  schedule:
+    - cron: "23 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutants-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Fewer property-test cases per mutant: each mutant runs the suites again.
+  KYROS_PROPTEST_CASES: "8"
+
+jobs:
+  in-diff:
+    name: Mutants in the changed lines
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+          key: mutants
+      - name: Mutants in the diff
+        run: |
+          git diff "origin/${{ github.base_ref }}...HEAD" -- . > ../pr.diff
+          cargo mutants --in-place --in-diff ../pr.diff --test-workspace true --no-shuffle
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-in-diff
+          path: contracts/mutants.out
+
+  full:
+    name: Mutants ${{ matrix.name }}
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: types-1, files: "types/src/**/*.rs", tests: "--test-package kyros-types", shard: "0/2" }
+          - { name: types-2, files: "types/src/**/*.rs", tests: "--test-package kyros-types", shard: "1/2" }
+          - { name: vault-1, files: "reserve-vault/src/**/*.rs", tests: "--test-package kyros-reserve-vault --test-package kyros-test-suites", shard: "0/6" }
+          - { name: vault-2, files: "reserve-vault/src/**/*.rs", tests: "--test-package kyros-reserve-vault --test-package kyros-test-suites", shard: "1/6" }
+          - { name: vault-3, files: "reserve-vault/src/**/*.rs", tests: "--test-package kyros-reserve-vault --test-package kyros-test-suites", shard: "2/6" }
+          - { name: vault-4, files: "reserve-vault/src/**/*.rs", tests: "--test-package kyros-reserve-vault --test-package kyros-test-suites", shard: "3/6" }
+          - { name: vault-5, files: "reserve-vault/src/**/*.rs", tests: "--test-package kyros-reserve-vault --test-package kyros-test-suites", shard: "4/6" }
+          - { name: vault-6, files: "reserve-vault/src/**/*.rs", tests: "--test-package kyros-reserve-vault --test-package kyros-test-suites", shard: "5/6" }
+          - { name: registry, files: "rate-registry/src/**/*.rs", tests: "--test-package kyros-rate-registry --test-package kyros-test-suites", shard: "0/1" }
+          - { name: cctp, files: "cctp-pay/src/**/*.rs", tests: "--test-package kyros-cctp-pay", shard: "0/1" }
+          - { name: inbox, files: "inbox/src/**/*.rs", tests: "--test-package kyros-router --test-package kyros-test-suites", shard: "0/1" }
+          - { name: router, files: "router/src/**/*.rs", tests: "--test-package kyros-router --test-package kyros-test-suites", shard: "0/1" }
+          - { name: adapters-ondo, files: "yield-ondo/src/**/*.rs", tests: "--test-package kyros-yield-ondo", shard: "0/1" }
+          - { name: adapters-blend, files: "yield-blend/src/**/*.rs", tests: "--test-package kyros-yield-blend", shard: "0/1" }
+          - { name: adapters-soroswap, files: "swap-soroswap/src/**/*.rs", tests: "--test-package kyros-swap-soroswap", shard: "0/1" }
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+          key: mutants-${{ matrix.name }}
+      - name: Mutants
+        # Selected by file, not with -p: with -p cargo-mutants loads only that
+        # package and ignores the suites named in --test-package.
+        # Missed mutants are reported, not a failed job: the score is the result.
+        run: |
+          cargo mutants --in-place --no-shuffle -f '${{ matrix.files }}' ${{ matrix.tests }} \
+            --shard ${{ matrix.shard }} --sharding round-robin || true
+          test -f mutants.out/outcomes.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mutants-${{ matrix.name }}
+          path: contracts/mutants.out/outcomes.json
+
+  score:
+    name: Mutation score
+    needs: full
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # publishes the badge to the `badges` branch, on main only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mutants-*
+          path: outcomes
+      - name: Score
+        run: |
+          python3 scripts/mutation-score.py score.md mutation.json $(find outcomes -name outcomes.json)
+          cat score.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mutation-score
+          path: |
+            score.md
+            mutation.json
+      - name: Publish the badge
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dir=$(mktemp -d)
+          git clone -q --depth 1 --branch badges "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$dir" 2>/dev/null \
+            || { git init -q -b badges "$dir"; }
+          cp mutation.json "$dir/mutation.json"
+          cd "$dir"
+          git add mutation.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Mutation score badge" || exit 0
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:badges

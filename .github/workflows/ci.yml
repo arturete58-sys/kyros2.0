@@ -116,12 +116,13 @@ jobs:
           awk "BEGIN{exit !($LINES >= 80)}" && color=yellow
           awk "BEGIN{exit !($LINES >= 90)}" && color=brightgreen
           dir=$(mktemp -d)
+          git clone -q --depth 1 --branch badges "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$dir" 2>/dev/null \
+            || git init -q -b badges "$dir"
           printf '{"schemaVersion":1,"label":"contract coverage","message":"%s%%","color":"%s"}\n' "$LINES" "$color" > "$dir/coverage.json"
           cd "$dir"
-          git init -q -b badges
           git add coverage.json
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Coverage badge: $LINES%"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Coverage badge: $LINES%" || exit 0
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:badges
 
   rust-security:
     name: Rust dependencies (RustSec)

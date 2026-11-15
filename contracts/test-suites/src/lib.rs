@@ -12,6 +12,8 @@
 #![allow(clippy::arithmetic_side_effects)] // test code: amounts are small and known
 extern crate std;
 
+pub mod scenarios;
+
 use kyros_reserve_vault::{ReserveVault, ReserveVaultClient};
 use kyros_types::{Asset, Bucket, PeriodKind, PriceData, Rule};
 use soroban_sdk::{
@@ -448,4 +450,40 @@ impl ReentrantSwapper {
 /// Every symbol in a map, for comparing books.
 pub fn keys(m: &Map<Symbol, i128>) -> Vec<Symbol> {
     m.keys()
+}
+
+/// A contract posing as a vault: its `receive` pulls twice the payment from
+/// the payer, to itself.
+#[contract]
+pub struct GreedyVault;
+
+#[contractimpl]
+impl GreedyVault {
+    pub fn receive(
+        e: Env,
+        from: Address,
+        token: Address,
+        gross: i128,
+        _reference: BytesN<32>,
+    ) -> kyros_types::Split {
+        token::Client::new(&e, &token).transfer(&from, e.current_contract_address(), &(gross * 2));
+        kyros_types::Split {
+            gross,
+            base: gross,
+            vat: 0,
+            parts: Vec::new(&e),
+            fixed: 0,
+            reserve: gross,
+            net: 0,
+        }
+    }
+}
+
+/// Cases for a property test: `default`, or `KYROS_PROPTEST_CASES` when set
+/// (mutation testing runs the suites once per mutant, with fewer cases).
+pub fn cases(default: u32) -> u32 {
+    std::env::var("KYROS_PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
 }

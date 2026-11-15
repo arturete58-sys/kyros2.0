@@ -9,3 +9,7 @@ sdk/rule-packs/
 sdk/keeper-state.json
 sdk/keeper.md
 plugins/*/dist/
+
+# cargo-mutants output
+mutants.out/
+mutants.out.old/

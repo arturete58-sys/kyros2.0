@@ -1,0 +1,130 @@
+name: Release
+
+# Verifiable contract releases (SEP-0055, Contract Build Verification).
+#
+# On a `v*` tag: builds every contract with a pinned toolchain, embeds the
+# version and the source repository in each wasm (contractmetav0), records
+# the SHA-256 of each wasm, attests its build provenance with GitHub, and
+# publishes a GitHub Release with the wasm files and the hash manifest.
+#
+# Anyone can then check that a contract deployed on Stellar was built here,
+# from this commit, by this workflow:
+#   gh attestation verify kyros_reserve_vault.wasm --repo arturete58-sys/kyros2.0
+# or through an explorer that reads `source_repo` and the attestation API.
+#
+# `workflow_dispatch` runs everything except publishing the Release (a dry
+# run): the build, the hashes and the attestation.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+env:
+  # Pinned so the same commit always gives the same wasm.
+  RUST_TOOLCHAIN: "1.97.0"
+  STELLAR_CLI: "28.1.0"
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        run: |
+          version=$(sed -n '/^\[workspace.package\]/,/^\[/{s/^version = "\(.*\)"/\1/p}' contracts/Cargo.toml)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the contracts' version ${version} (contracts/Cargo.toml)."
+            exit 1
+          fi
+          if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for ${version}."
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: wasm32v1-none
+
+      - name: Install the Stellar CLI
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI}/stellar-cli-${STELLAR_CLI}-x86_64-unknown-linux-gnu.tar.gz" | tar xz -C "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build
+        working-directory: contracts
+        run: |
+          stellar contract build \
+            --meta source_repo=github:${GITHUB_REPOSITORY} \
+            --meta version=${{ steps.version.outputs.version }}
+
+      - name: Check the metadata in every wasm
+        working-directory: contracts
+        run: |
+          for f in target/wasm32v1-none/release/*.wasm; do
+            meta=$(stellar contract info meta --wasm "$f" --output json)
+            echo "$meta" | grep -q "github:${GITHUB_REPOSITORY}" || { echo "::error::$f has no source_repo"; exit 1; }
+            echo "$meta" | grep -q '"${{ steps.version.outputs.version }}"' || { echo "::error::$f has no version"; exit 1; }
+          done
+
+      - name: Hashes
+        run: |
+          mkdir dist
+          cp contracts/target/wasm32v1-none/release/*.wasm dist/
+          cd dist
+          sha256sum *.wasm > SHA256SUMS
+          {
+            echo "## Contracts v${{ steps.version.outputs.version }}"
+            echo
+            echo "Commit \`${GITHUB_SHA}\`, Rust ${RUST_TOOLCHAIN}, Stellar CLI ${STELLAR_CLI}."
+            echo
+            echo "| Contract | Bytes | SHA-256 |"
+            echo "| --- | --- | --- |"
+            while read -r hash file; do
+              echo "| \`${file%.wasm}\` | $(stat -c %s "$file") | \`$hash\` |"
+            done < SHA256SUMS
+          } > ../hashes.md
+          cat ../hashes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*.wasm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: contracts-v${{ steps.version.outputs.version }}
+          path: dist/
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=${{ steps.version.outputs.version }}
+          # The release notes: this version's CHANGELOG section, then the hashes.
+          awk -v v="## [${version}]" 'index($0, v) == 1 {p = 1; next} /^## \[/ || /^\[[^]]+\]: / {p = 0} p' CHANGELOG.md > notes.md
+          {
+            echo
+            cat hashes.md
+            echo
+            echo "Verify a wasm, downloaded from this release or from the ledger:"
+            echo
+            echo '```sh'
+            echo "gh attestation verify kyros_reserve_vault.wasm --repo ${GITHUB_REPOSITORY}"
+            echo "sha256sum -c SHA256SUMS"
+            echo '```'
+          } >> notes.md
+          gh release create "${GITHUB_REF_NAME}" dist/*.wasm dist/SHA256SUMS \
+            --title "Contracts ${GITHUB_REF_NAME}" --notes-file notes.md --verify-tag

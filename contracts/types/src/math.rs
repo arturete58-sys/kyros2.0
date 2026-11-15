@@ -63,15 +63,9 @@ fn floor_div(e: &Env, p: &I256, d: i128) -> Result<i128, MathError> {
 /// `ceil(a * b / d)`, with the product taken in 256 bits. `d` must be positive.
 pub fn mul_div_ceil(e: &Env, a: i128, b: i128, d: i128) -> Result<i128, MathError> {
     let q = mul_div_floor(e, a, b, d)?;
-    // a * b is a multiple of d exactly when q * d == a * b.
-    let exact = match (q.checked_mul(d), a.checked_mul(b)) {
-        (Some(x), Some(y)) => x == y,
-        _ => {
-            let x = I256::from_i128(e, q).mul(&I256::from_i128(e, d));
-            x == I256::from_i128(e, a).mul(&I256::from_i128(e, b))
-        }
-    };
-    if exact {
+    // a * b is a multiple of d exactly when q * d == a * b (in 256 bits).
+    let qd = I256::from_i128(e, q).mul(&I256::from_i128(e, d));
+    if qd == I256::from_i128(e, a).mul(&I256::from_i128(e, b)) {
         Ok(q)
     } else {
         q.checked_add(1).ok_or(MathError::Overflow)

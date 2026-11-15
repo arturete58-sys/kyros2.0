@@ -1,0 +1,69 @@
+[package]
+name = "kyros-fuzz"
+description = "libFuzzer targets for the Kyros contracts (cargo-fuzz, nightly)."
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = "1"
+soroban-sdk = { version = "28.0.0", features = ["testutils"] }
+kyros-types = { path = "../types", features = ["testutils"] }
+kyros-cctp-pay = { path = "../cctp-pay" }
+kyros-test-suites = { path = "../test-suites" }
+
+# Its own workspace: the fuzz build uses nightly and sanitizer flags that the
+# contracts' workspace must never see.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+overflow-checks = true
+
+[[bin]]
+name = "split"
+path = "fuzz_targets/split.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cctp_message"
+path = "fuzz_targets/cctp_message.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "vault_ops"
+path = "fuzz_targets/vault_ops.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "router_ops"
+path = "fuzz_targets/router_ops.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "inbox_ops"
+path = "fuzz_targets/inbox_ops.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "registry_ops"
+path = "fuzz_targets/registry_ops.rs"
+test = false
+doc = false
+bench = false

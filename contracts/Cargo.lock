@@ -1117,6 +1117,7 @@ version = "0.1.0"
 dependencies = [
  "kyros-reserve-vault",
  "kyros-types",
+ "proptest",
  "soroban-sdk",
 ]
 
@@ -1168,7 +1169,9 @@ dependencies = [
 name = "kyros-test-suites"
 version = "0.1.0"
 dependencies = [
+ "arbitrary",
  "kyros-inbox",
+ "kyros-rate-registry",
  "kyros-reserve-vault",
  "kyros-router",
  "kyros-types",

@@ -1,0 +1,93 @@
+name: Nightly fuzz
+
+# Coverage-guided fuzzing of every contract (cargo-fuzz, libFuzzer). The
+# operation targets drive the same scenarios as the property tests in
+# contracts/test-suites, with every invariant checked after every step.
+# A crash is uploaded with its minimized input; the corpus is kept between
+# runs so each night starts where the last one stopped.
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds per target
+        required: false
+        default: "600"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-fuzz
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [split, cctp_message, vault_ops, router_ops, inbox_ops, registry_ops]
+    defaults:
+      run:
+        working-directory: contracts/fuzz
+    env:
+      SECONDS_PER_TARGET: ${{ github.event.inputs.seconds || '600' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/fuzz
+          key: ${{ matrix.target }}
+      - name: Restore the corpus
+        uses: actions/cache/restore@v4
+        with:
+          path: contracts/fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
+      - name: Fuzz
+        run: |
+          mkdir -p "corpus/${{ matrix.target }}"
+          # Rust is memory-safe: no sanitizer, all the time goes to new inputs.
+          cargo fuzz run --sanitizer none "${{ matrix.target }}" "corpus/${{ matrix.target }}" -- \
+            -max_total_time="$SECONDS_PER_TARGET" -max_len=4096 -rss_limit_mb=4096 -print_final_stats=1 \
+            2>&1 | tee fuzz.log
+      - name: Minimize the crash
+        if: failure()
+        run: |
+          crash=$(ls artifacts/${{ matrix.target }}/crash-* 2>/dev/null | head -1)
+          if [ -n "$crash" ]; then
+            cargo fuzz tmin --sanitizer none "${{ matrix.target }}" "$crash" -- -runs=2000 2>&1 | tail -20 || true
+            cargo fuzz fmt --sanitizer none "${{ matrix.target }}" "$crash" > artifacts/${{ matrix.target }}/crash.txt 2>&1 || true
+          fi
+      - name: Upload the crash
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crash-${{ matrix.target }}
+          path: |
+            contracts/fuzz/artifacts/${{ matrix.target }}
+            contracts/fuzz/fuzz.log
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.target }}"
+            echo '```'
+            grep -E "stat::|Done|SUMMARY|panicked" fuzz.log | tail -12 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save the corpus
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: contracts/fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}

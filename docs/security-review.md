@@ -108,9 +108,80 @@ Three gaps against production protocols (Blend, Phoenix, Comet), closed in one p
 
 **Attack suites.** A new crate, `contracts/test-suites`, holds one test per threat in [threat-model.md](threat-model.md): donations and inflation, dust, the edges of i128, zero and negative amounts, overdrafts, missing and foreign signatures, signatures for another amount, re-entry from a token with hooks, from a strategy and from a swapper, a strategy lying about its balance, entries kept alive and restored, the cost of the thousandth payment, list caps, and junk tokens in an Inbox. Its mocks include a SEP-41 token with any number of decimals and hostile contracts.
 
-**Stateful properties.** `invariants.rs` runs random sequences of up to 40 operations (payments, deposits, tax payments, releases, corrections, donations, yield earned, lent out, rebalanced, time passing) and checks eight invariants after every step, refused or not. It was checked against injected bugs: dropping the bookkeeping line in `release`, and releasing before the due date, were each caught and shrunk to a short sequence. proptest runs on stable Rust in every CI run; cargo-fuzz would need nightly and libFuzzer for the same properties.
+**Stateful properties.** `invariants.rs` runs random sequences of up to 40 operations (payments, deposits, tax payments, releases, corrections, donations, yield earned, lent out, rebalanced, time passing) and checks eight invariants after every step, refused or not. It was checked against injected bugs: dropping the bookkeeping line in `release`, and releasing before the due date, were each caught and shrunk to a short sequence. proptest runs on stable Rust in every CI run; the fifth pass adds the same properties under cargo-fuzz.
 
 **CI.** A coverage job (cargo-llvm-cov) measures lines, regions and functions of the contract code only, publishes the summary in each run and a badge on `contracts/README.md`, and fails below a floor. A security job runs RustSec advisories over the dependencies (`cargo audit`). One advisory is accepted (RUSTSEC-2026-0387, crypto-bigint timing): it reaches only the native host that runs the tests, and a CI step fails if it ever reaches the contract wasm. CoinFabrik's Scout action was tried and dropped for now: its image fails to build its own linter driver (dylint), upstream. The Scout detectors that apply to this code (integer overflow, division before multiplication, unchecked arithmetic in general) are covered by the denied `arithmetic_side_effects` lint and the 256-bit helpers.
+
+## Fifth pass: every contract under attack, fuzzing, mutation testing, releases
+
+The fourth pass covered the vault in depth; this one brings the other
+contracts to the same level, checks that the tests would notice a bug, and
+makes each release verifiable.
+
+**Adversarial suites for every contract.** One test per threat, listed in
+the [threat model](threat-model.md) by contract:
+
+| Contract | Suite | Threats covered |
+| --- | --- | --- |
+| Router | `test-suites/tests/router.rs` | The payer signs exact transfers and nothing else (the full authorization tree is pinned); a fake vault cannot pull more than the payer signed; a payroll run with one entry that is not a vault moves nothing |
+| Inbox | `test-suites/tests/inbox.rs` | Anyone may sweep and only the split is paid; only the owner moves it, only to their own vault, only after notice; junk tokens go back to the owner only |
+| CCTP receiver | `cctp-pay/src/test.rs` (`adversarial`) | Nonces out of order each pay once (no replay); an unknown domain or token mints nothing; a hook naming something that is not a vault reverts the mint; any corrupted message is refused or pays exactly; any amount and fee settle exactly |
+| Rate Registry | `test-suites/tests/registry.rs` | Rates at the edges (0% and 100%, out of range); a change applies exactly on its date in a vault that follows the registry; a rate above the vault's ceiling is ignored; only the publisher writes, and history is final |
+
+**Stateful properties for every contract.** The scenarios moved into the
+`test-suites` library (`src/scenarios`), one per contract, each with its
+invariants checked after every step: the vault's eight, the Router's (every
+unit accounted for, refused calls move nothing), the Inbox's (conservation,
+it follows only its owner's vaults and only after notice), the Registry's
+(history final, notice held, the following vault's VAT right). proptest runs
+them in every CI run.
+
+**Fuzzing.** `contracts/fuzz` holds six cargo-fuzz targets: the split over
+any valid rule and any gross, the CCTP V2 message parser over raw and
+mutated messages, and the four scenarios above driven by libFuzzer instead
+of proptest, so each invariant is written once and checked both ways.
+`.github/workflows/nightly-fuzz.yml` runs each target for ten minutes every
+night, keeps the corpus between nights, and uploads any crash minimized. A
+local smoke run of every target found nothing.
+
+**Mutation testing.** cargo-mutants changes the contract code one operator
+at a time and reruns the tests; a change no test notices is a gap.
+`.github/workflows/mutants.yml` mutates the lines a pull request changes,
+and every contract every week, and publishes the score as a badge. Before
+this pass, a sample of the vault's money paths (`math`, `money_in`,
+`money_out`, `internal`, `corrections`) left 11 of 91 mutants alive, and
+the shared types left some in the split's validation. Each survivor was a
+behaviour no test pinned down:
+
+| Survivor | Test that kills it |
+| --- | --- |
+| A proposal applying another proposal's pending rule or payout early | `notice::a_pending_rule_is_not_applied_early_by_another_proposal`, `notice::a_pending_payout_is_not_applied_early_by_another_proposal` |
+| A replacement conversion skipping its notice; a ready strategy not moved into place | `notice::a_replacement_conversion_waits_its_notice_and_then_takes_its_place`, `notice::a_ready_strategy_is_moved_into_place` |
+| Deposits not reaching the rule's bucket, or a dues-only bucket | `notice::deposits_reach_every_bucket_the_vault_keeps` |
+| A bucket kept only for a fixed amount refusing deposits | `notice::a_fixed_amount_bucket_takes_deposits` |
+| A correction with nothing left still calling the token | `notice::a_correction_with_nothing_left_moves_no_token` |
+| A split with nothing on one side making two transfers | `notice::a_split_with_nothing_on_one_side_makes_one_transfer` |
+| A rule taking exactly 100%, a withholding equal to the base | `types` tests `a_rule_may_take_exactly_everything_and_no_more`, `a_withholding_may_take_up_to_the_base_and_leave_something_to_pay` |
+
+After the new tests: the shared types 100% (45 of 45), the vault sample
+100% (89 of 89; 8 more do not compile). One mutant is excluded as equivalent, with the reason in
+`contracts/.cargo/mutants.toml`: in `release`, `v > 0` against `v >= 0`
+for a bucket that is empty either way.
+
+**Releases.** Each wasm carries its version and source repository in its
+contract metadata (`version`, `source_repo`, SEP-0055). A `v*` tag runs
+`.github/workflows/release.yml`: a pinned toolchain (Rust 1.97.0, Stellar
+CLI 28.1.0), a check that the tag, the crate version and the changelog
+agree, the build, a check of the metadata in every wasm, SHA-256 hashes,
+GitHub build attestations, and a GitHub Release with the wasm files,
+`SHA256SUMS` and the changelog section. Anyone can check that a deployed
+contract came from a given commit (`gh attestation verify`).
+
+**Documents.** [SECURITY.md](../SECURITY.md) (private reporting, response
+times, scope, safe harbour), [CHANGELOG.md](../CHANGELOG.md),
+[migration.md](migration.md) (why the contracts cannot be upgraded and how
+a user moves to a new version) and [audit/AUDIT_SCOPE.md](audit/AUDIT_SCOPE.md)
+(scope, hashes, roles, trust assumptions, questions for the auditor).
 
 ## Randomized checks
 

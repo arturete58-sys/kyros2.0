@@ -1,0 +1,36 @@
+# cargo-mutants: changes the contracts' code one mutation at a time (an
+# operator flipped, a condition negated, a function body replaced by a
+# default) and checks that some test fails. A mutant that survives is a
+# behaviour no test pins down. The score is caught / (caught + missed).
+#
+# Only contract logic is mutated: tests, the test kit, the fuzz targets and
+# vendored wasm are not. CI picks the tests per package: each package's own,
+# plus the adversarial suites in test-suites/ for the contracts they cover
+# (`--test-package`), with fewer property-test cases (KYROS_PROPTEST_CASES).
+
+exclude_globs = [
+    "**/test.rs",
+    "**/test/**",
+    "test-suites/**",
+    "fuzz/**",
+    "vendor/**",
+    # Event and error definitions: declarations, no logic to mutate.
+    "reserve-vault/src/events.rs",
+    "reserve-vault/src/error.rs",
+]
+
+# Calls whose mutation only changes what a test environment cannot observe
+# without a live network: ledger-entry lifetimes are covered by their own
+# tests (ttl_and_limits.rs), not by every scenario.
+exclude_re = [
+    "replace bump_instance with \\(\\)",
+    "replace bump with \\(\\)",
+    # Equivalent mutant: an empty bucket released or kept is the same (it
+    # adds 0 to the total and stays 0), so no test can tell them apart.
+    "money_out.rs:\\d+:\\d+: replace > with >= in ReserveVault::release",
+]
+
+timeout_multiplier = 3.0
+
+# The baseline only runs the mutated package's tests; the suites take longer.
+minimum_test_timeout = 120

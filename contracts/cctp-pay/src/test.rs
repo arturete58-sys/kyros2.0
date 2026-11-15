@@ -453,3 +453,135 @@ fn a_fake_vault_cannot_take_more_than_the_payment() {
     );
     assert_eq!(bal(&w, &thief), 0);
 }
+
+// ---- Adversarial: cross-chain messages (threats C1-C5, docs/threat-model.md) ----
+
+mod adversarial {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Everything a refused message must leave as it was.
+    fn balances(w: &W) -> (i128, i128, i128) {
+        (
+            bal(w, &w.owner),
+            bal(w, &w.vault.address),
+            bal(w, &w.pay.address),
+        )
+    }
+
+    /// C1. Nonces arriving out of order each pay once, and only once:
+    /// replaying any of them is refused (Circle's transmitter tracks nonces;
+    /// a replay reverts the whole call, the mint included).
+    #[test]
+    fn nonces_out_of_order_each_pay_once() {
+        let w = world();
+        let h = hook(&w, &w.vault.address, [0; 32]);
+        let msgs: std::vec::Vec<Bytes> = [3u8, 1, 2]
+            .iter()
+            .map(|n| message(&w, *n, 121_000_000, 0, &w.pay.address, None, &h))
+            .collect();
+        for m in &msgs {
+            w.pay.mint_and_pay(m, &Bytes::new(&w.e));
+        }
+        let paid = balances(&w);
+        assert_eq!(paid, (240 * UNIT, 123 * UNIT, 0));
+        for m in &msgs {
+            assert!(w.pay.try_mint_and_pay(m, &Bytes::new(&w.e)).is_err());
+        }
+        assert_eq!(balances(&w), paid);
+    }
+
+    /// C2. A message from a domain or for a token Circle does not map to
+    /// Stellar USDC is refused before anything is minted.
+    #[test]
+    fn an_unknown_domain_or_token_mints_nothing() {
+        let w = world();
+        let h = hook(&w, &w.vault.address, [0; 32]);
+        let good = message(&w, 9, 121_000_000, 0, &w.pay.address, None, &h);
+        // Source domain 7 instead of Base's 6.
+        let mut domain = good.clone();
+        domain.set(7, 7);
+        assert_eq!(
+            w.pay.try_mint_and_pay(&domain, &Bytes::new(&w.e)),
+            Err(Ok(soroban_sdk::Error::from_contract_error(
+                CctpPayError::UnknownToken as u32
+            )))
+        );
+        // Another burn token.
+        let mut tok = good.clone();
+        tok.set(MSG_BODY + BURN_TOKEN, 0xEE);
+        assert_eq!(
+            w.pay.try_mint_and_pay(&tok, &Bytes::new(&w.e)),
+            Err(Ok(soroban_sdk::Error::from_contract_error(
+                CctpPayError::UnknownToken as u32
+            )))
+        );
+        assert_eq!(balances(&w), (0, 0, 0));
+        // The genuine message still pays (nothing was consumed).
+        w.pay.mint_and_pay(&good, &Bytes::new(&w.e));
+        assert_eq!(balances(&w), (80 * UNIT, 41 * UNIT, 0));
+    }
+
+    /// C3. A hook naming something that is not a vault fails whole: the
+    /// mint is reverted with it, and nothing is left in the receiver.
+    #[test]
+    fn a_hook_naming_a_non_vault_reverts_the_mint() {
+        let w = world();
+        let stranger = Address::generate(&w.e);
+        let h = hook(&w, &stranger, [0; 32]);
+        let m = message(&w, 5, 121_000_000, 0, &w.pay.address, None, &h);
+        assert!(w.pay.try_mint_and_pay(&m, &Bytes::new(&w.e)).is_err());
+        assert_eq!(balances(&w), (0, 0, 0));
+        assert_eq!(bal(&w, &stranger), 0);
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 256, failure_persistence: None, ..ProptestConfig::default() })]
+
+        /// C4. Any corruption of a valid message (up to three bytes changed,
+        /// or cut short) is either refused with nothing moved, or pays
+        /// exactly what was minted: every unit to the owner or the vault,
+        /// nothing left in the receiver.
+        #[test]
+        fn any_corrupted_message_is_refused_or_pays_exactly(
+            flips in prop::collection::vec((0u32..400, any::<u8>()), 0..4),
+            cut in prop::option::of(0u32..400),
+        ) {
+            let w = world();
+            let h = hook(&w, &w.vault.address, [0; 32]);
+            let mut m = message(&w, 11, 121_000_000, 0, &w.pay.address, None, &h);
+            for (at, b) in &flips {
+                if *at < m.len() {
+                    m.set(*at, *b);
+                }
+            }
+            if let Some(c) = cut {
+                m = m.slice(0..c.min(m.len()));
+            }
+            w.e.cost_estimate().budget().reset_unlimited();
+            match w.pay.try_mint_and_pay(&m, &Bytes::new(&w.e)) {
+                Ok(Ok(s)) => {
+                    let (owner, vault, left) = balances(&w);
+                    prop_assert_eq!(left, 0);
+                    prop_assert_eq!(owner + vault, s.gross);
+                    prop_assert_eq!(s.net + s.reserve, s.gross);
+                }
+                _ => prop_assert_eq!(balances(&w), (0, 0, 0)),
+            }
+        }
+
+        /// C5. Any amount and any fee Circle keeps settle exactly: the
+        /// split adds up to what was minted, none of it stays behind.
+        #[test]
+        fn any_amount_and_fee_settle_exactly(amount in 1u32..=u32::MAX, fee in 0u32..=u32::MAX) {
+            let fee = fee % amount;
+            let w = world();
+            let h = hook(&w, &w.vault.address, [0; 32]);
+            let m = message(&w, 12, amount, fee, &w.pay.address, None, &h);
+            let s = w.pay.mint_and_pay(&m, &Bytes::new(&w.e));
+            let minted = i128::from(amount - fee) * 10;
+            prop_assert_eq!(s.gross, minted);
+            prop_assert_eq!(balances(&w), (s.net, s.reserve, 0));
+        }
+    }
+}

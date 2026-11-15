@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = ["types", "reserve-vault", "router", "inbox", "rate-registry", "swap-soroswap", "yield-blend", "yield-ondo", "cctp-pay", "test-suites"]
+# cargo-fuzz targets build on nightly with their own workspace.
+exclude = ["fuzz"]
 
 [workspace.package]
 edition = "2021"

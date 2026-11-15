@@ -1,0 +1,2 @@
+# Snapshots of the property tests: hundreds of random cases, rewritten on every run.
+test_snapshots/test/adversarial/

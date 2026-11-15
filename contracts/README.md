@@ -1,6 +1,6 @@
 # Kyros contracts
 
-[![CI](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml/badge.svg)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml) [![contract coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/arturete58-sys/kyros2.0/badges/coverage.json)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml)
+[![CI](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml/badge.svg)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml) [![contract coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/arturete58-sys/kyros2.0/badges/coverage.json)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/ci.yml) [![mutation score](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/arturete58-sys/kyros2.0/badges/mutation.json)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/mutants.yml) [![nightly fuzz](https://github.com/arturete58-sys/kyros2.0/actions/workflows/nightly-fuzz.yml/badge.svg)](https://github.com/arturete58-sys/kyros2.0/actions/workflows/nightly-fuzz.yml)
 
 Soroban contracts for Kyros, written in Rust with `soroban-sdk` 28. Each user
 gets their own Reserve Vault: every payment is split as it arrives, the net
@@ -138,8 +138,10 @@ Each line is enforced on-chain and covered by tests in `reserve-vault/src/test.r
 | --- | --- | --- |
 | Unit and integration | each crate's `src/test.rs` | Every entry point, every error, the testnet flows, the heaviest vault against mainnet limits |
 | Property tests | `types/src/test.rs` | The 256-bit arithmetic and the split over the whole i128 range (proptest) |
-| Adversarial | `test-suites/tests/{economic,auth,hostile,ttl_and_limits}.rs` | One test per threat in [docs/threat-model.md](../docs/threat-model.md): donations, dust, i128 edges, signatures, re-entry, lying strategies, archival, denial of service |
-| Stateful properties | `test-suites/tests/invariants.rs` | Random sequences of payments, tax payments, releases, corrections, donations, yield and time; eight invariants checked after every step, failures shrunk to the shortest sequence |
+| Adversarial | `test-suites/tests/{economic,auth,hostile,ttl_and_limits,router,inbox,registry}.rs`, `cctp-pay/src/test.rs` | One test per threat in [docs/threat-model.md](../docs/threat-model.md) for every contract: donations, dust, i128 edges, signatures, re-entry, lying strategies, archival, denial of service, fake vaults, replayed and corrupted cross-chain messages, rates at the edges |
+| Stateful properties | `test-suites/src/scenarios`, run by `test-suites/tests/*.rs` | Random sequences of operations on the vault, the Router, the Inbox and the Registry; their invariants checked after every step, failures shrunk to the shortest sequence |
+| Fuzzing | `fuzz/fuzz_targets` (cargo-fuzz, nightly) | The same scenarios, the split arithmetic and the CCTP message parser under coverage-guided libFuzzer, every night; crashes uploaded minimized |
+| Mutation testing | `.cargo/mutants.toml` (cargo-mutants) | Every contract mutated one change at a time, weekly; the changed lines of every pull request. The score is the badge above |
 
 ```sh
 cargo fmt --all --check

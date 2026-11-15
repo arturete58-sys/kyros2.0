@@ -62,11 +62,53 @@ history is in [security-review.md](security-review.md).
 | D3 | Junk tokens in an Inbox | Each token is swept on its own; junk never blocks the real currency | `ttl_and_limits::junk_in_the_inbox_does_not_block_real_payments` |
 | D4 | A payroll run too large for one transaction | The SDK sends runs of eight; the Router test measures the event limit | router `a_full_payout_run_fits_in_one_transaction` |
 
+### Router
+
+| # | Threat | Handling | Test |
+| --- | --- | --- | --- |
+| R1 | A signature reused for another amount, or for more than the payment | The payer signs one tree: the Router call, the vault's `receive` and the two exact transfers | `router::the_payer_signs_exact_transfers_and_nothing_else` |
+| R2 | A contract posing as a vault pulling more than the payment | Its transfer is not in the signed tree: refused, nothing moves | `router::a_fake_vault_cannot_pull_more_than_the_payer_signed` |
+| R3 | A payroll run with one bad payout | All or nothing | `router::a_run_to_a_non_vault_moves_nothing` |
+| R4 | Accounting drift over many payments and runs | Conservation checked after every step of random sequences (three vaults, one refusing the token) | `router::every_unit_is_accounted_for` |
+
+### Inbox
+
+| # | Threat | Handling | Test |
+| --- | --- | --- | --- |
+| N1 | A sweep redirected, or paid twice | `sweep` takes no recipient and pays only the split; a second sweep finds nothing | `inbox::anyone_sweeps_and_only_the_split_is_paid` |
+| N2 | Moving someone's Inbox to another vault | Only the owner, only to a vault of the same owner, only after notice, cancellable until then | `inbox::only_the_owner_moves_it_to_their_own_vault_after_notice` |
+| N3 | Junk tokens used to extract the accepted token, or returned to the wrong address | Junk goes back only to the owner's payout address; the accepted token is never "returned" | `inbox::junk_goes_back_to_the_owner_only` |
+| N4 | Any sequence of payments, junk, sweeps, returns and moves | Conservation, the vault in force and refusals checked after every step | `inbox::every_unit_is_accounted_for` |
+
+### CCTP receiver
+
+| # | Threat | Handling | Test |
+| --- | --- | --- | --- |
+| C1 | Replayed or out-of-order nonces | Each message pays once (Circle's transmitter tracks nonces; a replay reverts the whole call) | cctp `nonces_out_of_order_each_pay_once`, `a_message_cannot_be_paid_twice` |
+| C2 | Messages from another domain or for another token | Refused before anything is minted (`UnknownToken`) | cctp `an_unknown_domain_or_token_mints_nothing` |
+| C3 | A hook that names something other than a vault | The whole call reverts, the mint with it | cctp `a_hook_naming_a_non_vault_reverts_the_mint` |
+| C4 | Corrupted or truncated messages | Refused with nothing moved, or paid exactly, never partly | cctp `any_corrupted_message_is_refused_or_pays_exactly` (property); fuzz target `cctp_message` |
+| C5 | Fees and amounts at any value | The split adds up to what was minted; nothing stays in the receiver | cctp `any_amount_and_fee_settle_exactly` (property) |
+| C6 | A fake vault taking more than the payment | `BadSplit`, checked arithmetic | cctp `a_fake_vault_cannot_take_more_than_the_payment` |
+
+### Rate Registry
+
+| # | Threat | Handling | Test |
+| --- | --- | --- | --- |
+| G1 | Rates out of range | 0% and 100% accepted, above refused (`InvalidRate`) | `registry::rates_at_the_edges` |
+| G2 | A change applied early, late, or mid-payment | Applies from its date to the second; each transaction reads the rate at its own ledger time (Soroban transactions do not interleave) | `registry::a_change_applies_exactly_on_its_date` |
+| G3 | A rate the vault's owner never agreed to (e.g. 100%) | Above the vault's ceiling it is ignored; the vault keeps its own rule | `registry::a_rate_above_the_ceiling_is_ignored` |
+| G4 | Someone other than the publisher writing, or history rewritten | Only the publisher signs; a rate in force or past cannot be withdrawn | `registry::only_the_publisher_writes_and_history_is_final` |
+| G5 | Any sequence of publications, withdrawals and time | History final, notice held, schedule sorted, the vault's VAT right at every moment | `registry::the_registry_holds_under_any_sequence` |
+
 ## Invariants
 
-Checked after every step of random sequences of operations
-(`invariants::the_books_hold_under_any_sequence_of_operations`, proptest,
-with shrinking), whether the step succeeded or was refused:
+Checked after every step of random sequences of operations, whether the
+step succeeded or was refused. The scenarios live in
+`contracts/test-suites/src/scenarios` and run twice: under proptest on every
+CI run (with shrinking), and under libFuzzer every night
+(`contracts/fuzz`, coverage-guided). The vault's
+(`invariants::the_books_hold_under_any_sequence_of_operations`):
 
 1. `held` equals the sum of every bucket of every period.
 2. Each period balances: reserved = buckets + paid + released + converted.
