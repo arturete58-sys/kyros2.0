@@ -3,7 +3,7 @@ import { regimeChoices, split, type ActivityId, type ClientKind, type RulePack }
 import { countries, countryName, loadPack } from '../packs';
 import { createVault, followLaw, makePlan, money, type Answers } from '../kyros';
 import { fmtNumber, t, type Key } from '../i18n';
-import { Button, LangPicker, Option, pct, Seg, Toggle, Top, useApp } from '../ui';
+import { Button, LangPicker, LegalLinks, Option, pct, Seg, Toggle, Top, useApp } from '../ui';
 import { Logo } from '../brand';
 
 export const ACTIVITIES: ActivityId[] = ['software', 'consulting', 'creative', 'web3', 'ecommerce', 'education', 'health', 'books', 'hospitality'];
@@ -114,6 +114,7 @@ export function Welcome() {
         </div>
         <p className="tiny muted">{t('walletList')}</p>
         <p className="tiny muted">{t('testnetNote')}</p>
+        <LegalLinks />
       </div>
       <div className="footer">
         <Button testid="connect-wallet" onClick={() => start(async () => (await import('../wallet/classic')).connectClassicWallet(chain), t('connectingWallet'))}>

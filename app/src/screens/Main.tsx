@@ -3,7 +3,7 @@ import { normalizeAmount, parseAmount, dayString, type PeriodKind, formatAmount,
 import { mixedOf, reclaimMixedVat, setAsideMissingVat, abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
 import { Deadlines, Leaf, NoticeReader, ScheduledList, SplitBar, deadlineLabel } from './Taxes';
-import { Button, LangPicker, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
+import { Button, LangPicker, LegalLinks, pct, Skeleton, Tabs, Toggle, Top, TxLink, useApp } from '../ui';
 import { activityText, clientText } from './Start';
 import { ExpensesCard } from './Expenses';
 import { ArchivedBanner, MoveCard, PreviousVaults } from './Move';
@@ -870,6 +870,7 @@ export function Settings() {
           <p className="small" data-testid="privacy-testnet" style={{ fontWeight: 500 }}>
             {t('privacyTestnet')}
           </p>
+          <LegalLinks />
         </div>
       </div>
       <Tabs current="settings" />

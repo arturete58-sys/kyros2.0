@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { Chain } from './chain';
 import type { Snapshot, VaultInfo } from './kyros';
 import type { Wallet } from './wallet/types';
-import { fmtNumber, LANGS, t, type Lang } from './i18n';
+import { fmtNumber, LANGS, legalUrl, SECURITY_URL, t, type Lang } from './i18n';
 
 export interface Ctx {
   chain: Chain;
@@ -173,5 +173,24 @@ export function Skeleton(p: { rows?: number }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/** Links to the privacy policy, terms, legal notice and security policy. */
+export function LegalLinks() {
+  const links: [string, string][] = [
+    [legalUrl('privacy'), t('legalPrivacy')],
+    [legalUrl('terms'), t('legalTerms')],
+    [legalUrl('notice'), t('legalNotice')],
+    [SECURITY_URL, t('legalSecurity')],
+  ];
+  return (
+    <p className="tiny muted" data-testid="legal-links" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+      {links.map(([href, label]) => (
+        <a key={href} href={href} target="_blank" rel="noopener" style={{ color: 'inherit' }}>
+          {label}
+        </a>
+      ))}
+    </p>
   );
 }

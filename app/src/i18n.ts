@@ -61,6 +61,10 @@ const D = {
     de: 'Zahlungen und dein Tresor sind auf Stellar öffentlich, wie jede Transaktion, aber ohne Namen: von jeder Rechnung wird nur ein verschlüsselter Fingerabdruck gespeichert.',
     it: 'I pagamenti e il tuo caveau sono pubblici su Stellar, come ogni transazione, ma senza nomi: di ogni fattura si salva solo un’impronta cifrata.',
   },
+  legalPrivacy: { es: 'Política de privacidad', en: 'Privacy policy', pt: 'Política de privacidade', fr: 'Politique de confidentialité', de: 'Datenschutzerklärung', it: 'Informativa sulla privacy' },
+  legalTerms: { es: 'Condiciones de uso', en: 'Terms of use', pt: 'Termos de utilização', fr: 'Conditions d’utilisation', de: 'Nutzungsbedingungen', it: 'Termini d’uso' },
+  legalNotice: { es: 'Aviso legal', en: 'Legal notice', pt: 'Aviso legal', fr: 'Mentions légales', de: 'Impressum', it: 'Note legali' },
+  legalSecurity: { es: 'Seguridad', en: 'Security', pt: 'Segurança', fr: 'Sécurité', de: 'Sicherheit', it: 'Sicurezza' },
   privacyTestnet: {
     es: 'Esto es una versión de prueba en la testnet de Stellar, con dinero que no es real. Antes de pasar a dinero real, la seguridad y la privacidad se reforzarán, y este aviso cambiará con ellas. Mientras tanto, no uses fondos ni datos reales.',
     en: 'This is a test version on Stellar testnet, with money that is not real. Before moving to real money, security and privacy will be strengthened, and this notice will change with them. Until then, do not use real funds or real data.',
@@ -702,6 +706,11 @@ export function t(key: Key, vars: Record<string, string | number> = {}): string 
   for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
   return s;
 }
+
+/** The legal pages exist in Spanish and English; every other language gets English. */
+export const legalUrl = (doc: 'privacy' | 'terms' | 'notice') =>
+  `${import.meta.env.BASE_URL}legal/${current === 'es' ? 'es' : 'en'}/${doc}.html`;
+export const SECURITY_URL = 'https://github.com/arturete58-sys/kyros2.0/blob/main/SECURITY.md';
 
 /** The locale for numbers and dates in the language in use. */
 export const locale = () => localeOf(current);
