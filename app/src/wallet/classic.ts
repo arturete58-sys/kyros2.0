@@ -1,6 +1,6 @@
 /**
  * "Conectar mi wallet": any wallet that signs on Stellar, through Stellar
- * Wallets Kit: LOBSTR, xBull, Freighter, Albedo, Hana, Rabet, Klever,
+ * Wallets Kit: LOBSTR, xBull, Varial (formerly Freighter), Albedo, Hana, Rabet, Klever,
  * Scopuly, multichain wallets (MetaMask, Bitget, OneKey, HOT) and Ledger.
  * The wallet signs in its own app or extension; Kyros never sees its keys.
  */
