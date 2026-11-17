@@ -1,7 +1,9 @@
 /**
  * "Conectar mi wallet": any wallet that signs on Stellar, through Stellar
  * Wallets Kit: LOBSTR, xBull, Varial (formerly Freighter), Albedo, Hana, Rabet, Klever,
- * Scopuly, multichain wallets (MetaMask, Bitget, OneKey, HOT) and Ledger.
+ * Scopuly, multichain wallets (MetaMask, Bitget, OneKey, HOT) and Ledger;
+ * and mobile wallets through WalletConnect when the build has a project id
+ * (VITE_WALLETCONNECT_PROJECT_ID, from Reown; without one it is left out).
  * The wallet signs in its own app or extension; Kyros never sees its keys.
  */
 import { Operation, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
@@ -10,6 +12,7 @@ import { defaultModules } from '@creit.tech/stellar-wallets-kit/modules/utils';
 import { HotWalletModule } from '@creit.tech/stellar-wallets-kit/modules/hotwallet';
 import { LedgerModule } from '@creit.tech/stellar-wallets-kit/modules/ledger';
 import { Networks } from '@creit.tech/stellar-wallets-kit/types';
+import type { ModuleInterface } from '@creit.tech/stellar-wallets-kit/types';
 import type { Chain } from '../chain';
 import type { Wallet } from './types';
 
@@ -18,7 +21,10 @@ let started = false;
 export async function connectClassicWallet(chain: Chain): Promise<Wallet> {
   if (!started) {
     // The defaults plus HOT (multichain) and Ledger, which need the Buffer polyfill the app already has.
-    StellarWalletsKit.init({ modules: [...defaultModules(), new HotWalletModule(), new LedgerModule()], network: Networks.TESTNET });
+    const modules: ModuleInterface[] = [...defaultModules(), new HotWalletModule(), new LedgerModule()];
+    const wc = await walletConnect(chain);
+    if (wc) modules.push(wc);
+    StellarWalletsKit.init({ modules, network: kitNetwork(chain) });
     started = true;
   }
   const { address } = await StellarWalletsKit.authModal();
@@ -62,7 +68,7 @@ export async function connectClassicWallet(chain: Chain): Promise<Wallet> {
 async function trusted(chain: Chain, address: string): Promise<Set<'usd' | 'eur' | 'usdc'>> {
   const out = new Set<'usd' | 'eur' | 'usdc'>();
   try {
-    const r = await fetch(`https://horizon-testnet.stellar.org/accounts/${address}`);
+    const r = await fetch(`${horizonUrl(chain)}/accounts/${address}`);
     const a = (await r.json()) as { balances?: { asset_code?: string; asset_issuer?: string }[] };
     const tokens = { usd: chain.cfg.tokens.usd, eur: chain.cfg.tokens.eur, ...(chain.cfg.cctp ? { usdc: chain.cfg.cctp.usdc } : {}) };
     for (const [k, t] of Object.entries(tokens)) if (a.balances?.some((b) => b.asset_code === t.code && b.asset_issuer === t.issuer)) out.add(k as 'usd' | 'eur' | 'usdc');
@@ -70,4 +76,36 @@ async function trusted(chain: Chain, address: string): Promise<Set<'usd' | 'eur'
     /* treat as none: changeTrust on an existing trustline is harmless */
   }
   return out;
+}
+
+const isPublic = (chain: Chain) => chain.cfg.networkPassphrase === Networks.PUBLIC;
+
+/** The kit's network follows the app's configuration, never a fixed one. */
+function kitNetwork(chain: Chain): Networks {
+  return isPublic(chain) ? Networks.PUBLIC : Networks.TESTNET;
+}
+
+function horizonUrl(chain: Chain): string {
+  return isPublic(chain) ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
+}
+
+/**
+ * WalletConnect, only when the build has a Reown project id. Loaded on demand so
+ * builds without one do not ship its code.
+ */
+async function walletConnect(chain: Chain): Promise<ModuleInterface | undefined> {
+  const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined;
+  if (!projectId) return undefined;
+  const { WalletConnectModule, WalletConnectTargetChain } = await import('@creit.tech/stellar-wallets-kit/modules/wallet-connect');
+  const url = new URL(import.meta.env.BASE_URL, location.origin).toString();
+  return new WalletConnectModule({
+    projectId,
+    metadata: {
+      name: 'Kyros',
+      description: 'Sets aside the tax from every stablecoin payment, in a vault you own.',
+      url,
+      icons: [new URL('icons/apple-touch-icon.png', url).toString()],
+    },
+    allowedChains: [isPublic(chain) ? WalletConnectTargetChain.PUBLIC : WalletConnectTargetChain.TESTNET],
+  });
 }
