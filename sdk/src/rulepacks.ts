@@ -241,6 +241,8 @@ export function checkRulePack(pack: RulePack): void {
   checkCalendar(pack.id, pack.calendar);
   if (!/^[A-Z]{3}$/.test(pack.currency ?? '')) throw new Error(`${pack.id}: currency must be an ISO 4217 code`);
   if (pack.reviewed !== undefined && !DAY.test(pack.reviewed)) throw new Error(`${pack.id}: reviewed must be YYYY-MM-DD`);
+  // A level other than the default changes the safety margin, so it must say where it comes from.
+  if (pack.enforcement && pack.enforcement.level !== 'standard' && !pack.enforcement.source?.url) throw new Error(`${pack.id}: enforcement level ${pack.enforcement.level} needs a source`);
   for (const t of pack.vatRates ?? []) {
     if (!DAY.test(t.from)) throw new Error(`${pack.id}: VAT table date ${t.from}`);
     for (const [k, v] of Object.entries(t.rates)) {

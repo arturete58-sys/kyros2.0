@@ -4,7 +4,7 @@
   "country": "PT",
   "name": "Portugal: self-employed (trabalhadores independentes)",
   "version": "2026.4",
-  "reviewed": "2026-10-22",
+  "reviewed": "2026-11-17",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -20,8 +20,15 @@
   "enforcement": {
     "level": "strict",
     "facts": [
-      "Compensatory interest and fines for late payment; prepayments (pagamentos por conta) are compulsory"
-    ]
+      "Tax not paid on time is an administrative offence: fines of 15% to half of the unpaid tax when negligent, up to twice the tax when intentional (art. 114 RGIT), plus default interest",
+      "Prepayments (pagamentos por conta) are compulsory"
+    ],
+    "source": {
+      "title": "Portal das Finanças: RGIT, art. 114",
+      "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/rgit/Pages/rgit114.aspx",
+      "official": true,
+      "checked": "2026-11-17"
+    }
   },
   "residence": {
     "basis": "worldwide",

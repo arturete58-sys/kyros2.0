@@ -4,7 +4,7 @@
   "country": "IN",
   "name": "India: freelancers, professionals and sole proprietors",
   "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "reviewed": "2026-11-17",
   "currency": "INR",
   "vatName": "GST",
   "vatRates": [
@@ -30,8 +30,14 @@
   "enforcement": {
     "level": "strict",
     "facts": [
-      "Interest of 1% a month on shortfalls in advance tax (sections 234B and 234C)"
-    ]
+      "Interest of 1% a month on advance-tax shortfalls (sections 234B and 234C) and on late returns (234A); late-filing fee up to INR 5,000, or INR 1,000 if income does not exceed INR 500,000 (234F)"
+    ],
+    "source": {
+      "title": "Income Tax Department: interest and fees",
+      "url": "https://www.incometaxindia.gov.in/w/interest-and-fees",
+      "official": true,
+      "checked": "2026-11-17"
+    }
   },
   "residence": {
     "basis": "worldwide",

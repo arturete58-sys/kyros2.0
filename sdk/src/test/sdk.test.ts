@@ -254,9 +254,10 @@ test('reserve check: short, ok, generous, and exact regimes', () => {
   assert.equal(checkReserve(es, 'general', { revenue: 80_000, expenses: 8_000, reserveBps: 3000 }).status, 'ok');
   assert.equal(checkReserve(es, 'general', { revenue: 12_000, expenses: 1_200 }).status, 'generous');
 
-  // Italy, forfettario: 78% x (15% + 26.07%) = 32.03% of revenue; the preset reserves 33%.
+  // Italy, forfettario: 78% x (26.07% INPS + 15% of what is left after INPS, which is deductible)
+  // = 78% x 37.16% = 28.98% of revenue; the preset reserves 33%.
   const it = checkReserve(loadRulePack('it'), 'forfettario', { revenue: 50_000 });
-  assert.equal(it.requiredBps, 3204);
+  assert.equal(it.requiredBps, 2899);
   assert.equal(it.status, 'ok');
 
   // Mexico, RESICO: one rate on all income by band.

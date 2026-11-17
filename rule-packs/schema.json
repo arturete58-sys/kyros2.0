@@ -396,7 +396,7 @@
           "type": "object"
         }
       },
-      "description": "How strictly late or short payment is penalised; sets the safety margin"
+      "description": "How strictly late or short payment is penalised; sets the safety margin. 'standard' is the default; any other level must cite a source"
     },
     "calendar": {
       "$ref": "#/$defs/calendar",

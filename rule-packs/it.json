@@ -3,8 +3,8 @@
   "id": "it",
   "country": "IT",
   "name": "Italy: freelancers (partita IVA)",
-  "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "version": "2026.3",
+  "reviewed": "2026-11-17",
   "currency": "EUR",
   "vatName": "IVA",
   "vatRates": [
@@ -21,8 +21,14 @@
   "enforcement": {
     "level": "strict",
     "facts": [
-      "Late payment penalties and interest; voluntary correction (ravvedimento operoso) reduces them only if paid before the agency acts"
-    ]
+      "Late payment: 25% of the unpaid tax since 1 September 2024 (art. 13 D.Lgs. 471/1997), reduced when corrected voluntarily (ravvedimento operoso), plus interest"
+    ],
+    "source": {
+      "title": "D.Lgs. 471/1997, art. 13 (Normattiva)",
+      "url": "https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:1997-12-18;471~art13",
+      "official": true,
+      "checked": "2026-11-17"
+    }
   },
   "residence": {
     "basis": "worldwide",
@@ -126,6 +132,7 @@
       "estimate": {
         "year": 2026,
         "taxableShareBps": 7800,
+        "socialDeductible": true,
         "items": [
           {
             "name": "imposta_sostitutiva",
@@ -151,7 +158,8 @@
           }
         ],
         "notes": [
-          "Profitability coefficient 78% (professional services); other activities use 40% to 86%."
+          "Profitability coefficient 78% (professional services); other activities use 40% to 86%.",
+          "Compulsory social contributions paid in the year are deducted from the forfettario income before the substitute tax (art. 1, para. 64, Law 190/2014)."
         ]
       }
     },
@@ -173,6 +181,7 @@
       "estimate": {
         "year": 2026,
         "taxableShareBps": 7800,
+        "socialDeductible": true,
         "items": [
           {
             "name": "imposta_sostitutiva",
@@ -196,6 +205,9 @@
             ],
             "label": "INPS gestione separata"
           }
+        ],
+        "notes": [
+          "Compulsory social contributions paid in the year are deducted from the forfettario income before the substitute tax (art. 1, para. 64, Law 190/2014)."
         ]
       }
     },

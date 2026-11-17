@@ -4,7 +4,7 @@
   "country": "AR",
   "name": "Argentina: monotributistas and responsables inscriptos",
   "version": "2026.3",
-  "reviewed": "2026-10-21",
+  "reviewed": "2026-11-17",
   "currency": "ARS",
   "vatName": "IVA",
   "vatRates": [
@@ -20,8 +20,14 @@
   "enforcement": {
     "level": "strict",
     "facts": [
-      "Compensatory interest on late tax, high in nominal terms; formal fines on top"
-    ]
+      "Late payment accrues compensatory interest (intereses resarcitorios, art. 37 Law 11.683) at the rate set by the Ministry of Economy; failing to file a return and omitting tax are fined (arts. 38 and 45)"
+    ],
+    "source": {
+      "title": "ARCA Biblioteca: Ley 11.683 (T.O. 1998)",
+      "url": "https://biblioteca.afip.gob.ar/dcp/TOR_C_011683_1998_07_13",
+      "official": true,
+      "checked": "2026-11-17"
+    }
   },
   "residence": {
     "basis": "worldwide",

@@ -4,14 +4,20 @@
   "country": "BR",
   "name": "Brazil: Simples Nacional and self-employed individuals",
   "version": "2026.2",
-  "reviewed": "2026-10-17",
+  "reviewed": "2026-11-17",
   "currency": "BRL",
   "vatName": "ISS / CBS / IBS",
   "enforcement": {
     "level": "strict",
     "facts": [
-      "Late payment fine of 0.33% a day up to 20%, plus interest at the Selic rate"
-    ]
+      "Late payment: 0.33% a day, capped at 20%, plus interest at the Selic rate (art. 61, Law 9.430/1996)"
+    ],
+    "source": {
+      "title": "Lei 9.430/1996, art. 61 (Planalto)",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/l9430.htm",
+      "official": true,
+      "checked": "2026-11-17"
+    }
   },
   "residence": {
     "basis": "worldwide",
