@@ -15,6 +15,7 @@
  *      (address, amount, after the order) and, when every transfer is in,
  *      marks the order paid in Shopify.
  */
+import { timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import type { CheckoutCheck, ShopConfig } from 'kyros-sdk';
@@ -59,8 +60,11 @@ interface Store {
   used: Record<string, string>;
 }
 
+/** Sent with every response: no MIME sniffing, no referrer (the pay link carries the order key), no framing. */
+const SAFE = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY', 'content-security-policy': "frame-ancestors 'none'" };
+
 const json = (res: ServerResponse, code: number, body: unknown) => {
-  res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+  res.writeHead(code, { ...SAFE, 'content-type': 'application/json', 'cache-control': 'no-store' });
   res.end(JSON.stringify(body));
 };
 
@@ -76,6 +80,13 @@ const read = (req: IncomingMessage) =>
     req.on('end', () => ok(Buffer.concat(parts)));
     req.on('error', ko);
   });
+
+/** Compares an order key without leaking, through timing, how much of it matched. */
+const sameKey = (a: string, b: string) => {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+};
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -113,7 +124,7 @@ export function kyrosShopify(o: KyrosShopifyOptions): Server {
 
   async function onStatus(id: string, body: { key?: string; hash?: string | null; payer?: string | null }) {
     const rec = store.orders[id];
-    if (!rec || !body.key || body.key !== rec.n) return [404, { error: 'unknown order' }] as const;
+    if (!rec || !body.key || !rec.n || !sameKey(body.key, rec.n)) return [404, { error: 'unknown order' }] as const;
     // The widget says which wallet pays before it asks the buyer to sign. Only
     // transfers from that wallet, made after that moment, pay this order: a
     // transfer someone else made (visible on chain) cannot be claimed for it.
@@ -180,7 +191,7 @@ export function kyrosShopify(o: KyrosShopifyOptions): Server {
 
   function payPage(id: string, n: string) {
     const rec = store.orders[id];
-    if (!rec || rec.n !== n) return null;
+    if (!rec || !rec.n || !sameKey(n, rec.n)) return null;
     const a = o.config.asset;
     return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pay order</title><style>body{font:16px/1.5 system-ui,sans-serif;margin:0;padding:24px 16px;display:flex;justify-content:center}main{width:100%;max-width:460px;display:flex;flex-direction:column;gap:16px}a{color:#2e4a6c}</style></head>
@@ -215,11 +226,11 @@ ${rec.statusUrl ? `<a href="${esc(rec.statusUrl)}">← Order</a>` : ''}
       if (req.method === 'GET' && url.pathname.startsWith('/pay/') && m && !m[2]) {
         const page = payPage(m[1], url.searchParams.get('n') ?? '');
         if (!page) return json(res, 404, { error: 'unknown order (it may still be arriving: reload in a few seconds)' });
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+        res.writeHead(200, { ...SAFE, 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
         return res.end(page);
       }
       if (req.method === 'GET' && url.pathname === '/kyros-checkout.js') {
-        res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=3600' });
+        res.writeHead(200, { 'x-content-type-options': 'nosniff', 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=3600' });
         return res.end(widget());
       }
       if (url.pathname === '/health') return json(res, 200, { ok: true });
