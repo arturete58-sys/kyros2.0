@@ -83,7 +83,11 @@ export class Chain {
   async submit(tx: Transaction): Promise<string> {
     const sent = await this.server.sendTransaction(tx);
     if (sent.status === 'ERROR') throw new Error(t('errRejected', { why: sent.errorResult?.result().switch().name ?? 'error' }));
-    const done = await this.server.pollTransaction(sent.hash, { attempts: 40, sleepStrategy: () => 1000 });
+    // Wait until the transaction can no longer be included (its time bound), not a fixed 40 s: on a busy
+    // network a transaction can land late, and giving up early reports a failure for a payment that went through.
+    const maxTime = Number(tx.timeBounds?.maxTime ?? 0);
+    const secs = maxTime > 0 ? Math.min(180, Math.max(40, maxTime - Math.floor(Date.now() / 1000) + 10)) : 40;
+    const done = await this.server.pollTransaction(sent.hash, { attempts: secs, sleepStrategy: () => 1000 });
     if (done.status !== 'SUCCESS') throw new Error(t('errTxStatus', { tx: sent.hash.slice(0, 8), status: String(done.status) }));
     return sent.hash;
   }
