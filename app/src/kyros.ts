@@ -418,17 +418,21 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   const euros = publicOf(v, 'eur');
   const none = { held: 0n, liquid: 0n, invested: 0n, surplus: 0n };
   const sum = (xs: bigint[]) => xs.reduce((a, b) => a + b, 0n);
-  // Read every time: the rule changes when a proposal takes effect.
-  const live = await safe(() => c.config(v.vault), null);
-  if (live) configs.set(v.vault, { period: live.period, dues: live.dues });
-  const conf = configs.get(v.vault) ?? null;
-  const [sUsds, sEurs, pUsds, pEurs, period] = await Promise.all([
+  // The country's rules are local files: they load while the network is read.
+  const packP = safe(() => loadPack(v.answers.packId), null);
+  const holidaysP = safe(() => loadHolidays(v.answers.packId), undefined);
+  // Everything that does not depend on another read goes out at once.
+  // The configuration is read every time: the rule changes when a proposal takes effect.
+  const [live, sUsds, sEurs, pUsds, pEurs, period] = await Promise.all([
+    safe(() => c.config(v.vault), null),
     Promise.all(dollars.map((d) => safe(() => c.balance(d, v.owner), 0n))),
     Promise.all([eur.contract, ...euros].map((d) => safe(() => c.balance(d, v.owner), 0n))),
     Promise.all(dollars.map((d) => safe(() => c.position(v.vault, d), none))),
     Promise.all([eur.contract, ...euros].map((d) => safe(() => c.position(v.vault, d), none))),
     safe(() => c.currentPeriod(v.vault), 0),
   ]);
+  if (live) configs.set(v.vault, { period: live.period, dues: live.dues });
+  const conf = configs.get(v.vault) ?? null;
   const sEur = sum(sEurs);
   const pEur = { held: sum(pEurs.map((p) => p.held)) };
   // Every period since the vault was created can still hold reserve (the income tax is due long after).
@@ -437,8 +441,7 @@ export async function snapshot(chain: Chain, v: VaultInfo): Promise<Snapshot> {
   for (let id = Math.max(first, period - 40); id <= period; id++) ids.push(id);
   const tokens: [string, 'usd' | 'eur'][] = [...dollars.map((d): [string, 'usd'] => [d, 'usd']), ...[eur.contract, ...euros].map((d): [string, 'eur'] => [d, 'eur'])];
   const states = await Promise.all(ids.flatMap((id) => tokens.map(([tk, which]) => safe(async () => ({ id, tk, which, p: await c.period(v.vault, id, tk) }), null))));
-  const pack = await safe(() => loadPack(v.answers.packId), null);
-  const holidays = await safe(() => loadHolidays(v.answers.packId), undefined);
+  const [pack, holidays] = await Promise.all([packP, holidaysP]);
   const workdays = pack?.calendar.workdays;
   const incomeBuckets = pack && v.presetId ? incomeTaxBuckets(pack, v.presetId) : [];
   const notice = (bucket: string, id: number) => (v.notices ?? []).find((n) => n.bucket === bucket && n.fromPeriod <= id && id <= n.toPeriod);

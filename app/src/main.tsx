@@ -2,13 +2,17 @@ import './polyfill';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { loadStrings } from './i18n';
 import '@fontsource-variable/geist';
 import './styles.css';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+// Only the visitor's language is downloaded; the first screen waits for it.
+void loadStrings().then(() =>
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  ),
 );
 
 // Installable app: cache the built files so the next open is instant (production only).

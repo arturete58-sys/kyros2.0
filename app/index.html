@@ -26,9 +26,17 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://arturete58-sys.github.io/kyros2.0/og.png" />
     <title>Kyros</title>
+    <style>
+      /* Shown by the HTML itself until the app's first screen replaces it. */
+      .boot { min-height: 100dvh; display: grid; place-items: center; }
+      .boot img { width: 64px; height: 64px; animation: boot 1.4s ease-in-out infinite; }
+      @keyframes boot { 50% { opacity: 0.45; } }
+      @media (prefers-color-scheme: dark) { .boot img { filter: invert(1) hue-rotate(180deg) brightness(1.4); } }
+      @media (prefers-reduced-motion: reduce) { .boot img { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot" aria-busy="true"><img src="/icons/mark.svg" alt="Kyros" /></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

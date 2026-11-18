@@ -183,8 +183,7 @@ export default function App() {
     go: setScreen,
     lang,
     setLang: (l) => {
-      applyLang(l);
-      setLangState(l);
+      void applyLang(l).then(() => setLangState(l));
     },
     async run(title, f) {
       setBusy({ title, step: '' });
