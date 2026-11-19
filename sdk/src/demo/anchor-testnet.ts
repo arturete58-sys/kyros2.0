@@ -125,7 +125,13 @@ async function main(): Promise<void> {
       target = w as WithdrawalTarget;
       rows.push({ step: `SEP-6: the owner opens a withdrawal of ${amount} SRT (anchor limits ${limits.min_amount ?? '-'} to ${limits.max_amount ?? '-'})`, ok: true, result: `pay ${target.account.slice(0, 8)}… with ${target.memoType ?? 'no'} memo ${target.memo ?? ''}; id ${target.id}` });
     } catch (e) {
-      rows.push({ step: `SEP-6: the owner opens a withdrawal of ${amount} SRT (anchor limits ${limits.min_amount ?? '-'} to ${limits.max_amount ?? '-'})`, ok: false, result: (e as Error).message.slice(0, 250) });
+      // Say what the anchor still wants: its customer record and the transaction as it stands.
+      const auth = { authorization: `Bearer ${token}` };
+      const cust = await (await fetch(`${kyc}/customer?account=${k.owner.publicKey()}&type=sep6-withdraw`, { headers: auth })).text().catch(() => '');
+      const id = /withdrawal (\S+) /.exec((e as Error).message)?.[1];
+      const txn = id ? await (await fetch(`${info.transferServer}/transaction?id=${id}`, { headers: auth })).text().catch(() => '') : '';
+      console.log('customer:', cust, '\ntransaction:', txn);
+      rows.push({ step: `SEP-6: the owner opens a withdrawal of ${amount} SRT (anchor limits ${limits.min_amount ?? '-'} to ${limits.max_amount ?? '-'})`, ok: false, result: `${(e as Error).message.slice(0, 200)}; customer: ${cust.slice(0, 300)}` });
     }
     if (!target) return report();
 
