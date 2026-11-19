@@ -105,6 +105,7 @@ async function main(): Promise<void> {
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         account: k.owner.publicKey(),
+        type: 'sep6-withdraw',
         first_name: 'Kyros',
         last_name: 'Test',
         email_address: 'kyros-test@example.com',
@@ -120,7 +121,7 @@ async function main(): Promise<void> {
     const amount = Math.max(limits.min_amount ?? 0, Math.min(21, limits.max_amount ?? 21));
     let target: WithdrawalTarget | null = null;
     try {
-      const w = await startWithdrawal(info, token, { assetCode: 'SRT', account: k.owner.publicKey(), amount: String(amount), sep: 6, type: 'bank_account', dest: '12345678' });
+      const w = await startWithdrawal(info, token, { assetCode: 'SRT', account: k.owner.publicKey(), amount: String(amount), sep: 6, type: 'bank_account', dest: '12345678' }, { pollMs: 4000, polls: 45 });
       if ('interactiveUrl' in w && !('account' in w)) throw new Error('the anchor answered with a form');
       target = w as WithdrawalTarget;
       rows.push({ step: `SEP-6: the owner opens a withdrawal of ${amount} SRT (anchor limits ${limits.min_amount ?? '-'} to ${limits.max_amount ?? '-'})`, ok: true, result: `pay ${target.account.slice(0, 8)}… with ${target.memoType ?? 'no'} memo ${target.memo ?? ''}; id ${target.id}` });
