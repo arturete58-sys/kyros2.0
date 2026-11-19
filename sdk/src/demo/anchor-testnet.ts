@@ -102,8 +102,8 @@ async function main(): Promise<void> {
     const kyc = String(toml.KYC_SERVER ?? info.transferServer);
     const put = await fetch(`${kyc}/customer`, {
       method: 'PUT',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
         account: k.owner.publicKey(),
         first_name: 'Kyros',
         last_name: 'Test',
@@ -115,14 +115,17 @@ async function main(): Promise<void> {
     });
     rows.push({ step: 'SEP-12: the owner registers test bank details', ok: put.ok, result: put.ok ? 'accepted' : `HTTP ${put.status}: ${(await put.text()).slice(0, 200)}` });
 
+    // The VAT on a 121 SRT payment is 21; pay less if the anchor caps withdrawals lower.
+    const limits = (((await (await fetch(`${info.transferServer}/info`)).json()) as { withdraw?: Record<string, { min_amount?: number; max_amount?: number }> }).withdraw ?? {}).SRT ?? {};
+    const amount = Math.max(limits.min_amount ?? 0, Math.min(21, limits.max_amount ?? 21));
     let target: WithdrawalTarget | null = null;
     try {
-      const w = await startWithdrawal(info, token, { assetCode: 'SRT', account: k.owner.publicKey(), amount: '21', sep: 6, type: 'bank_account', dest: '12345678' });
+      const w = await startWithdrawal(info, token, { assetCode: 'SRT', account: k.owner.publicKey(), amount: String(amount), sep: 6, type: 'bank_account', dest: '12345678' });
       if ('interactiveUrl' in w && !('account' in w)) throw new Error('the anchor answered with a form');
       target = w as WithdrawalTarget;
-      rows.push({ step: 'SEP-6: the owner opens a withdrawal of 21 SRT', ok: true, result: `pay ${target.account.slice(0, 8)}… with ${target.memoType ?? 'no'} memo ${target.memo ?? ''}; id ${target.id}` });
+      rows.push({ step: `SEP-6: the owner opens a withdrawal of ${amount} SRT (anchor limits ${limits.min_amount ?? '-'} to ${limits.max_amount ?? '-'})`, ok: true, result: `pay ${target.account.slice(0, 8)}… with ${target.memoType ?? 'no'} memo ${target.memo ?? ''}; id ${target.id}` });
     } catch (e) {
-      rows.push({ step: 'SEP-6: the owner opens a withdrawal of 21 SRT', ok: false, result: (e as Error).message.slice(0, 250) });
+      rows.push({ step: `SEP-6: the owner opens a withdrawal of ${amount} SRT (anchor limits ${limits.min_amount ?? '-'} to ${limits.max_amount ?? '-'})`, ok: false, result: (e as Error).message.slice(0, 250) });
     }
     if (!target) return report();
 
@@ -181,8 +184,8 @@ async function main(): Promise<void> {
     const period = await c.currentPeriod(vault.contractId);
     const book = await c.period(vault.contractId, period, srtContract);
     rows.push({ step: 'The client pays 121 SRT: VAT 21 and income tax 20 stay in the vault', ok: (book.buckets.vat ?? 0n) === parseAmount('21'), result: `VAT ${formatAmount(book.buckets.vat ?? 0n)}, income tax ${formatAmount(book.buckets.irpf ?? 0n)}`, tx: paid.hash });
-    const tax = await c.send(k.owner, c.payTaxToOp(vault.contractId, { period, token: srtContract, bucket: 'vat', amount: parseAmount('21'), to }));
-    rows.push({ step: 'The owner pays the 21 SRT of VAT to the anchor with its memo (pay_tax_to)', ok: true, result: `to ${to.slice(0, 10)}…`, tx: tax.hash });
+    const tax = await c.send(k.owner, c.payTaxToOp(vault.contractId, { period, token: srtContract, bucket: 'vat', amount: parseAmount(String(amount)), to }));
+    rows.push({ step: `The owner pays ${amount} SRT of the VAT to the anchor with its memo (pay_tax_to)`, ok: true, result: `to ${to.slice(0, 10)}…`, tx: tax.hash });
 
     // ---- 4. Does the anchor see it? ----
     let status = '';
