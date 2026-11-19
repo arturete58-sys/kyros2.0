@@ -1,0 +1,38 @@
+name: Cross-chain payment on testnet
+
+# Pays 1 USDC from Base Sepolia into a fresh Kyros vault on Stellar testnet
+# through Circle's CCTP V2 and checks the split (sdk/src/demo/cctp-testnet.ts).
+# Needs the repository secret CCTP_TEST_EVM_KEY: a test-only EVM key whose
+# address holds Base Sepolia ETH for gas and USDC from faucet.circle.com.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cctp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: Pay from Base Sepolia into a vault on Stellar testnet
+        working-directory: sdk
+        env:
+          CCTP_TEST_EVM_KEY: ${{ secrets.CCTP_TEST_EVM_KEY }}
+        run: node dist/demo/cctp-testnet.js --config ../app/public/testnet.json --out cctp-report.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cctp-testnet-report
+          path: sdk/cctp-report.md
+          if-no-files-found: ignore
