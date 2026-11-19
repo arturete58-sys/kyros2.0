@@ -43,6 +43,9 @@ export interface AnchorOptions {
   /** For a local test anchor only. */
   allowHttp?: boolean;
   fetch?: typeof fetch;
+  /** SEP-6 withdrawals answered with an id only: how often and how many times to ask for the account. */
+  pollMs?: number;
+  polls?: number;
 }
 
 /** Reads the anchor's stellar.toml (SEP-1). */
@@ -146,25 +149,40 @@ export async function startWithdrawal(
   if (w.amount) q.set('amount', w.amount);
   if (w.dest) q.set('dest', w.dest);
   const r = await json(f, `${a.transferServer}/withdraw?${q}`, { headers: bearer(token) });
-  return {
-    id: String(r.id ?? ''),
-    account: String(r.account_id),
-    memo: r.memo !== undefined ? String(r.memo) : undefined,
-    memoType: r.memo_type as WithdrawalTarget['memoType'],
-  };
+  if (typeof r.account_id === 'string' && r.account_id) {
+    return {
+      id: String(r.id ?? ''),
+      account: r.account_id,
+      memo: r.memo !== undefined ? String(r.memo) : undefined,
+      memoType: r.memo_type as WithdrawalTarget['memoType'],
+    };
+  }
+  // Newer SEP-6 anchors (the Anchor Platform among them) answer with the transaction id only and
+  // give the account and memo on the transaction once it is ready.
+  if (!r.id) throw new Error(`${a.homeDomain}: the withdrawal answer has neither an account nor a transaction id`);
+  const id = String(r.id);
+  for (let i = 0; ; i++) {
+    const t = await withdrawalStatus(a, token, id, o, 6);
+    if (t.account) return t;
+    if (i >= (o.polls ?? 15)) throw new Error(`${a.homeDomain}: withdrawal ${id} has no account to pay yet (status ${t.status ?? 'unknown'})`);
+    await new Promise((res) => setTimeout(res, o.pollMs ?? 2000));
+  }
 }
 
-/** Polls a SEP-24 withdrawal; once the owner finishes the form it carries the target. */
-export async function withdrawalStatus(a: AnchorInfo, token: string, id: string, o: AnchorOptions = {}): Promise<WithdrawalTarget> {
+/**
+ * A withdrawal's state; once it is ready (SEP-24: the owner finished the form) it carries the target.
+ * `sep` says which server opened it; by default the SEP-24 one if the anchor has it.
+ */
+export async function withdrawalStatus(a: AnchorInfo, token: string, id: string, o: AnchorOptions = {}, sep?: 6 | 24): Promise<WithdrawalTarget> {
   const f = o.fetch ?? fetch;
-  const server = a.transferServerSep24 ?? a.transferServer;
+  const server = sep === 6 ? a.transferServer : sep === 24 ? a.transferServerSep24 : (a.transferServerSep24 ?? a.transferServer);
   if (!server) throw new Error(`${a.homeDomain} has no transfer server`);
   const r = await json(f, `${server}/transaction?id=${encodeURIComponent(id)}`, { headers: bearer(token) });
   const t = (r.transaction ?? {}) as Record<string, unknown>;
   return {
     id,
     status: t.status !== undefined ? String(t.status) : undefined,
-    account: String(t.withdraw_anchor_account ?? ''),
+    account: typeof t.withdraw_anchor_account === 'string' ? t.withdraw_anchor_account : '',
     memo: t.withdraw_memo !== undefined ? String(t.withdraw_memo) : undefined,
     memoType: t.withdraw_memo_type as WithdrawalTarget['memoType'],
     amount: t.amount_in !== undefined ? String(t.amount_in) : undefined,

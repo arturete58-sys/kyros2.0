@@ -191,7 +191,7 @@ async function main(): Promise<void> {
     let status = '';
     for (let i = 0; i < 36; i++) {
       try {
-        status = (await withdrawalStatus(info, token, target.id)).status ?? '';
+        status = (await withdrawalStatus(info, token, target.id, {}, 6)).status ?? '';
       } catch (e) {
         status = `error: ${(e as Error).message.slice(0, 120)}`;
       }

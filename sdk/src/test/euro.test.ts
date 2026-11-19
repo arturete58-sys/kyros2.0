@@ -79,6 +79,7 @@ test('anchor: SEP-1, SEP-10 login, SEP-24 withdrawal, and a muxed payout only to
   const anchorAccount = Keypair.random().publicKey();
   const owner = Keypair.random();
   let domain = '';
+  let sep6Asks = 0;
   const http = createServer(async (req, res) => {
     const url = new URL(req.url!, `http://${domain}`);
     const send = (code: number, body: unknown, type = 'application/json') => {
@@ -95,6 +96,7 @@ test('anchor: SEP-1, SEP-10 login, SEP-24 withdrawal, and a muxed payout only to
           `SIGNING_KEY="${server.publicKey()}"`,
           `WEB_AUTH_ENDPOINT="http://${domain}/auth"`,
           `TRANSFER_SERVER_SEP0024="http://${domain}/sep24"`,
+          `TRANSFER_SERVER="http://${domain}/sep6"`,
           '[[CURRENCIES]]',
           'code="EURC"',
           `issuer="${STABLECOINS.testnet.EURC.issuer}"`,
@@ -113,6 +115,12 @@ test('anchor: SEP-1, SEP-10 login, SEP-24 withdrawal, and a muxed payout only to
     }
     if (req.headers.authorization !== 'Bearer jwt-for-owner') return send(403, { error: 'forbidden' });
     if (url.pathname === '/sep24/transactions/withdraw/interactive') return send(200, { type: 'interactive_customer_info_needed', url: `http://${domain}/form`, id: 'w1' });
+    // A SEP-6 anchor that answers with an id and gives the account on the transaction a moment later.
+    if (url.pathname === '/sep6/withdraw') return send(200, { id: 'w6' });
+    if (url.pathname === '/sep6/transaction') {
+      sep6Asks++;
+      return send(200, { transaction: sep6Asks < 2 ? { id: 'w6', status: 'incomplete' } : { id: 'w6', status: 'pending_user_transfer_start', withdraw_anchor_account: anchorAccount, withdraw_memo: '77', withdraw_memo_type: 'id' } });
+    }
     if (url.pathname === '/sep24/transaction') {
       return send(200, { transaction: { id: 'w1', status: 'pending_user_transfer_start', withdraw_anchor_account: anchorAccount, withdraw_memo: '4242', withdraw_memo_type: 'id', amount_in: '4310' } });
     }
@@ -137,6 +145,10 @@ test('anchor: SEP-1, SEP-10 login, SEP-24 withdrawal, and a muxed payout only to
     assert.equal(m.id(), '4242');
     assert.throws(() => anchorPayout(target, Keypair.random().publicKey()), /propose the anchor's account/);
     assert.throws(() => anchorPayout({ ...target, memoType: 'text', memo: 'abc' }, anchorAccount), /id memo/);
+    // SEP-6 answered with an id only: the account comes from the transaction.
+    const six = await startWithdrawal(a, token, { assetCode: 'EURC', account: owner.publicKey(), amount: '10', sep: 6 }, { allowHttp: true, pollMs: 1 });
+    assert.equal((six as { account: string }).account, anchorAccount);
+    assert.equal((six as { memo: string }).memo, '77');
   } finally {
     http.close();
   }
