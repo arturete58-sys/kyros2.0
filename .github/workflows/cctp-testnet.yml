@@ -7,6 +7,11 @@ name: Cross-chain payment on testnet
 
 on:
   workflow_dispatch:
+    inputs:
+      probe:
+        description: Only read the interfaces of Circle's Stellar contracts (no wallet needed)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,7 +34,8 @@ jobs:
         working-directory: sdk
         env:
           CCTP_TEST_EVM_KEY: ${{ secrets.CCTP_TEST_EVM_KEY }}
-        run: node dist/demo/cctp-testnet.js --config ../app/public/testnet.json --out cctp-report.md
+          PROBE: ${{ inputs.probe }}
+        run: node dist/demo/cctp-testnet.js --config ../app/public/testnet.json --out cctp-report.md $([ "$PROBE" = true ] && echo --probe)
       - uses: actions/upload-artifact@v4
         if: always()
         with:

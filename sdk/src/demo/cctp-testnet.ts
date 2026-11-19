@@ -14,15 +14,19 @@
  * faucet.circle.com. Without CCTP_TEST_EVM_KEY the script prints a new key
  * and its address, to fund and store as that secret.
  *
- *   node dist/demo/cctp-testnet.js --config ../app/public/testnet.json [--out report.md]
+ * `--probe` needs no wallet: it reads the interfaces of Circle's Stellar
+ * contracts and checks that the functions the Kyros receiver calls exist with
+ * the arguments it passes.
+ *
+ *   node dist/demo/cctp-testnet.js --config ../app/public/testnet.json [--out report.md] [--probe]
  */
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
-import { Asset, BASE_FEE, Keypair, Networks, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
+import { Asset, BASE_FEE, contract, Keypair, Networks, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 import { createPublicClient, createWalletClient, http, type Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 import { KyrosClient } from '../client.js';
-import { burnCalls, EVM_TESTNETS, fastFeeBps, fetchAttestation, mintAndPayOp } from '../cctp.js';
+import { burnCalls, EVM_TESTNETS, fastFeeBps, fetchAttestation, mintAndPayOp, STELLAR_CCTP } from '../cctp.js';
 import { duesAfter } from '../periods.js';
 import { loadRulePack, termsFromPack } from '../rulepacks.js';
 
@@ -64,7 +68,39 @@ async function classic(c: KyrosClient, source: Keypair, op: ReturnType<typeof Op
 const usdc6 = (x: bigint) => `${x / 1_000_000n}.${(x % 1_000_000n).toString().padStart(6, '0')}`;
 const usdc7 = (x: bigint) => `${x / 10_000_000n}.${(x % 10_000_000n).toString().padStart(7, '0')}`;
 
+/** What the Kyros receiver calls on Circle's contracts (contracts/cctp-pay/src/lib.rs). */
+const EXPECTED: { contract: 'messageTransmitter' | 'tokenMessengerMinter'; fn: string; args: string[] }[] = [
+  { contract: 'messageTransmitter', fn: 'receive_message', args: ['caller', 'message', 'attestation'] },
+  { contract: 'tokenMessengerMinter', fn: 'get_local_token', args: ['remote_domain', 'remote_token'] },
+];
+
+async function probe(rpcUrl: string, out?: string): Promise<void> {
+  const lines = ['## Circle CCTP contracts on Stellar testnet: interfaces', ''];
+  let ok = true;
+  for (const [name, id] of Object.entries(STELLAR_CCTP.testnet)) {
+    const client = await contract.Client.from({ contractId: id, rpcUrl, networkPassphrase: Networks.TESTNET });
+    const fns = client.spec.funcs().map((f) => `${f.name().toString()}(${f.inputs().map((i) => i.name().toString()).join(', ')})`);
+    lines.push(`- **${name}** \`${id}\`: ${fns.join(', ')}`);
+    for (const want of EXPECTED.filter((x) => x.contract === name)) {
+      const f = client.spec.funcs().find((x) => x.name().toString() === want.fn);
+      const args = f?.inputs().map((i) => i.name().toString()) ?? [];
+      const match = !!f && args.length === want.args.length;
+      ok &&= match;
+      lines.push(`  - ${match ? 'OK' : 'MISSING OR DIFFERENT'}: the receiver calls \`${want.fn}(${want.args.join(', ')})\`${f ? `; Circle's is \`${want.fn}(${args.join(', ')})\`` : ''}`);
+    }
+  }
+  const report = lines.join('\n') + '\n';
+  console.log(report);
+  if (out) writeFileSync(out, report);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);
+  if (!ok) process.exitCode = 1;
+}
+
 async function main(): Promise<void> {
+  if (args.includes('--probe')) {
+    const cfg = JSON.parse(readFileSync(flag('config', '../app/public/testnet.json')!, 'utf8')) as TestnetConfig;
+    return probe(cfg.rpcUrl, flag('out'));
+  }
   const key = process.env.CCTP_TEST_EVM_KEY as Hex | undefined;
   if (!key) {
     const fresh = generatePrivateKey();
