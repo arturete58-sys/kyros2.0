@@ -835,7 +835,8 @@ async function main(): Promise<void> {
       const atBlend = scValToNative(await c.read(blend.adapter, 'balance')) as bigint;
       steps.push({
         step: "A client pays 1,210 XLM; the keeper lends half of the 410 reserve to Blend's testnet pool (no owner signature)",
-        ok: lent.invested === parseAmount('205') && lent.held === parseAmount('410') && BigInt(atBlend) >= parseAmount('204.9999'),
+        // Blend rounds the pool shares down, so the position can read a few stroops under what was lent.
+        ok: lent.invested <= parseAmount('205') && lent.invested >= parseAmount('204.9999') && lent.held === parseAmount('410') && BigInt(atBlend) >= parseAmount('204.9999'),
         tx: inv.hash,
         detail: `invested ${formatAmount(lent.invested)} XLM, still in the vault ${formatAmount(lent.liquid)}; the adapter's position at Blend ${formatAmount(BigInt(atBlend))} XLM`,
       });
@@ -844,7 +845,8 @@ async function main(): Promise<void> {
       const inVault = await c.balance(blend.xlm, blend.vault);
       steps.push({
         step: 'The owner stops the strategy at once: the lent reserve comes back from Blend to the vault',
-        ok: back.invested === 0n && inVault >= parseAmount('410'),
+        // What comes back is what Blend's shares are worth: at most a few stroops under the 410 lent and kept.
+        ok: back.invested === 0n && inVault >= parseAmount('409.9999'),
         tx: stop.hash,
         detail: `vault holds ${formatAmount(inVault)} XLM (reserve ${formatAmount(back.held)})`,
       });
