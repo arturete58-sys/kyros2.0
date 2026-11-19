@@ -79,3 +79,9 @@ export function checkBuiltInAddresses(): void {
     }
   }
 }
+
+/**
+ * Blend v2's shared testnet pool (blend-capital/blend-utils, testnet.contracts.json).
+ * A testnet reset can move it; the testnet demo skips the step when the pool is gone.
+ */
+export const BLEND_TESTNET_POOL = 'CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF';

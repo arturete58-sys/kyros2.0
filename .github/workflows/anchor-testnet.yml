@@ -1,0 +1,37 @@
+name: Tax paid through an anchor on testnet
+
+# Pays a vault's VAT through the SDF test anchor (testanchor.stellar.org):
+# SEP-10 login, SEP-12 and SEP-6 withdrawal, pay_tax_to with the anchor's memo,
+# and whether the anchor sees the payment (sdk/src/demo/anchor-testnet.ts).
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  anchor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: Pay the VAT through the test anchor
+        working-directory: sdk
+        run: node dist/demo/anchor-testnet.js --config ../app/public/testnet.json --out anchor-report.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anchor-testnet-report
+          path: sdk/anchor-report.md
+          if-no-files-found: ignore

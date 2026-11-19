@@ -38,7 +38,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Asset, AuthClawbackEnabledFlag, AuthRequiredFlag, AuthRevocableFlag, BASE_FEE, Contract, Keypair, MuxedAccount, Account, Networks, Operation, scValToNative, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
-import { REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
+import { BLEND_TESTNET_POOL, REFLECTOR, SOROSWAP_ROUTER } from '../assets.js';
 import { money, payableUnits, requestRef, requestTerms, requestTotals, type PaymentRequest } from '../payment-request.js';
 import { addr, i128, oracleAssetToScVal, u64 } from '../scval.js';
 import { invoiceReference, KyrosClient, KyrosError } from '../client.js';
@@ -492,6 +492,39 @@ async function main(): Promise<void> {
     steps.push({ step: 'Euro reserve on testnet', ok: true, skipped: true, detail: `skipped: ${euroSkip}` });
   }
 
+  log('yield: a vault in XLM proposes lending part of its reserve to Blend\'s testnet pool');
+  let blend: { vault: string; adapter: string; xlm: string; proposedAt: number } | null = null;
+  try {
+    const xlm = Asset.native().contractId(PASS);
+    const reserves = (scValToNative(await c.read(BLEND_TESTNET_POOL, 'get_reserve_list')) as string[]).map(String);
+    if (!reserves.includes(xlm)) throw new Error(`Blend's testnet pool ${BLEND_TESTNET_POOL} does not lend XLM`);
+    // A long period that ends at least a month from now, so the reserve is not due within two weeks
+    // (reserve due that soon is never lent).
+    const nowS = BigInt(Math.floor(Date.now() / 1000));
+    let longPeriod = 400n * 86_400n;
+    while (longPeriod - (nowS % longPeriod) < 30n * 86_400n) longPeriod += 86_400n;
+    const bv = await c.deployVault(k.keeper, vaultHash, {
+      owner: k.freelancer.publicKey(),
+      rule: terms.rule,
+      taxDestination: k.taxAccount.publicKey(),
+      noticeSecs: 120n,
+      period: { kind: 'Seconds', seconds: longPeriod },
+      dues: duesAfter(0n),
+      tokens: [xlm],
+    });
+    const adapter = await c.deployBlendYield(k.keeper, await c.upload(k.keeper, wasm('kyros_yield_blend')), { vault: bv.contractId, pool: BLEND_TESTNET_POOL, asset: xlm });
+    const prop = await c.send(k.freelancer, c.proposeStrategyOp(bv.contractId, adapter.contractId, 5000));
+    blend = { vault: bv.contractId, adapter: adapter.contractId, xlm, proposedAt: Date.now() };
+    steps.push({
+      step: "Yield: a vault in XLM proposes lending up to half of its reserve to Blend v2's testnet pool (2-minute notice)",
+      ok: true,
+      tx: prop.hash,
+      detail: `vault ${bv.contractId}; Blend adapter ${adapter.contractId}; pool ${BLEND_TESTNET_POOL}`,
+    });
+  } catch (e) {
+    steps.push({ step: "Yield on Blend's testnet pool", ok: true, skipped: true, detail: `skipped: ${(e as Error).message.slice(0, 300)}` });
+  }
+
   log('scheduled VAT change: Thailand 7% -> 10%, signed ahead');
   const th = loadRulePack('th');
   const thTerms = termsFromPack(th, 'vat-registered', '2026-10-16');
@@ -788,6 +821,35 @@ async function main(): Promise<void> {
       });
     } catch (e) {
       steps.push({ step: 'Euro reserve conversion on testnet', ok: false, detail: (e as Error).message.slice(0, 300) });
+    }
+  }
+
+  if (blend) {
+    const wait = blend.proposedAt + 125_000 - Date.now();
+    if (wait > 0) await sleep(wait);
+    log('yield: payment in XLM, keeper lends half of the reserve to Blend, owner stops the strategy');
+    try {
+      await c.send(k.client, c.payOp(router.contractId, { from: k.client.publicKey(), vault: blend.vault, token: blend.xlm, amount: parseAmount('1210'), reference: invoiceReference('INV-XLM-001') }));
+      const inv = await c.send(k.keeper, c.investOp(blend.vault));
+      const lent = await c.position(blend.vault, blend.xlm);
+      const atBlend = scValToNative(await c.read(blend.adapter, 'balance')) as bigint;
+      steps.push({
+        step: "A client pays 1,210 XLM; the keeper lends half of the 410 reserve to Blend's testnet pool (no owner signature)",
+        ok: lent.invested === parseAmount('205') && lent.held === parseAmount('410') && BigInt(atBlend) >= parseAmount('204.9999'),
+        tx: inv.hash,
+        detail: `invested ${formatAmount(lent.invested)} XLM, still in the vault ${formatAmount(lent.liquid)}; the adapter's position at Blend ${formatAmount(BigInt(atBlend))} XLM`,
+      });
+      const stop = await c.send(k.freelancer, c.stopStrategyOp(blend.vault));
+      const back = await c.position(blend.vault, blend.xlm);
+      const inVault = await c.balance(blend.xlm, blend.vault);
+      steps.push({
+        step: 'The owner stops the strategy at once: the lent reserve comes back from Blend to the vault',
+        ok: back.invested === 0n && inVault >= parseAmount('410'),
+        tx: stop.hash,
+        detail: `vault holds ${formatAmount(inVault)} XLM (reserve ${formatAmount(back.held)})`,
+      });
+    } catch (e) {
+      steps.push({ step: "Yield on Blend's testnet pool", ok: false, detail: (e as Error).message.slice(0, 300) });
     }
   }
 
