@@ -146,7 +146,8 @@ impl ReserveVault {
         tokens: Vec<Address>,
     ) -> Result<(), VaultError> {
         check_rule(&e, &rule)?;
-        if notice_secs > MAX_NOTICE_SECS {
+        let mainnet = e.ledger().network_id().to_array() == MAINNET_NETWORK_ID;
+        if notice_secs > MAX_NOTICE_SECS || (mainnet && notice_secs < MIN_MAINNET_NOTICE_SECS) {
             return Err(VaultError::InvalidNotice);
         }
         if !valid_period(&period) {

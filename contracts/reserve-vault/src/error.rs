@@ -89,6 +89,7 @@ pub enum VaultError {
     MathOverflow = 40,
     /// A price or a scale of zero where one is needed to divide.
     DivisionByZero = 41,
-    /// A notice period longer than `MAX_NOTICE_SECS`.
+    /// A notice period longer than `MAX_NOTICE_SECS`, or shorter than
+    /// `MIN_MAINNET_NOTICE_SECS` on Stellar's public network.
     InvalidNotice = 42,
 }

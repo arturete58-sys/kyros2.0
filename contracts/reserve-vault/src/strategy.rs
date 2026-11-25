@@ -43,8 +43,9 @@ pub(crate) fn ensure_liquid(e: &Env, token: &Address, amount: i128) -> Result<()
 
 /// The reserve in `token` whose bucket is due within `INVEST_HORIZON_SECS`
 /// (or already past due). For each bucket it takes the earlier of the rule's
-/// date (before any holiday moves it) and the earliest date set by hand for
-/// that period: never later than the real one.
+/// date (before any holiday moves it) and the date set by hand for that
+/// bucket: never later than the real one, and a postponed date never puts
+/// reserve to work past the date the rule gives.
 pub(crate) fn due_soon(e: &Env, c: &Config, token: &Address) -> Result<i128, VaultError> {
     let total = held(e, token);
     let (soon, tracked) = scan_open(e, c, token)?;
@@ -68,14 +69,15 @@ pub(crate) fn scan_open(e: &Env, c: &Config, token: &Address) -> Result<(i128, i
         // Two reads per period (its buckets and the earliest date set by
         // hand), not one per bucket: 36 periods of 8 buckets stay far from
         // the network's limit of entries per transaction.
-        let set: Option<u64> = store.get(&Key::EarliestSet(id));
+        let set: Option<Map<Symbol, u64>> = store.get(&Key::DuesSet(id));
         for (bucket, amount) in load_period(e, id, token).buckets.iter() {
             if amount <= 0 {
                 continue;
             }
             tracked = add(tracked, amount)?;
             let rule = due_at(&c.period, id, &bucket_due(&c.dues, &bucket));
-            if set.map_or(rule, |x| x.min(rule)) <= limit {
+            let hand = set.as_ref().and_then(|s| s.get(bucket.clone()));
+            if hand.map_or(rule, |x| x.min(rule)) <= limit {
                 soon = add(soon, amount)?;
             }
         }

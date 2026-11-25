@@ -37,6 +37,18 @@ pub const MAX_SCHEDULED: u32 = 40;
 /// The longest notice period a vault may have (a year): long enough for any
 /// owner, and every date it adds to stays far inside `u64`.
 pub const MAX_NOTICE_SECS: u64 = 366 * 86_400;
+/// The shortest notice period a vault on Stellar's public network may have
+/// (a day): the notice is what protects the reserve against a stolen owner
+/// key, so a mainnet vault cannot be deployed without one. Test networks
+/// accept any notice, so demos can run in minutes.
+pub const MIN_MAINNET_NOTICE_SECS: u64 = 86_400;
+/// Stellar's public network: SHA-256 of "Public Global Stellar Network ; September 2015".
+pub const MAINNET_NETWORK_ID: [u8; 32] = [
+    0x7a, 0xc3, 0x39, 0x97, 0x54, 0x4e, 0x31, 0x75, 0xd2, 0x66, 0xbd, 0x02, 0x24, 0x39, 0xb2, 0x2c,
+    0xdb, 0x16, 0x50, 0x8c, 0x01, 0x16, 0x3f, 0x26, 0xe5, 0xcb, 0x2a, 0x3e, 0x10, 0x45, 0xa9, 0x79,
+];
+/// Most buckets of one period with a date set by hand (`TooMany` past it).
+pub const MAX_DUES_SET: u32 = 2 * kyros_types::MAX_BUCKETS;
 
 /// How the payments of one invoice are split (shared with the CCTP receiver, which predicts the split).
 pub use kyros_types::InvoiceTerms;

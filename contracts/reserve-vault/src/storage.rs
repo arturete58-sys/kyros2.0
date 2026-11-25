@@ -35,10 +35,11 @@ pub(crate) enum Key {
     /// Set once a token had more than `MAX_OPEN` such periods: `invest` then
     /// treats all its reserve as due soon.
     OpenFull(Address),
-    /// The earliest date set by hand (`set_due`) for any bucket of a period:
-    /// one read per period lets `invest` stay well inside the network's
-    /// per-transaction entry limit.
-    EarliestSet(u32),
+    /// The dates set by hand (`set_due`) for the buckets of a period, by
+    /// bucket: one read per period lets `invest` stay well inside the
+    /// network's per-transaction entry limit, and each bucket keeps its own
+    /// date (the latest one set).
+    DuesSet(u32),
     /// The owner stopped the strategy while it could not pay everything out:
     /// `invest` brings the rest back and then removes it.
     Stopping,

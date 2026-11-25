@@ -178,3 +178,99 @@ fn an_unbounded_notice_is_refused() {
         ),
     );
 }
+
+/// E6. On Stellar's public network a vault needs at least a day of notice:
+/// with none, a stolen owner key could propose a correction and apply it in
+/// the same ledger (reported in issue #3). Test networks accept a shorter
+/// notice, so demos run in minutes.
+fn deploy(w: &World, notice: u64) -> Address {
+    w.e.register(
+        kyros_reserve_vault::ReserveVault,
+        (
+            w.owner.clone(),
+            spain(&w.e),
+            w.tax.clone(),
+            notice,
+            kyros_types::PeriodKind::Quarter,
+            kyros_reserve_vault::dues_after(&w.e, DUE_OFFSET),
+            soroban_sdk::vec![&w.e, w.token.clone()],
+        ),
+    )
+}
+
+fn on_mainnet(w: &World) {
+    w.e.ledger()
+        .with_mut(|l| l.network_id = kyros_reserve_vault::MAINNET_NETWORK_ID);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #42)")]
+fn a_mainnet_vault_without_notice_is_refused() {
+    let w = World::new();
+    on_mainnet(&w);
+    deploy(&w, 0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #42)")]
+fn a_mainnet_vault_needs_a_whole_day_of_notice() {
+    let w = World::new();
+    on_mainnet(&w);
+    deploy(&w, DAY - 1);
+}
+
+#[test]
+fn a_day_of_notice_is_enough_on_mainnet_and_any_works_on_testnet() {
+    let w = World::new();
+    deploy(&w, 0);
+    deploy(&w, 120);
+    on_mainnet(&w);
+    deploy(&w, DAY);
+    deploy(&w, NOTICE);
+}
+
+/// A due date set by hand counts for its own bucket only, and a later date
+/// (an extension from the tax office) replaces an earlier one, up to the
+/// rule's date: `invest` keeps liquid only what is really due soon
+/// (reported in issue #3).
+#[test]
+fn a_date_set_by_hand_counts_for_its_own_bucket_and_can_move_later() {
+    let w = World::new();
+    w.pay(1_210 * UNIT);
+    let q = w.v.current_period();
+    let today = (FEB_10_2027 / DAY) as u32;
+    assert_eq!(w.v.due_soon(&w.token), 0);
+    // The income tax is due in eight days: only its 200 are held back.
+    w.v.set_due(&w.irpf(), &q, &q, &(today + 8));
+    assert_eq!(w.v.due_soon(&w.token), 200 * UNIT);
+    // The tax office extends it by six months: none of it is due soon.
+    w.v.set_due(&w.irpf(), &q, &q, &(today + 180));
+    assert!(w.v.bucket_due_date(&q, &w.irpf()) > FEB_10_2027 + 100 * DAY);
+    assert_eq!(w.v.due_soon(&w.token), 0);
+    // A postponed date never keeps reserve at work past the rule's date: two
+    // weeks before it, both taxes are due soon again.
+    w.at(w.v.bucket_due_date(&q, &w.vat()) - 14 * DAY);
+    assert_eq!(w.v.due_soon(&w.token), 410 * UNIT);
+}
+
+/// The dates set by hand for one period are capped, so a period's entry
+/// stays small enough for `invest` to read.
+#[test]
+fn dates_set_by_hand_are_capped_per_period() {
+    let w = World::new();
+    let q = w.v.current_period();
+    let day = (FEB_10_2027 / DAY) as u32 + 300;
+    let names = [
+        "b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b11", "b12", "b13",
+        "b14", "b15",
+    ];
+    for n in names {
+        w.v.set_due(&soroban_sdk::Symbol::new(&w.e, n), &q, &q, &day);
+    }
+    // The same buckets can still be moved; a new one is refused.
+    w.v.set_due(&soroban_sdk::Symbol::new(&w.e, "b0"), &q, &q, &(day + 1));
+    assert_eq!(
+        w.v.try_set_due(&soroban_sdk::Symbol::new(&w.e, "b16"), &q, &q, &day),
+        Err(Ok(VaultError::TooMany))
+    );
+}

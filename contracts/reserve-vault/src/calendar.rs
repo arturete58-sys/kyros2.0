@@ -118,11 +118,14 @@ impl ReserveVault {
             e.storage()
                 .persistent()
                 .extend_ttl(&k, TTL_THRESHOLD, PERIOD_TTL);
-            let k = Key::EarliestSet(p);
-            let earliest: Option<u64> = e.storage().persistent().get(&k);
-            if earliest.is_none_or(|x| end < x) {
-                e.storage().persistent().set(&k, &end);
+            let k = Key::DuesSet(p);
+            let mut set: Map<Symbol, u64> =
+                e.storage().persistent().get(&k).unwrap_or(Map::new(&e));
+            if !set.contains_key(bucket.clone()) && set.len() >= MAX_DUES_SET {
+                return Err(VaultError::TooMany);
             }
+            set.set(bucket.clone(), end);
+            e.storage().persistent().set(&k, &set);
             e.storage()
                 .persistent()
                 .extend_ttl(&k, TTL_THRESHOLD, PERIOD_TTL);
