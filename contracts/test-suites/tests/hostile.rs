@@ -239,3 +239,96 @@ fn prices(w: &World, oracle: &OracleClient) {
         &t,
     );
 }
+
+/// S7. A vault deployed with 0 notice (bypassing client-side SDK checks on-chain)
+/// allows the owner to immediately extract 100% of the locked reserve before the due date.
+#[test]
+fn a_zero_notice_vault_bypasses_the_lock_invariant_instantly() {
+    let e = Env::default();
+    e.mock_all_auths();
+    e.ledger().set_timestamp(FEB_10_2027);
+    let token = e
+        .register_stellar_asset_contract_v2(Address::generate(&e))
+        .address();
+    let owner = Address::generate(&e);
+    let payer = Address::generate(&e);
+    let tax = Address::generate(&e);
+
+    // Deploy directly on Soroban with notice_secs = 0 (missing MIN_NOTICE_SECS constraint on-chain)
+    let id = e.register(
+        ReserveVault,
+        (
+            owner.clone(),
+            spain(&e),
+            tax.clone(),
+            0u64,
+            PeriodKind::Quarter,
+            kyros_reserve_vault::dues_after(&e, DUE_OFFSET),
+            vec![&e, token.clone()],
+        ),
+    );
+    let v = ReserveVaultClient::new(&e, &id);
+    let tc = StellarAssetClient::new(&e, &token);
+    tc.mint(&payer, &(10_000 * UNIT));
+
+    // Payment arrives and reserves tax
+    v.receive(
+        &payer,
+        &token,
+        &(1_210 * UNIT),
+        &soroban_sdk::BytesN::from_array(&e, &[1u8; 32]),
+    );
+    let q = v.current_period();
+    let p = v.period(&q, &token);
+    assert_eq!(p.reserved, 410 * UNIT);
+
+    // Path 1: Propose correction with 0 notice takes funds back immediately at block 0
+    let c_id = v.propose_correction(&q, &token, &symbol_short!("vat"), &(210 * UNIT));
+    let released = v.apply_correction(&c_id);
+    assert_eq!(released, 210 * UNIT);
+
+    // Path 2: Propose destination with 0 notice switches tax destination to owner immediately
+    v.propose_destination(&owner);
+    v.apply_pending();
+    assert_eq!(v.config().tax_destination, owner);
+
+    // Now owner calls pay_tax directly to own wallet, draining the remaining IRPF
+    v.pay_tax(&q, &token, &symbol_short!("irpf"), &(200 * UNIT));
+
+    // Both buckets are completely emptied at block 0, months before APR_1_2027 due date
+    let p_after = v.period(&q, &token);
+    assert_eq!(p_after.buckets.get(symbol_short!("vat")).unwrap(), 0);
+    assert_eq!(p_after.buckets.get(symbol_short!("irpf")).unwrap(), 0);
+}
+
+/// S8. State drift in EarliestSet: When set_due pushes a date forward (tax office extension),
+/// EarliestSet remains stuck at the old early date, permanently blocking yield investment.
+#[test]
+fn set_due_forward_extension_leaves_stale_earliest_set() {
+    let w = World::new();
+    w.pay(1_210 * UNIT);
+    let q = w.v.current_period();
+
+    // 1. Initial due dates are months away (APR_1_2027 + DUE_OFFSET)
+    assert_eq!(w.v.due_soon(&w.token), 0);
+
+    // 2. set_due sets an early date for IRPF only (8 days away, within the 14-day INVEST_HORIZON_SECS)
+    let today_day = (FEB_10_2027 / DAY) as u32;
+    w.v.set_due(&symbol_short!("irpf"), &q, &q, &(today_day + 8));
+
+    // Notice: EarliestSet is per-period, so setting IRPF early taints ALL buckets (VAT + IRPF = 410)
+    assert_eq!(w.v.due_soon(&w.token), 410 * UNIT);
+
+    // 3. Tax office grants a 6-month extension! Owner calls set_due for 180 days in the future
+    w.v.set_due(&symbol_short!("irpf"), &q, &q, &(today_day + 180));
+
+    // Bucket due date is indeed updated to 180 days away
+    assert!(w.v.bucket_due_date(&q, &symbol_short!("irpf")) > FEB_10_2027 + 100 * DAY);
+
+    // BUG VERIFICATION: due_soon SHOULD be 0 because both taxes are far away (APR_1_2027 / +180d).
+    // But EarliestSet was not updated on forward shift, so due_soon still reports 410 units forever!
+    let reported_soon = w.v.due_soon(&w.token);
+    assert_eq!(reported_soon, 410 * UNIT);
+}
+
+
