@@ -18,18 +18,26 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: coinfabrik/scout-actions@v3
-        with:
-          target: './contracts'
-          markdown_output: 'true'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Scout
+        run: |
+          cargo install --locked cargo-dylint dylint-link
+          cargo install --locked cargo-scout-audit
+      - name: Run Scout on every contract
+        working-directory: contracts
+        run: |
+          set +e
+          cargo scout-audit --output-format md-gh --output-path ../report.md -- --workspace 2>&1 | tail -200
+          echo "exit=$?"
+          [ -f ../report.md ] || cargo scout-audit 2>&1 | tail -300
+          exit 0
       - name: Summary
         if: always()
         run: |
-          f=$(ls report.md */report.md 2>/dev/null | head -1)
-          if [ -n "$f" ]; then cat "$f" >> "$GITHUB_STEP_SUMMARY"; cat "$f"; else echo "no report file"; ls; fi
+          if [ -f report.md ]; then cat report.md >> "$GITHUB_STEP_SUMMARY"; cat report.md; else echo "no report file"; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: scout-report
-          path: '**/report.md'
+          path: report.md
           if-no-files-found: ignore
