@@ -4,13 +4,11 @@ name: Scout
 # known vulnerability patterns and deviations from best practice in every
 # contract. Findings go to the run summary and to a Markdown report.
 
+# Run by hand for now: Scout 0.3.x cannot build its detectors since its
+# dylint driver looks for rust-clippy's old `master` branch (November 2026).
+# Turn the push and weekly triggers back on once a release fixes that.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['contracts/**/src/**', 'contracts/**/Cargo.toml', '.github/workflows/scout.yml']
-  schedule:
-    - cron: '23 3 * * 1'
 
 jobs:
   scout:
@@ -30,7 +28,8 @@ jobs:
           cargo scout-audit --output-format md-gh --output-path ../report.md -- --workspace 2>&1 | tail -200
           echo "exit=$?"
           [ -f ../report.md ] || cargo scout-audit 2>&1 | tail -300
-          exit 0
+          # No report means Scout did not run: fail, so a broken run never looks clean.
+          [ -f ../report.md ]
       - name: Summary
         if: always()
         run: |
