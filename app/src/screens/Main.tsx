@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { InstallCard } from '../install';
 import { normalizeAmount, parseAmount, dayString, type PeriodKind, formatAmount, payableUnits, requestTotals, taxToolCsv, TAX_TOOLS, toCsv, type PaymentRequest, type TaxTool, assistantText, guardStopOp, payLinkHash, type AssistantTextKey } from 'kyros-sdk';
 import { mixedOf, reclaimMixedVat, setAsideMissingVat, abroadSuspects, cancelCorrection, convertNow, ensureAbroadInbox, expectPayment, keepVat, reclaimAbroadVat, followLaw, money, payBucket, proposeEuroReserve, releaseDue, simulateClientPayment, type Held } from '../kyros';
 import { countryName } from '../packs';
@@ -712,6 +713,7 @@ export function Settings() {
       <div className="content" style={{ gap: 10 }}>
         <h1>{t('settings')}</h1>
         <LangPicker />
+        <InstallCard always />
         <h2>{t('yourSituation')}</h2>
         <div className="card" style={{ gap: 6 }}>
           <div className="row spread small">

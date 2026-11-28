@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { InstallCard } from '../install';
 import { regimeChoices, split, type ActivityId, type ClientKind, type RulePack } from 'kyros-sdk';
 import { countries, countryName, loadPack } from '../packs';
 import { createVault, followLaw, makePlan, money, type Answers } from '../kyros';
@@ -114,6 +115,7 @@ export function Welcome() {
         </div>
         <p className="tiny muted">{t('walletList')}</p>
         <p className="tiny muted">{t('testnetNote')}</p>
+        <InstallCard />
         <LegalLinks />
       </div>
       <div className="footer">

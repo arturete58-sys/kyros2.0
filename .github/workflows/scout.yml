@@ -1,0 +1,35 @@
+name: Scout
+
+# CoinFabrik's Scout, the static analyzer made for Soroban contracts: looks for
+# known vulnerability patterns and deviations from best practice in every
+# contract. Findings go to the run summary and to a Markdown report.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['contracts/**/src/**', 'contracts/**/Cargo.toml', '.github/workflows/scout.yml']
+  schedule:
+    - cron: '23 3 * * 1'
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: coinfabrik/scout-actions@v3
+        with:
+          target: './contracts'
+          markdown_output: 'true'
+      - name: Summary
+        if: always()
+        run: |
+          f=$(ls report.md */report.md 2>/dev/null | head -1)
+          if [ -n "$f" ]; then cat "$f" >> "$GITHUB_STEP_SUMMARY"; cat "$f"; else echo "no report file"; ls; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scout-report
+          path: '**/report.md'
+          if-no-files-found: ignore

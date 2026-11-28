@@ -3,8 +3,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { loadStrings } from './i18n';
+import { watchInstallPrompt } from './install';
 import '@fontsource-variable/geist';
 import './styles.css';
+
+watchInstallPrompt();
 
 // Only the visitor's language is downloaded; the first screen waits for it.
 void loadStrings().then(() =>

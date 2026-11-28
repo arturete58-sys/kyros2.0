@@ -291,6 +291,10 @@ details p { padding-bottom: 24px; color: var(--muted); max-width: 62ch; }
 .cta { background: var(--navy); color: var(--white); padding-block: clamp(72px, 10vw, 120px); }
 .cta-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 28px; }
 .cta h2 { max-width: 16ch; }
+.cta-note { margin-top: 14px; max-width: 46ch; color: var(--on-dark-muted); }
+.cta-stats { margin-top: 18px; font-size: .9375rem; color: var(--on-dark); font-variant-numeric: tabular-nums; }
+.cta-stats b { color: var(--amber); font-weight: 600; }
+.cta-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .footer { background: var(--ink); color: var(--on-dark-muted); padding-block: 72px 40px; font-size: .9375rem; }
 .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; }
 .footer .brand { color: var(--on-dark); }

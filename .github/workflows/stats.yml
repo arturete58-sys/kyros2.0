@@ -1,0 +1,47 @@
+name: Testnet stats
+
+# Once a day, counts the vaults people opened with the app on Stellar testnet
+# and the payments they split, from the vaults' own events, and publishes the
+# figures on the website (site/stats.json). See sdk/scripts/site-stats.mjs.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * *'
+
+concurrency:
+  group: stats
+  cancel-in-progress: false
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - name: Build the SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+      - name: Count
+        working-directory: sdk
+        run: node scripts/site-stats.mjs --config ../app/public/testnet.json --state ../site/stats.json
+      - name: Publish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/stats.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Testnet stats"
+          git push
+          # A push made with the workflow token does not start other workflows: republish the site explicitly.
+          gh workflow run app.yml --ref main -f e2e=false
+        env:
+          GH_TOKEN: ${{ github.token }}

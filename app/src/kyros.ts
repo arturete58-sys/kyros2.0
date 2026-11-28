@@ -294,7 +294,8 @@ export async function createVault(chain: Chain, wallet: Wallet, plan: Plan, answ
     owner: wallet.address,
     rule: plan.rule,
     taxDestination: cfg.taxAccount,
-    noticeSecs: BigInt(cfg.noticeSecs),
+    // End-to-end test builds add one second of notice, so the public counter on the website leaves their vaults out.
+    noticeSecs: BigInt(cfg.noticeSecs) + (import.meta.env.VITE_KYROS_E2E ? 1n : 0n),
     period: terms.period,
     dues: terms.dues,
     tokens: [...chain.dollarTokens, cfg.tokens.eur.contract],

@@ -146,6 +146,25 @@ gsap.registerPlugin(ScrollTrigger, SplitText);
     });
   }
 
+  /* ---------- Public testnet counter (stats.json, updated daily from Stellar) ---------- */
+  {
+    const el = $('[data-stats]');
+    // Shown once there is something worth showing.
+    const MIN_VAULTS = 10;
+    if (el) {
+      fetch('stats.json', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((s) => {
+          if (!s || !(s.vaults >= MIN_VAULTS)) return;
+          const n = (x) => Number(x).toLocaleString('en-US');
+          const b = (x) => Object.assign(document.createElement('b'), { textContent: n(x) });
+          el.replaceChildren(b(s.vaults), ' vaults opened and ', b(s.payments), ' payments split on testnet so far, all checkable on Stellar.');
+          el.hidden = false;
+        })
+        .catch(() => {});
+    }
+  }
+
   fetch('countries.json')
     .then((r) => r.json())
     .then((data) => {

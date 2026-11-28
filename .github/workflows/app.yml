@@ -6,6 +6,11 @@ name: App
 
 on:
   workflow_dispatch:
+    inputs:
+      e2e:
+        description: Run the end-to-end tests on testnet
+        type: boolean
+        default: true
   push:
     branches: [main]
     paths: ['app/**', 'site/**', 'sdk/src/**', 'rule-packs/**', '.github/workflows/app.yml']
@@ -47,6 +52,7 @@ jobs:
         run: |
           mkdir -p _site
           cp -r site/index.html site/favicon.ico site/countries.json site/assets site/legal _site/
+          if [ -f site/stats.json ]; then cp site/stats.json _site/; fi
           cp -r app/dist _site/app
           echo kyrosfinance.com > _site/CNAME
       - uses: actions/upload-pages-artifact@v3
@@ -55,6 +61,8 @@ jobs:
 
   e2e:
     needs: build
+    # The daily counter update only republishes the website: no need to test the app again.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.e2e }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -74,6 +82,9 @@ jobs:
       - name: Passkey sign-up, payment, expected payment and tax payment on testnet
         if: steps.cfg.outputs.deployed == 'true'
         working-directory: app
+        env:
+          # Marks the test vaults (one extra second of notice) so the website's counter leaves them out.
+          VITE_KYROS_E2E: '1'
         run: npm run build && npx playwright test
       - uses: actions/upload-artifact@v4
         if: always()
