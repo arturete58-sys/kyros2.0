@@ -102,7 +102,11 @@ redirect money waits for the old vault's notice period.
 
 ## Emergency procedures
 
-There is no pause and no admin: nobody can freeze a vault, including Kyros.
+There is no pause and no admin: nothing in the contracts lets anyone, Kyros
+included, freeze a vault. Outside the contracts, two powers apply to every
+Stellar account: an issuer can freeze its own asset, and since Protocol 26
+the validators can freeze ledger entries by a network vote (CAP-77). See
+[threat-model.md](threat-model.md#accepted-risks).
 What exists is in the owner's hands, and acts at once:
 
 | Situation | What the owner does | Effect |

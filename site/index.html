@@ -237,7 +237,7 @@
     <ol class="pillars">
       <li><span class="pillar-n" aria-hidden="true">01</span><h3>Non-custodial</h3><p>Kyros never holds your funds or your keys. The vault is a contract that only your wallet controls.</p></li>
       <li><span class="pillar-n" aria-hidden="true">02</span><h3>Time-locked changes</h3><p>A new destination or a change of rules waits a notice period you can cancel. A stolen key cannot empty your reserve at once.</p></li>
-      <li><span class="pillar-n" aria-hidden="true">03</span><h3>No admin keys</h3><p>There is no switch to freeze or move your money. Not for us, not for anyone.</p></li>
+      <li><span class="pillar-n" aria-hidden="true">03</span><h3>No admin keys</h3><p>Kyros holds no key that can freeze or move your money. Only the powers every Stellar account lives with remain: the stablecoin issuer's, and a public vote of the network's validators (CAP-77).</p></li>
       <li><span class="pillar-n" aria-hidden="true">04</span><h3>Tested in the open</h3><p>Every change runs the test suite; fuzzing runs every night and mutation testing checks that the tests catch real bugs. Developers are invited to try to break it.</p></li>
       <li><span class="pillar-n" aria-hidden="true">05</span><h3>Verifiable builds</h3><p>Anyone can check that the contracts on the network are built from the published source code.</p></li>
     </ol>
@@ -276,6 +276,10 @@
       <details>
         <summary>Who holds my money?</summary>
         <p>You do. Your share goes straight to your wallet and the tax part sits in a vault that only your wallet controls. Kyros never has access to your funds or keys.</p>
+      </details>
+      <details>
+        <summary>Can anyone freeze my reserve?</summary>
+        <p>Not Kyros: it holds no key over your vault. Two parties outside Kyros keep powers that apply to every account on Stellar. The issuer of the stablecoin (Circle, for USDC and EURC) can freeze its own tokens wherever they are. And since May 2026, Stellar's validators can freeze specific accounts or contracts by a vote recorded on the network, a mechanism meant for hacked funds and network incidents (CAP-77, "Quorum Freeze").</p>
       </details>
       <details>
         <summary>Which stablecoins does it work with?</summary>

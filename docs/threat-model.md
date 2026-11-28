@@ -24,6 +24,7 @@ history is in [security-review.md](security-review.md).
 | Token contracts | Balances and transfers of accepted tokens | Calling back into the vault |
 | Strategy, swapper, oracle | What the owner chose them for | Their reported figures beyond what the vault checks |
 | Network (Soroban host) | Authorization, atomicity, refusing re-entry, archival rules | — |
+| Validators (network governance) | Protocol upgrades and, since Protocol 26, freezing ledger entries by consensus (CAP-77) | — (outside Kyros; applies to every account) |
 
 ## Threats and how they are handled
 
@@ -149,4 +150,11 @@ review.
   is what protects against a stolen owner key.
 - A stolen owner key can redirect the reserve after the notice period. The
   guardian in the SDK watches every proposal and alerts the user.
+- Since Protocol 26 (mainnet, May 2026), Stellar validators can freeze ledger
+  entries by a network configuration vote (CAP-77, Quorum Freeze): contract
+  data and code, accounts and trustlines. A frozen vault, inbox or owner
+  account cannot be used until it is unfrozen, and validators can let
+  specific reviewed transactions through. Kyros has no part in that vote and
+  cannot stop or trigger it; the power applies to every Stellar account and
+  is published on-chain. The app and the website say so.
 - Tokens accepted by the vault are trusted for balances and transfers.
