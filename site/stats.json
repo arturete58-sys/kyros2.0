@@ -1,0 +1,13 @@
+{
+  "network": "testnet",
+  "deployedAt": "2026-11-25T18:57:39.161Z",
+  "since": "2026-11-28T13:13:39.966Z",
+  "sinceLedger": 5969594,
+  "nextLedger": 5969595,
+  "vaults": 0,
+  "payments": 0,
+  "taxesPaid": 0,
+  "counted": [],
+  "excluded": [],
+  "updatedAt": "2026-11-28T13:13:40.025Z"
+}
