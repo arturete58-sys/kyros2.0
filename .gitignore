@@ -13,3 +13,7 @@ plugins/*/dist/
 # cargo-mutants output
 mutants.out/
 mutants.out.old/
+
+# website bundle, built in CI
+site/assets/site.js
+site/assets/site.js.LEGAL.txt

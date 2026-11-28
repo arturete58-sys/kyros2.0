@@ -1,13 +1,14 @@
 name: App
 
 # Builds the web app, tests it end to end on Stellar testnet with a virtual
-# passkey (Face ID) authenticator, and publishes it on GitHub Pages.
+# passkey (Face ID) authenticator, and publishes it on GitHub Pages together
+# with the website: kyrosfinance.com is the website, kyrosfinance.com/app the app.
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['app/**', 'sdk/src/**', 'rule-packs/**', '.github/workflows/app.yml']
+    paths: ['app/**', 'site/**', 'sdk/src/**', 'rule-packs/**', '.github/workflows/app.yml']
   workflow_run:
     workflows: ['App on testnet']
     types: [completed]
@@ -31,15 +32,26 @@ jobs:
         run: |
           (cd sdk && npm ci)
           (cd app && npm ci)
-      - name: Build
+          (cd site && npm ci)
+      - name: Build the app
         working-directory: app
         env:
+          KYROS_BASE: /app/
           # Optional: a Reown (WalletConnect) project id, set as a repository variable. Without it the app leaves WalletConnect out.
           VITE_WALLETCONNECT_PROJECT_ID: ${{ vars.WALLETCONNECT_PROJECT_ID }}
         run: npm run build
+      - name: Build the website
+        working-directory: site
+        run: npm run build
+      - name: Put the website and the app together
+        run: |
+          mkdir -p _site
+          cp -r site/index.html site/favicon.ico site/countries.json site/assets site/legal _site/
+          cp -r app/dist _site/app
+          echo kyrosfinance.com > _site/CNAME
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: app/dist
+          path: _site
 
   e2e:
     needs: build

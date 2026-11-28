@@ -1,0 +1,41 @@
+@font-face { font-family: 'Geist'; src: url('../assets/fonts/geist-latin-wght-normal.woff2') format('woff2-variations'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Geist'; src: url('../assets/fonts/geist-latin-ext-wght-normal.woff2') format('woff2-variations'); font-weight: 100 900; font-display: swap; unicode-range: U+0100-02BA, U+1E00-1EFF, U+2020, U+20A0-20C0; }
+:root {
+  --paper: #f2f4f7;
+  --surface: #ffffff;
+  --ink: #141b24;
+  --muted: #576272;
+  --line: #e0e5ec;
+  --action: #2e4a6c;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0c1117;
+    --surface: #141b24;
+    --ink: #e6ebf2;
+    --muted: #9ba6b5;
+    --line: #243040;
+    --action: #93b5de;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body { font: 16px/1.6 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+header a.home { color: var(--ink); font-weight: 650; letter-spacing: 0.08em; text-decoration: none; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; }
+a { color: var(--action); text-underline-offset: 3px; }
+nav a[aria-current="page"] { color: var(--ink); font-weight: 600; text-decoration: none; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+h2 { font-size: 19px; margin: 32px 0 8px; }
+.updated { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 18px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; }
+.scroll { overflow-x: auto; }
+code { font-size: 0.9em; overflow-wrap: anywhere; }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }

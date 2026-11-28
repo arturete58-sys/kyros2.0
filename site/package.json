@@ -1,0 +1,17 @@
+{
+  "name": "kyros-site",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The kyrosfinance.com website.",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --legal-comments=external --outfile=assets/site.js"
+  },
+  "dependencies": {
+    "cobe": "2.0.1",
+    "gsap": "3.15.1",
+    "lenis": "1.3.29"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' 'sha256-h3GYPBFE6Av6zUWOZYeC83lN95g5tnhsj1pyM3woz/c='; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Kyros · Your taxes, set aside the moment you get paid</title>
+<meta name="description" content="Kyros splits every stablecoin payment on Stellar as it arrives: what is yours goes to your wallet, the tax waits in a vault only you control until it is due. 48 jurisdictions, non-custodial, open source.">
+<meta name="theme-color" content="#0a1422">
+<link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://kyrosfinance.com/">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Kyros · Your taxes, set aside the moment you get paid">
+<meta property="og:description" content="Every stablecoin payment splits itself on Stellar: yours to your wallet, VAT and income tax locked in a vault only you own.">
+<meta property="og:image" content="https://kyrosfinance.com/assets/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="assets/fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" data-nav>
+  <div class="nav-bar">
+    <a class="brand" href="#top" aria-label="Kyros, home">
+      <svg class="brand-mark" viewBox="66 61.5 565 565" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="44" stroke-linecap="round"><circle cx="348.5" cy="344" r="272"/><path d="M166.9 141.5H348.5A204 204 0 1 1 144.5 344"/><path d="M111.52 210.5H348.5A134 134 0 1 1 214.5 344"/><path d="M85.53 274.5H299.4A127.6 127.6 0 0 1 412.02 461.99"/><path d="M76.5 343.5H262A100 100 0 0 1 355.94 477.79"/></g></svg>
+      <span>Kyros</span>
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#product">Product</a>
+      <a href="#security">Security</a>
+      <a href="#countries">Countries</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-light btn-sm nav-cta" href="https://kyrosfinance.com/app/" data-app>Open the app</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-sheet" data-nav-toggle>
+      <span class="sr-only">Menu</span><span class="nav-toggle-bars" aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="nav-sheet" id="nav-sheet" hidden data-nav-sheet>
+    <a href="#how">How it works</a>
+    <a href="#product">Product</a>
+    <a href="#security">Security</a>
+    <a href="#countries">Countries</a>
+    <a href="#faq">FAQ</a>
+    <a class="btn btn-light" href="https://kyrosfinance.com/app/" data-app>Open the app</a>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <canvas class="hero-canvas" aria-hidden="true" data-particles></canvas>
+  <div class="wrap hero-inner">
+    <div class="hero-copy">
+      <h1 id="hero-title">Your taxes, set aside the moment you get paid.</h1>
+      <p class="hero-lead">Kyros splits every stablecoin payment on Stellar as it arrives. What is yours goes to your wallet. The tax waits in a vault only you control, until the day it is due.</p>
+      <div class="actions">
+        <a class="btn btn-light" href="https://kyrosfinance.com/app/" data-app>Try it on testnet <span class="btn-arrow" aria-hidden="true"></span></a>
+        <a class="btn btn-ghost-light" href="#split">See a payment split</a>
+      </div>
+      <dl class="hero-facts">
+        <div><dt>48</dt><dd>jurisdictions</dd></div>
+        <div><dt>0</dt><dd>keys or funds held by Kyros</dd></div>
+        <div><dt>100%</dt><dd>open-source code</dd></div>
+      </dl>
+      <p class="hero-note">Free beta on the Stellar test network. Test money only.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section split" id="split" aria-labelledby="split-title">
+  <div class="wrap split-grid">
+    <div class="split-copy">
+      <h2 id="split-title">Watch a payment split itself</h2>
+      <p>Pick a country and a situation. These are the same rates Kyros uses, from its open rule packs.</p>
+      <div class="field">
+        <label for="split-country">Country</label>
+        <select id="split-country" data-split-country></select>
+      </div>
+      <div class="field">
+        <label for="split-preset">Your situation</label>
+        <select id="split-preset" data-split-preset></select>
+      </div>
+      <div class="field">
+        <label for="split-amount">A client pays you <output data-split-amount-out>1,210</output> USDC</label>
+        <input id="split-amount" type="range" min="100" max="10000" step="10" value="1210" data-split-amount>
+      </div>
+    </div>
+    <div class="split-result" aria-live="polite">
+      <div class="payment">
+        <span class="payment-label">Payment received</span>
+        <span class="payment-amount num" data-split-total>1,210.00</span>
+        <span class="payment-unit">USDC</span>
+      </div>
+      <div class="bar" role="img" aria-label="How the payment is split" data-split-bar>
+        <span class="bar-seg seg-you" data-seg="you"></span>
+        <span class="bar-seg seg-vat" data-seg="vat"></span>
+        <span class="bar-seg seg-tax" data-seg="tax"></span>
+      </div>
+      <ul class="legend">
+        <li>
+          <span class="dot dot-you" aria-hidden="true"></span>
+          <span class="legend-text"><strong>To your wallet</strong><span>Yours to spend right away</span></span>
+          <span class="legend-amount num" data-out="you">800.00</span>
+        </li>
+        <li data-row="vat">
+          <span class="dot dot-vat" aria-hidden="true"></span>
+          <span class="legend-text"><strong data-out="vat-name">VAT</strong><span data-out="vat-when">Locked until your return is due</span></span>
+          <span class="legend-amount num" data-out="vat">210.00</span>
+        </li>
+        <li data-row="tax">
+          <span class="dot dot-tax" aria-hidden="true"></span>
+          <span class="legend-text"><strong data-out="tax-name">Income tax</strong><span>Locked in your vault until it is due</span></span>
+          <span class="legend-amount num" data-out="tax">200.00</span>
+        </li>
+      </ul>
+      <button class="btn btn-dark btn-sm" type="button" data-split-replay>Send the payment again</button>
+      <p class="fine">An estimate from public rules, not tax advice. In the app, Kyros adjusts the reserve to your income and expenses.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section how" id="how" aria-labelledby="how-title">
+  <div class="wrap">
+    <h2 id="how-title">One address. Every payment split. Each tax paid on its date.</h2>
+    <ol class="steps">
+      <li>
+        <span class="step-n" aria-hidden="true">1</span>
+        <h3>Share one payment address</h3>
+        <p>Clients pay you in USDC or EURC from any wallet or exchange. They do not need to install or learn anything.</p>
+      </li>
+      <li>
+        <span class="step-n" aria-hidden="true">2</span>
+        <h3>Each payment splits as it lands</h3>
+        <p>Your share reaches your wallet in the same moment. VAT and income tax go to a vault that belongs to you, sorted by period.</p>
+      </li>
+      <li>
+        <span class="step-n" aria-hidden="true">3</span>
+        <h3>Pay each tax on time</h3>
+        <p>Every tax unlocks on its legal date, moved past weekends and holidays. Schedule the payment once and it goes out by itself.</p>
+      </li>
+    </ol>
+    <figure class="flow">
+      <svg viewBox="0 0 1000 300" role="img" aria-labelledby="flow-title">
+        <title id="flow-title">A client pays your Kyros address; the payment splits between your wallet and your tax vault, which pays the tax office on the due date.</title>
+        <g class="flow-lines" fill="none" stroke-width="2">
+          <path d="M190 150 H380"/>
+          <path d="M520 150 C600 150 600 70 690 70"/>
+          <path d="M520 150 C600 150 600 230 690 230"/>
+          <path d="M850 230 H900" stroke-dasharray="4 6"/>
+        </g>
+        <g class="flow-dots">
+          <circle r="5"><animateMotion dur="3.2s" repeatCount="indefinite" path="M190 150 H380"/></circle>
+          <circle r="5" class="c-you"><animateMotion dur="3.2s" begin="1.2s" repeatCount="indefinite" path="M520 150 C600 150 600 70 690 70"/></circle>
+          <circle r="5" class="c-tax"><animateMotion dur="3.2s" begin="1.2s" repeatCount="indefinite" path="M520 150 C600 150 600 230 690 230"/></circle>
+        </g>
+        <g class="flow-nodes">
+          <rect x="40" y="115" width="150" height="70" rx="14"/>
+          <text x="115" y="146">Your client</text><text class="sub" x="115" y="166">pays in USDC</text>
+          <rect x="380" y="105" width="140" height="90" rx="14" class="n-brand"/>
+          <text x="450" y="146" class="on-brand">Your Kyros</text><text x="450" y="166" class="on-brand">address</text>
+          <rect x="690" y="35" width="160" height="70" rx="14"/>
+          <text x="770" y="66">Your wallet</text><text class="sub" x="770" y="86">spend it now</text>
+          <rect x="690" y="195" width="160" height="70" rx="14"/>
+          <text x="770" y="226">Your tax vault</text><text class="sub" x="770" y="246">locked until due</text>
+          <text class="sub end" x="910" y="235">Tax office</text>
+        </g>
+      </svg>
+    </figure>
+  </div>
+</section>
+
+<section class="section product" id="product" aria-labelledby="product-title">
+  <div class="wrap product-grid">
+    <div class="product-copy">
+      <h2 id="product-title">Everything about your taxes, in one app</h2>
+      <div class="tabs" role="tablist" aria-label="App screens" data-tabs>
+        <button role="tab" id="tab-home" aria-controls="panel-screens" aria-selected="true" data-screen="screen-home">
+          <strong>Know what you can spend</strong>
+          <span>What is yours, what is set aside and the next deadline, always up to date.</span>
+        </button>
+        <button role="tab" id="tab-assistant" aria-controls="panel-screens" aria-selected="false" tabindex="-1" data-screen="screen-assistant">
+          <strong>Ask the assistant</strong>
+          <span>Is my reserve enough? When do I pay? It answers from your country's rules and your vault.</span>
+        </button>
+        <button role="tab" id="tab-pay" aria-controls="panel-screens" aria-selected="false" tabindex="-1" data-screen="screen-pay">
+          <strong>Pay on the right day</strong>
+          <span>Every tax has its own date. Schedule it once and it pays itself.</span>
+        </button>
+        <button role="tab" id="tab-move" aria-controls="panel-screens" aria-selected="false" tabindex="-1" data-screen="screen-move">
+          <strong>Move country, keep your address</strong>
+          <span>The new country's rules apply from the day you move. Your clients notice nothing.</span>
+        </button>
+        <button role="tab" id="tab-shop" aria-controls="panel-screens" aria-selected="false" tabindex="-1" data-screen="screen-shop">
+          <strong>Sell online</strong>
+          <span>One address per VAT rate for your WooCommerce or Shopify shop, or your paid API.</span>
+        </button>
+      </div>
+    </div>
+    <div class="phone-stage" id="panel-screens" role="tabpanel" aria-labelledby="tab-home" data-panel>
+      <div class="phone">
+        <img src="assets/img/screen-home.webp" width="390" height="844" alt="Kyros home screen: 6,482.35 USDC you can spend and 2,918.40 USDC set aside for taxes" data-phone-img>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section who" aria-labelledby="who-title">
+  <div class="wrap">
+    <h2 id="who-title">Built for anyone paid in stablecoins</h2>
+    <div class="who-list">
+      <article>
+        <h3>Freelancers and contractors</h3>
+        <p>Paid in USDC by clients at home or abroad. Kyros knows which payments carry VAT, which carry withholding and when each tax is due.</p>
+      </article>
+      <article>
+        <h3>Online shops and paid APIs</h3>
+        <p>Plugins for WooCommerce and Shopify, and pay-per-use APIs over x402: every sale sets its tax aside as it is paid.</p>
+      </article>
+      <article>
+        <h3>Platforms that pay many people</h3>
+        <p>Pay a whole run of contractors in one signature. Each of them is split by the rules of their own vault.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section security" id="security" aria-labelledby="security-title">
+  <div class="wrap">
+    <h2 id="security-title">Your money never leaves your hands</h2>
+    <p class="section-lead">Kyros is software, not a bank. The rules that protect your reserve live in smart contracts on Stellar, where anyone can read them.</p>
+    <ol class="pillars">
+      <li><span class="pillar-n" aria-hidden="true">01</span><h3>Non-custodial</h3><p>Kyros never holds your funds or your keys. The vault is a contract that only your wallet controls.</p></li>
+      <li><span class="pillar-n" aria-hidden="true">02</span><h3>Time-locked changes</h3><p>A new destination or a change of rules waits a notice period you can cancel. A stolen key cannot empty your reserve at once.</p></li>
+      <li><span class="pillar-n" aria-hidden="true">03</span><h3>No admin keys</h3><p>There is no switch to freeze or move your money. Not for us, not for anyone.</p></li>
+      <li><span class="pillar-n" aria-hidden="true">04</span><h3>Tested in the open</h3><p>Every change runs the test suite; fuzzing runs every night and mutation testing checks that the tests catch real bugs. Developers are invited to try to break it.</p></li>
+      <li><span class="pillar-n" aria-hidden="true">05</span><h3>Verifiable builds</h3><p>Anyone can check that the contracts on the network are built from the published source code.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section countries" id="countries" aria-labelledby="countries-title">
+  <div class="wrap">
+    <div class="countries-head">
+      <div>
+        <h2 id="countries-title">48 jurisdictions, one vault</h2>
+        <p class="section-lead">Each country has its own rule pack: rates, deadlines, holidays and instalments, with the official source behind every figure.</p>
+      </div>
+      <div class="globe-wrap">
+        <canvas class="globe" data-globe aria-hidden="true"></canvas>
+        <p class="globe-label" aria-hidden="true" data-globe-label>Drag the globe, or point at a country</p>
+      </div>
+    </div>
+    <div class="field field-search">
+      <label for="country-search">Find your country</label>
+      <input id="country-search" type="search" placeholder="Spain, Mexico, Brazil…" autocomplete="off" data-country-search>
+    </div>
+    <div class="regions" data-regions></div>
+    <p class="fine" data-country-empty hidden>No rule pack for that country yet.</p>
+  </div>
+</section>
+
+<section class="section faq" id="faq" aria-labelledby="faq-title">
+  <div class="wrap faq-grid">
+    <h2 id="faq-title">Questions</h2>
+    <div class="faq-list">
+      <details>
+        <summary>Is Kyros a tax adviser?</summary>
+        <p>No. Kyros applies public tax rules to set money aside and reminds you of each date. The figures are estimates. For decisions about your own situation, talk to a qualified adviser.</p>
+      </details>
+      <details>
+        <summary>Who holds my money?</summary>
+        <p>You do. Your share goes straight to your wallet and the tax part sits in a vault that only your wallet controls. Kyros never has access to your funds or keys.</p>
+      </details>
+      <details>
+        <summary>Which stablecoins does it work with?</summary>
+        <p>USDC and EURC on Stellar. Clients can pay from any Stellar wallet or exchange that sends them.</p>
+      </details>
+      <details>
+        <summary>Is it live?</summary>
+        <p>Kyros is a free beta on the Stellar test network, with test money. A beta on the main network is being prepared, and this page will say so when it opens.</p>
+      </details>
+      <details>
+        <summary>What happens if I move to another country?</summary>
+        <p>You keep the same payment address. From the day you move, new payments follow the rules of your new country, and the old vault still pays the old country's taxes on their dates.</p>
+      </details>
+      <details>
+        <summary>What if Kyros disappears?</summary>
+        <p>Your vault keeps working. It is a contract on Stellar with no admin keys: each tax still unlocks on its date, and the code is open source so anyone can run the tools around it.</p>
+      </details>
+      <details>
+        <summary>What does it cost?</summary>
+        <p>Nothing during the testnet beta. Network fees on Stellar are a fraction of a cent.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="cta" aria-labelledby="cta-title">
+  <div class="wrap cta-inner">
+    <h2 id="cta-title">Set your taxes aside before you spend them.</h2>
+    <a class="btn btn-light" href="https://kyrosfinance.com/app/" data-app>Try it on testnet <span class="btn-arrow" aria-hidden="true"></span></a>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href="#top" aria-label="Kyros, back to top">
+        <svg class="brand-mark" viewBox="66 61.5 565 565" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="44" stroke-linecap="round"><circle cx="348.5" cy="344" r="272"/><path d="M166.9 141.5H348.5A204 204 0 1 1 144.5 344"/><path d="M111.52 210.5H348.5A134 134 0 1 1 214.5 344"/><path d="M85.53 274.5H299.4A127.6 127.6 0 0 1 412.02 461.99"/><path d="M76.5 343.5H262A100 100 0 0 1 355.94 477.79"/></g></svg>
+        <span>Kyros</span>
+      </a>
+      <p>Taxes set aside the moment you get paid. The time is now.</p>
+    </div>
+    <nav class="footer-col" aria-label="Product">
+      <h2>Product</h2>
+      <a href="https://kyrosfinance.com/app/" data-app>Open the app</a>
+      <a href="#how">How it works</a>
+      <a href="#countries">Countries</a>
+    </nav>
+    <nav class="footer-col" aria-label="Project">
+      <h2>Project</h2>
+      <a href="https://github.com/arturete58-sys/kyros2.0" rel="noopener">Source code</a>
+      <a href="https://github.com/arturete58-sys/kyros2.0/blob/main/SECURITY.md" rel="noopener">Report a vulnerability</a>
+    </nav>
+    <nav class="footer-col" aria-label="Legal">
+      <h2>Legal</h2>
+      <a href="legal/notice.html">Legal notice</a>
+      <a href="legal/privacy.html">Privacy</a>
+      <a href="legal/cookies.html">Cookies</a>
+      <a href="legal/terms.html">Terms of use</a>
+    </nav>
+  </div>
+  <div class="wrap footer-fine">
+    <p>Kyros is open-source software in a free test phase. It is not a bank, a payment institution or a crypto-asset service provider, and it never holds users' funds or keys. Tax figures are estimates from public rules and are not tax, legal or financial advice. Stablecoins and blockchain networks carry risks, including the loss of access to your wallet.</p>
+    <p>© 2026 Kyros. Stellar, USDC, EURC, WooCommerce and Shopify are trademarks of their owners, named here only to describe compatibility.</p>
+  </div>
+</footer>
+</body>
+</html>
